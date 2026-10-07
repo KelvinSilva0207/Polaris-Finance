@@ -40,6 +40,10 @@ final servicesProvider = StreamProvider<List<RecurringService>>((ref) {
   return ref.watch(appDatabaseProvider).watchServices();
 });
 
+final budgetsProvider = StreamProvider<List<Budget>>((ref) {
+  return ref.watch(appDatabaseProvider).watchBudgets();
+});
+
 final seedProvider = FutureProvider<void>((ref) {
   return seedDatabase(ref.watch(appDatabaseProvider));
 });

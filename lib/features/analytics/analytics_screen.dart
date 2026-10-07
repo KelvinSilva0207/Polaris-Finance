@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
 import '../../data/models/enums.dart';
+import '../budgets/budgets_screen.dart';
 import '../export/export_screen.dart';
 
 const _monthNames = [
@@ -186,6 +187,17 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       appBar: AppBar(
         title: const Text('Analítica'),
         actions: [
+          IconButton(
+            tooltip: 'Presupuestos',
+            icon: const Icon(Icons.donut_large_outlined),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (context) => const BudgetsScreen(),
+                ),
+              );
+            },
+          ),
           IconButton(
             tooltip: 'Exportar datos',
             icon: const Icon(Icons.ios_share_outlined),

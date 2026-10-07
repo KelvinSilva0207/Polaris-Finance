@@ -1,9 +1,10 @@
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/enums.dart';
+import 'memory_database.dart'
+    if (dart.library.js_interop) 'memory_database_stub.dart';
 
 part 'app_database.g.dart';
 
@@ -135,6 +136,17 @@ class LoanPayments extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+class Budgets extends Table {
+  TextColumn get id => text()();
+  TextColumn get categoryId => text().references(Categories, #id)();
+  RealColumn get amount => real()();
+  TextColumn get currency => text().withDefault(const Constant('VES'))();
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DriftDatabase(
   tables: [
     Accounts,
@@ -146,17 +158,26 @@ class LoanPayments extends Table {
     CurrencyRates,
     Loans,
     LoanPayments,
+    Budgets,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
-  factory AppDatabase.open() => AppDatabase(driftDatabase(name: 'polaris_finance'));
+  factory AppDatabase.open() => AppDatabase(
+        driftDatabase(
+          name: 'polaris_finance',
+          web: DriftWebOptions(
+            sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+            driftWorker: Uri.parse('drift_worker.js'),
+          ),
+        ),
+      );
 
-  factory AppDatabase.memory() => AppDatabase(NativeDatabase.memory());
+  factory AppDatabase.memory() => createMemoryDatabase();
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -170,6 +191,9 @@ class AppDatabase extends _$AppDatabase {
           if (from < 3) {
             await m.createTable(loans);
             await m.createTable(loanPayments);
+          }
+          if (from < 4) {
+            await m.createTable(budgets);
           }
         },
       );
@@ -482,6 +506,95 @@ class AppDatabase extends _$AppDatabase {
       paidAmount: Value(loan.paidAmount + amount),
     ));
     return payment;
+  }
+
+  Stream<List<Budget>> watchBudgets() =>
+      (select(budgets)..orderBy([(t) => OrderingTerm.asc(t.categoryId)])).watch();
+
+  Future<Budget> addBudget({
+    required String categoryId,
+    required double amount,
+    required String currency,
+  }) {
+    return into(budgets).insertReturning(
+      BudgetsCompanion.insert(
+        id: Uuid().v4(),
+        categoryId: categoryId,
+        amount: amount,
+        currency: Value(currency),
+      ),
+    );
+  }
+
+  Future<void> updateBudget(Budget budget) => update(budgets).replace(budget);
+
+  Future<void> deleteBudget(String id) =>
+      (delete(budgets)..where((t) => t.id.equals(id))).go();
+
+  Future<void> restoreBackup(Map<String, dynamic> json) async {
+    if (json['app'] != 'Polaris Finance') {
+      throw const FormatException('El archivo no es un respaldo de Polaris Finance');
+    }
+    List<Map<String, dynamic>> rows(String key) =>
+        (json[key] as List<dynamic>? ?? const [])
+            .map((row) => Map<String, dynamic>.from(row as Map))
+            .toList();
+
+    await transaction(() async {
+      await delete(loanPayments).go();
+      await delete(loans).go();
+      await delete(transactions).go();
+      await delete(savingsGoals).go();
+      await delete(recurringServices).go();
+      await delete(budgets).go();
+      await delete(feeRules).go();
+      await delete(currencyRates).go();
+      await delete(accounts).go();
+      await delete(categories).go();
+
+      await batch((batch) {
+        batch.insertAll(
+          categories,
+          rows('categories').map(Category.fromJson).toList(),
+        );
+        batch.insertAll(
+          accounts,
+          rows('accounts').map(Account.fromJson).toList(),
+        );
+        batch.insertAll(
+          transactions,
+          rows('transactions').map(Transaction.fromJson).toList(),
+        );
+        batch.insertAll(
+          feeRules,
+          rows('feeRules').map(FeeRule.fromJson).toList(),
+        );
+        batch.insertAll(
+          savingsGoals,
+          rows('goals').map(SavingsGoal.fromJson).toList(),
+        );
+        batch.insertAll(
+          recurringServices,
+          rows('services').map(RecurringService.fromJson).toList(),
+        );
+        batch.insertAll(
+          currencyRates,
+          rows('rates').map(CurrencyRate.fromJson).toList(),
+        );
+        batch.insertAll(
+          loans,
+          rows('loans').map(Loan.fromJson).toList(),
+        );
+        batch.insertAll(
+          loanPayments,
+          rows('loanPayments').map(LoanPayment.fromJson).toList(),
+        );
+        batch.insertAll(
+          budgets,
+          rows('budgets').map(Budget.fromJson).toList(),
+        );
+      });
+    });
   }
 
   Future<void> insertRate({

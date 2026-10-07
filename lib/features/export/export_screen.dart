@@ -1,17 +1,17 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import '../../core/providers.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
 import '../../data/models/enums.dart';
+import 'file_saver.dart';
 
 String _timestamp() {
   final now = DateTime.now();
@@ -69,6 +69,7 @@ String buildExportJson({
   required List<CurrencyRate> rates,
   required List<Loan> loans,
   required List<LoanPayment> loanPayments,
+  required List<Budget> budgets,
 }) {
   return const JsonEncoder.withIndent('  ').convert({
     'exportedAt': DateTime.now().toIso8601String(),
@@ -82,6 +83,7 @@ String buildExportJson({
     'rates': rates.map((rate) => rate.toJson()).toList(),
     'loans': loans.map((loan) => loan.toJson()).toList(),
     'loanPayments': loanPayments.map((payment) => payment.toJson()).toList(),
+    'budgets': budgets.map((budget) => budget.toJson()).toList(),
   });
 }
 
@@ -159,15 +161,15 @@ class ExportScreen extends ConsumerStatefulWidget {
 class _ExportScreenState extends ConsumerState<ExportScreen> {
   bool _busy = false;
 
-  Future<void> _run(Future<File> Function() action, {String? copyText}) async {
+  Future<void> _run(Future<String> Function() action, {String? copyText}) async {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      final file = await action();
+      final saved = await action();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Guardado: ${file.path}'),
+          content: Text('Guardado: $saved'),
           action: copyText == null
               ? null
               : SnackBarAction(
@@ -188,26 +190,19 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
     }
   }
 
-  Future<File> _save(String filename, List<int> bytes) async {
-    final directory = await getApplicationDocumentsDirectory();
-    final file = File('${directory.path}/$filename');
-    await file.writeAsBytes(bytes, flush: true);
-    return file;
-  }
-
-  Future<File> _exportCsv() async {
+  Future<String> _exportCsv() async {
     final csv = buildTransactionsCsv(
       ref.read(transactionsProvider).value ?? const [],
       ref.read(accountsProvider).value ?? const [],
       ref.read(categoriesProvider).value ?? const [],
     );
-    return _save(
+    return saveBackupFile(
       'polaris_movimientos_${_timestamp()}.csv',
       const Utf8Encoder().convert(csv),
     );
   }
 
-  Future<File> _exportJson() async {
+  Future<String> _exportJson() async {
     final json = buildExportJson(
       accounts: ref.read(accountsProvider).value ?? const [],
       categories: ref.read(categoriesProvider).value ?? const [],
@@ -218,20 +213,97 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
       rates: ref.read(ratesProvider).value ?? const [],
       loans: ref.read(loansProvider).value ?? const [],
       loanPayments: ref.read(loanPaymentsProvider).value ?? const [],
+      budgets: ref.read(budgetsProvider).value ?? const [],
     );
-    return _save(
+    return saveBackupFile(
       'polaris_respaldo_${_timestamp()}.json',
       const Utf8Encoder().convert(json),
     );
   }
 
-  Future<File> _exportPdf() async {
+  String _backupText() {
+    return buildExportJson(
+      accounts: ref.read(accountsProvider).value ?? const [],
+      categories: ref.read(categoriesProvider).value ?? const [],
+      transactions: ref.read(transactionsProvider).value ?? const [],
+      feeRules: ref.read(feeRulesProvider).value ?? const [],
+      goals: ref.read(goalsProvider).value ?? const [],
+      services: ref.read(servicesProvider).value ?? const [],
+      rates: ref.read(ratesProvider).value ?? const [],
+      loans: ref.read(loansProvider).value ?? const [],
+      loanPayments: ref.read(loanPaymentsProvider).value ?? const [],
+      budgets: ref.read(budgetsProvider).value ?? const [],
+    );
+  }
+
+  Future<void> _copyBackup() async {
+    final text = _backupText();
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Respaldo copiado al portapapeles')),
+    );
+  }
+
+  Future<void> _restoreFromClipboard() async {
+    final text = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        final controller = TextEditingController(
+          text: '',
+        );
+        return AlertDialog(
+          title: const Text('Restaurar respaldo'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Pega aquí el contenido del respaldo JSON. Esto reemplaza todos los datos actuales.',
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                maxLines: 8,
+                decoration:
+                    const InputDecoration(hintText: '{"app": "Polaris Finance", ...}'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(controller.text),
+              child: const Text('Restaurar'),
+            ),
+          ],
+        );
+      },
+    );
+    if (text == null || text.trim().isEmpty || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final decoded = jsonDecode(text) as Map<String, dynamic>;
+      await ref.read(appDatabaseProvider).restoreBackup(decoded);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Respaldo restaurado')),
+      );
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Respaldo inválido: $error')),
+      );
+    }
+  }
+
+  Future<String> _exportPdf() async {
     final bytes = await buildExportPdf(
       transactions: ref.read(transactionsProvider).value ?? const [],
       accounts: ref.read(accountsProvider).value ?? const [],
       categories: ref.read(categoriesProvider).value ?? const [],
     );
-    return _save('polaris_movimientos_${_timestamp()}.pdf', bytes);
+    return saveBackupFile('polaris_movimientos_${_timestamp()}.pdf', bytes);
   }
 
   @override
@@ -281,10 +353,20 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
                     'Todas las cuentas, categorías, movimientos, metas, préstamos, servicios y tasas.',
                   ),
                   const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: _busy ? null : () => _run(_exportJson),
-                    icon: const Icon(Icons.save_alt),
-                    label: const Text('Guardar'),
+                  Row(
+                    children: [
+                      FilledButton.icon(
+                        onPressed: _busy ? null : () => _run(_exportJson),
+                        icon: const Icon(Icons.save_alt),
+                        label: const Text('Guardar'),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : _copyBackup,
+                        icon: const Icon(Icons.copy_outlined),
+                        label: const Text('Copiar'),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -314,6 +396,27 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
               padding: EdgeInsets.all(16),
               child: Center(child: CircularProgressIndicator()),
             ),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Restaurar respaldo', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Reemplaza todos los datos actuales con los de un respaldo JSON.',
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _restoreFromClipboard,
+                    icon: const Icon(Icons.restore_outlined),
+                    label: const Text('Pegar y restaurar'),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );

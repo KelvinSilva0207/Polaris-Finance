@@ -1,4 +1,4 @@
-# Polaris Finance
+﻿# Polaris Finance
 
 Gestión financiera personal minimalista, modular y multimoneda. Multiplataforma (Windows, macOS, Linux, Android, iOS y Web) desde un único código base.
 
@@ -11,6 +11,7 @@ Gestión financiera personal minimalista, modular y multimoneda. Multiplataforma
 - **shared_preferences** — preferencias de usuario
 - **intl** — formato de monedas/fechas
 - **http** — tasas de referencia (BCV, Binance P2P)
+- **pdf** — exportación de estados de cuentas
 
 ## Estructura (feature-first)
 
@@ -19,13 +20,14 @@ lib/
   core/          tema, enrutado, módulos, proveedores base
   data/          drift (tablas, seeds) y modelos
   features/      dashboard, transactions, accounts, rates,
-                 loans, goals, services, analytics, settings
+                 loans, goals, services, analytics, budgets,
+                 export, onboarding, settings
   shared/        widgets reutilizables
 ```
 
-## Estado actual (Fase 3)
+## Estado actual (Fase 4)
 
-- Base de datos SQLite (drift) con los modelos base: `Account`, `Category`, `Transaction`, `FeeRule`, `SavingsGoal`, `RecurringService`, `CurrencyRate`, `Loan`, `LoanPayment` (schema v3).
+- Base de datos SQLite (drift) con los modelos base: `Account`, `Category`, `Transaction`, `FeeRule`, `SavingsGoal`, `RecurringService`, `CurrencyRate`, `Loan`, `LoanPayment`, `Budget` (schema v4).
 - Navegación modular: las pestañas se activan/desactivan en Ajustes.
 - Tema dark por defecto con color de acento y modo privacidad (ocultar montos).
 - Dashboard con saldo por cuenta y tasa de referencia.
@@ -40,6 +42,9 @@ lib/
 - Servicios recurrentes: pago en 1 clic con ajuste del recibo, día del mes, pausa/activar y estado "Pendiente".
 - Analítica: ingresos/egresos por mes (VES/USD), egresos por categoría, tendencia de 6 meses y gastos hormiga (≤ 5 USD).
 - Exportación: CSV de movimientos, respaldo JSON completo y estado de cuentas en PDF (paquete `pdf`).
+- Presupuestos: límite mensual por categoría de egreso con barra de progreso y semáforo (verde/naranja/rojo).
+- Restauración de respaldos: copiar respaldo al portapapeles y restaurarlo sobre la app (reemplaza todos los datos).
+- Web: `flutter build web` funciona con drift_wasm (`web/sqlite3.wasm` + `web/drift_worker.js`); las exportaciones descarchan en el navegador.
 
 ## Roadmap
 
@@ -48,8 +53,8 @@ lib/
 | 0 | Scaffolding, arquitectura, modelos base, navegación modular |
 | 1 | Cuentas, transacciones, categorías/etiquetas, tasas (BCV/Binance P2P/manual) |
 | 2 | Comisiones configurables, préstamos/deudas, metas de ahorro, onboarding |
-| 3 | Servicios recurrentes, analítica + gastos hormiga, export PDF/CSV/JSON (actual) |
-| 4 | Sincronización/backup (local + Google Drive), presupuestos, widgets, onboarding final |
+| 3 | Servicios recurrentes, analítica + gastos hormiga, export PDF/CSV/JSON |
+| 4 | Backup/restauración, presupuestos, web drift_wasm (actual) |
 
 ## Ejecución
 
@@ -60,12 +65,14 @@ flutter run -d chrome
 flutter run -d windows   # requiere Visual Studio (C++ workload)
 flutter analyze
 flutter test
+flutter build web        # genera build/web listo para servir
 ```
 
 ## Pendientes de entorno
 
 - Android: los APK se compilan en GitHub Actions (ver `.github/workflows/build-apk.yml`) y se descargan como artefacto; para compilar en local instalar Android Studio + SDK.
 - Windows desktop: Visual Studio 2022 BuildTools con workload "Desktop development with C++" (ya instalado en esta máquina).
-- Web: habilitar soporte de drift (drift_wasm) para que la BD funcione en el navegador.
+- Web: soporte drift_wasm habilitado (`flutter build web` genera `build/web` con `sqlite3.wasm` y `drift_worker.js`).
+- Pendiente posterior: sincronización con Google Drive (requiere credencial OAuth propia), widgets de pantalla de Android (código nativo) y verificación en navegador real.
 
 > Importante: en esta máquina `flutter` está en `C:\Users\Usuario\flutter\bin` y `git` en `C:\Program Files\Git\cmd`.

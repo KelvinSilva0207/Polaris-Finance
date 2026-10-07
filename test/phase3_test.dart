@@ -202,6 +202,7 @@ void main() {
       rates: const [],
       loans: const [],
       loanPayments: const [],
+      budgets: const [],
     );
     expect(json, contains('"app": "Polaris Finance"'));
     expect(json, contains('Banesco'));
