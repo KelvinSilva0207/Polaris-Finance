@@ -8,16 +8,18 @@ import '../../data/models/enums.dart';
 import '../../shared/utils/transaction_math.dart';
 import '../../shared/widgets/account_card.dart';
 import '../../shared/widgets/amount_text.dart';
-
-CurrencyRate? latestReferenceRate(List<CurrencyRate> rates, RateProvider provider) {
-  for (final rate in rates) {
-    if (rate.rateCode == 'USD/VES' && rate.provider == provider.name) return rate;
-  }
-  return null;
-}
+import '../accounts/account_form_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
+
+  void _openAccountEditor(BuildContext context, {Account? initial}) {
+    Navigator.of(context).push(
+      MaterialPageRoute<bool>(
+        builder: (context) => AccountFormScreen(initial: initial),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -26,6 +28,7 @@ class DashboardScreen extends ConsumerWidget {
     final accountsAsync = ref.watch(accountsProvider);
     final transactionsAsync = ref.watch(transactionsProvider);
     final ratesAsync = ref.watch(ratesProvider);
+    final hasAccounts = (accountsAsync.value ?? const []).isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -42,6 +45,13 @@ class DashboardScreen extends ConsumerWidget {
           ),
         ],
       ),
+      floatingActionButton: hasAccounts
+          ? FloatingActionButton.extended(
+              onPressed: () => _openAccountEditor(context),
+              icon: const Icon(Icons.add),
+              label: const Text('Cuenta'),
+            )
+          : null,
       body: accountsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text(error.toString())),
@@ -84,6 +94,7 @@ class DashboardScreen extends ConsumerWidget {
                         account: account,
                         balance: balances[account.id] ?? 0,
                         hidden: settings.hideBalances,
+                        onTap: () => _openAccountEditor(context, initial: account),
                       ),
                     ),
                 ],
@@ -193,9 +204,14 @@ class _WelcomeView extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 24),
-              Chip(
-                label: const Text('Fase 1: crea tu primera cuenta'),
-                side: BorderSide(color: scheme.primary.withValues(alpha: 0.4)),
+              FilledButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<bool>(
+                    builder: (context) => const AccountFormScreen(),
+                  ),
+                ),
+                icon: const Icon(Icons.add),
+                label: const Text('Crear mi primera cuenta'),
               ),
             ],
           ),

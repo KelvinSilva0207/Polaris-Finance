@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/feature_module.dart';
 import '../../core/settings/app_settings.dart';
 import '../../data/models/enums.dart';
+import '../categories/categories_screen.dart';
 
 const _accentOptions = <Color>[
   Color(0xFF9C6BFF),
@@ -85,6 +86,21 @@ class SettingsScreen extends ConsumerWidget {
               subtitle: const Text('Difumina los saldos dentro de la app'),
               value: settings.hideBalances,
               onChanged: controller.setHideBalances,
+            ),
+          ),
+          const Divider(),
+          const _SectionHeader('Datos'),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.category_outlined),
+              title: const Text('Categorías'),
+              subtitle: const Text('Gestiona ingresos y egresos'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (context) => const CategoriesScreen(),
+                ),
+              ),
             ),
           ),
           const Divider(),

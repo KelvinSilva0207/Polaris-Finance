@@ -11,17 +11,23 @@ class AccountCard extends StatelessWidget {
     required this.account,
     required this.balance,
     this.hidden = false,
+    this.onTap,
+    this.onLongPress,
   });
 
   final Account account;
   final double balance;
   final bool hidden;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
     final color = Color(account.colorValue);
     return Card(
       child: ListTile(
+        onTap: onTap,
+        onLongPress: onLongPress,
         leading: CircleAvatar(
           backgroundColor: color.withValues(alpha: 0.18),
           child: Icon(iconFromName(account.icon), color: color),

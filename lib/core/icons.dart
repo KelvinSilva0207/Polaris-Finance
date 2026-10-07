@@ -23,6 +23,18 @@ IconData iconFromName(String name) {
     'more_horiz': Icons.more_horiz,
     'currency_bitcoin': Icons.currency_bitcoin,
     'cash': Icons.payments,
+    'flight': Icons.flight_takeoff,
+    'fitness_center': Icons.fitness_center,
+    'pets': Icons.pets,
+    'phone_iphone': Icons.phone_iphone,
+    'laptop': Icons.laptop,
+    'favorite': Icons.favorite,
+    'celebration': Icons.celebration,
+    'local_shipping': Icons.local_shipping,
+    'menu_book': Icons.menu_book,
+    'beach_access': Icons.beach_access,
+    'attach_money': Icons.attach_money,
+    'trending_up': Icons.trending_up,
   };
   return icons[name] ?? Icons.category;
 }

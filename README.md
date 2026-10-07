@@ -10,6 +10,7 @@ Gestión financiera personal minimalista, modular y multimoneda. Multiplataforma
 - **go_router** — navegación
 - **shared_preferences** — preferencias de usuario
 - **intl** — formato de monedas/fechas
+- **http** — tasas de referencia (BCV, Binance P2P)
 
 ## Estructura (feature-first)
 
@@ -22,21 +23,24 @@ lib/
   shared/        widgets reutilizables
 ```
 
-## Estado actual (Fase 0)
+## Estado actual (Fase 1)
 
-- Proyecto Flutter creado con todas las plataformas habilitadas.
 - Base de datos SQLite (drift) con los modelos base: `Account`, `Category`, `Transaction`, `FeeRule`, `SavingsGoal`, `RecurringService`, `CurrencyRate`.
 - Navegación modular: las pestañas se activan/desactivan en Ajustes.
 - Tema dark por defecto con color de acento y modo privacidad (ocultar montos).
 - Dashboard con saldo por cuenta y tasa de referencia.
+- Cuentas: alta, edición y borrado (tipos banco/billetera/cripto/efectivo), sugerencias de instituciones venezolanas, selector de icono y color.
+- Transacciones: ingresos, egresos y transferencias entre cuentas con fecha/hora, nota y etiquetas; CRUD completo y conversión USD ↔ VES según la tasa de referencia.
+- Categorías personalizadas (ingresos/egresos) sobre el set predefinido.
+- Tasas de referencia: BCV (pydolarve.org), Binance P2P (USDT/VES) y manual, con historial guardado.
 
 ## Roadmap
 
 | Fase | Alcance |
 | ---- | ------- |
-| 0 | Scaffolding, arquitectura, modelos base, navegación modular (actual) |
-| 1 | Onboarding país/bancos, cuentas, transacciones, categorías/etiquetas, tasas (BCV/Binance P2P/manual) |
-| 2 | Comisiones configurables, préstamos/deudas, metas de ahorro |
+| 0 | Scaffolding, arquitectura, modelos base, navegación modular |
+| 1 | Cuentas, transacciones, categorías/etiquetas, tasas (BCV/Binance P2P/manual) (actual) |
+| 2 | Onboarding país/bancos, comisiones configurables, préstamos/deudas, metas de ahorro |
 | 3 | Servicios recurrentes, analítica + gastos hormiga, export PDF/CSV/JSON |
 | 4 | Sincronización/backup (local + Google Drive), presupuestos, widgets, onboarding final |
 
@@ -53,8 +57,8 @@ flutter test
 
 ## Pendientes de entorno
 
-- Android: instalar Android Studio + SDK.
-- Windows desktop: instalar Visual Studio (workload "Desktop development with C++").
+- Android: los APK se compilan en GitHub Actions (ver `.github/workflows/build-apk.yml`) y se descargan como artefacto; para compilar en local instalar Android Studio + SDK.
+- Windows desktop: Visual Studio 2022 BuildTools con workload "Desktop development with C++" (ya instalado en esta máquina).
 - Web: habilitar soporte de drift (drift_wasm) para que la BD funcione en el navegador.
 
 > Importante: en esta máquina `flutter` está en `C:\Users\Usuario\flutter\bin` y `git` en `C:\Program Files\Git\cmd`.
