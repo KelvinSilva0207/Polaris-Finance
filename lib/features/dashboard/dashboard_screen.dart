@@ -61,7 +61,7 @@ class DashboardScreen extends ConsumerWidget {
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, stack) => Center(child: Text(error.toString())),
             data: (transactions) {
-              final balances = balancesOf(transactions);
+              final balances = balancesOf(transactions, accounts: accounts);
               final singleCurrency = accounts.map((a) => a.currency).toSet().length == 1;
               final total = accounts.fold<double>(
                 0,

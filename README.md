@@ -25,13 +25,14 @@ lib/
   shared/        widgets reutilizables
 ```
 
-## Estado actual (Fase 4)
+## Estado actual (Fase 5)
 
-- Base de datos SQLite (drift) con los modelos base: `Account`, `Category`, `Transaction`, `FeeRule`, `SavingsGoal`, `RecurringService`, `CurrencyRate`, `Loan`, `LoanPayment`, `Budget` (schema v4).
+- Base de datos SQLite (drift) con los modelos base: `Account`, `Category`, `Transaction`, `FeeRule`, `SavingsGoal`, `RecurringService`, `CurrencyRate`, `Loan`, `LoanPayment`, `Budget` (schema v5).
 - Navegación modular: las pestañas se activan/desactivan en Ajustes.
 - Tema dark por defecto con color de acento y modo privacidad (ocultar montos).
 - Dashboard con saldo por cuenta y tasa de referencia.
 - Cuentas: alta, edición y borrado (tipos banco/billetera/cripto/efectivo), sugerencias de instituciones venezolanas, selector de icono y color.
+- Saldo fijado por cuenta: campo "Saldo actual" para reflejar lo que se tiene guardado sin registrarlo como ingreso (saldo inicial `openingBalance`; los movimientos posteriores lo suman/restan).
 - Transacciones: ingresos, egresos y transferencias entre cuentas con fecha/hora, nota y etiquetas; CRUD completo y conversión USD ↔ VES según la tasa de referencia.
 - Categorías personalizadas (ingresos/egresos) sobre el set predefinido.
 - Tasas de referencia: BCV (pydolarve.org), Binance P2P (USDT/VES) y manual, con historial guardado.
@@ -45,6 +46,7 @@ lib/
 - Presupuestos: límite mensual por categoría de egreso con barra de progreso y semáforo (verde/naranja/rojo).
 - Restauración de respaldos: copiar respaldo al portapapeles y restaurarlo sobre la app (reemplaza todos los datos).
 - Web: `flutter build web` funciona con drift_wasm (`web/sqlite3.wasm` + `web/drift_worker.js`); las exportaciones descarchan en el navegador.
+- Iconos de app generados desde `logo.png` con `flutter_launcher_icons` (Android, Windows y Web); fuente cuadrada en `icon_square.png`, config en `flutter_launcher_icons.yaml`.
 
 ## Roadmap
 
@@ -54,7 +56,8 @@ lib/
 | 1 | Cuentas, transacciones, categorías/etiquetas, tasas (BCV/Binance P2P/manual) |
 | 2 | Comisiones configurables, préstamos/deudas, metas de ahorro, onboarding |
 | 3 | Servicios recurrentes, analítica + gastos hormiga, export PDF/CSV/JSON |
-| 4 | Backup/restauración, presupuestos, web drift_wasm (actual) |
+| 4 | Backup/restauración, presupuestos, web drift_wasm |
+| 5 | Icono de app desde el logo, saldo fijado por cuenta (actual) |
 
 ## Ejecución
 

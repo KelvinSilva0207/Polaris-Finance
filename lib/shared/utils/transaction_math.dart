@@ -10,8 +10,13 @@ double signedAmount(Transaction transaction) {
   };
 }
 
-Map<String, double> balancesOf(List<Transaction> transactions) {
-  final balances = <String, double>{};
+Map<String, double> balancesOf(
+  List<Transaction> transactions, {
+  Iterable<Account> accounts = const [],
+}) {
+  final balances = <String, double>{
+    for (final account in accounts) account.id: account.openingBalance,
+  };
   for (final transaction in transactions) {
     final type = TransactionType.fromStorage(transaction.type);
     final delta = switch (type) {

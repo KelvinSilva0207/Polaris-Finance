@@ -67,7 +67,10 @@ class AccountsScreen extends ConsumerWidget {
           if (accounts.isEmpty) {
             return const _EmptyAccountsView();
           }
-          final balances = balancesOf(transactionsAsync.value ?? const []);
+          final balances = balancesOf(
+            transactionsAsync.value ?? const [],
+            accounts: accounts,
+          );
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: accounts.length,

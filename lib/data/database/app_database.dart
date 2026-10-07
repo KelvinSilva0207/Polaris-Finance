@@ -16,6 +16,7 @@ class Accounts extends Table {
   IntColumn get colorValue => integer()();
   TextColumn get icon => text().withDefault(const Constant('account_balance'))();
   BoolColumn get isDefault => boolean().withDefault(const Constant(false))();
+  RealColumn get openingBalance => real().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override
@@ -177,7 +178,7 @@ class AppDatabase extends _$AppDatabase {
   factory AppDatabase.memory() => createMemoryDatabase();
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -194,6 +195,9 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 4) {
             await m.createTable(budgets);
+          }
+          if (from < 5) {
+            await m.addColumn(accounts, accounts.openingBalance);
           }
         },
       );
@@ -230,6 +234,7 @@ class AppDatabase extends _$AppDatabase {
     required int colorValue,
     String icon = 'account_balance',
     bool isDefault = false,
+    double openingBalance = 0,
   }) {
     return into(accounts).insertReturning(
       AccountsCompanion.insert(
@@ -240,6 +245,7 @@ class AppDatabase extends _$AppDatabase {
         colorValue: colorValue,
         icon: Value(icon),
         isDefault: Value(isDefault),
+        openingBalance: Value(openingBalance),
       ),
     );
   }
@@ -540,6 +546,11 @@ class AppDatabase extends _$AppDatabase {
             .map((row) => Map<String, dynamic>.from(row as Map))
             .toList();
 
+    final accountRows = rows('accounts');
+    for (final row in accountRows) {
+      row.putIfAbsent('openingBalance', () => 0);
+    }
+
     await transaction(() async {
       await delete(loanPayments).go();
       await delete(loans).go();
@@ -557,10 +568,7 @@ class AppDatabase extends _$AppDatabase {
           categories,
           rows('categories').map(Category.fromJson).toList(),
         );
-        batch.insertAll(
-          accounts,
-          rows('accounts').map(Account.fromJson).toList(),
-        );
+        batch.insertAll(accounts, accountRows.map(Account.fromJson).toList());
         batch.insertAll(
           transactions,
           rows('transactions').map(Transaction.fromJson).toList(),

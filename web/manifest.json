@@ -3,7 +3,7 @@
     "short_name": "polaris_finance",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
+    "background_color": "#ffffff",
     "theme_color": "#0175C2",
     "description": "Gestion financiera personal minimalista, modular y multimoneda.",
     "orientation": "portrait-primary",

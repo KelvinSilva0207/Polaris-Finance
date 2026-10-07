@@ -82,6 +82,18 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _openingBalanceMeta = const VerificationMeta(
+    'openingBalance',
+  );
+  @override
+  late final GeneratedColumn<double> openingBalance = GeneratedColumn<double>(
+    'opening_balance',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -103,6 +115,7 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     colorValue,
     icon,
     isDefault,
+    openingBalance,
     createdAt,
   ];
   @override
@@ -166,6 +179,15 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         isDefault.isAcceptableOrUnknown(data['is_default']!, _isDefaultMeta),
       );
     }
+    if (data.containsKey('opening_balance')) {
+      context.handle(
+        _openingBalanceMeta,
+        openingBalance.isAcceptableOrUnknown(
+          data['opening_balance']!,
+          _openingBalanceMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -209,6 +231,10 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_default'],
       )!,
+      openingBalance: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}opening_balance'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -230,6 +256,7 @@ class Account extends DataClass implements Insertable<Account> {
   final int colorValue;
   final String icon;
   final bool isDefault;
+  final double openingBalance;
   final DateTime createdAt;
   const Account({
     required this.id,
@@ -239,6 +266,7 @@ class Account extends DataClass implements Insertable<Account> {
     required this.colorValue,
     required this.icon,
     required this.isDefault,
+    required this.openingBalance,
     required this.createdAt,
   });
   @override
@@ -251,6 +279,7 @@ class Account extends DataClass implements Insertable<Account> {
     map['color_value'] = Variable<int>(colorValue);
     map['icon'] = Variable<String>(icon);
     map['is_default'] = Variable<bool>(isDefault);
+    map['opening_balance'] = Variable<double>(openingBalance);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -264,6 +293,7 @@ class Account extends DataClass implements Insertable<Account> {
       colorValue: Value(colorValue),
       icon: Value(icon),
       isDefault: Value(isDefault),
+      openingBalance: Value(openingBalance),
       createdAt: Value(createdAt),
     );
   }
@@ -281,6 +311,7 @@ class Account extends DataClass implements Insertable<Account> {
       colorValue: serializer.fromJson<int>(json['colorValue']),
       icon: serializer.fromJson<String>(json['icon']),
       isDefault: serializer.fromJson<bool>(json['isDefault']),
+      openingBalance: serializer.fromJson<double>(json['openingBalance']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -295,6 +326,7 @@ class Account extends DataClass implements Insertable<Account> {
       'colorValue': serializer.toJson<int>(colorValue),
       'icon': serializer.toJson<String>(icon),
       'isDefault': serializer.toJson<bool>(isDefault),
+      'openingBalance': serializer.toJson<double>(openingBalance),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -307,6 +339,7 @@ class Account extends DataClass implements Insertable<Account> {
     int? colorValue,
     String? icon,
     bool? isDefault,
+    double? openingBalance,
     DateTime? createdAt,
   }) => Account(
     id: id ?? this.id,
@@ -316,6 +349,7 @@ class Account extends DataClass implements Insertable<Account> {
     colorValue: colorValue ?? this.colorValue,
     icon: icon ?? this.icon,
     isDefault: isDefault ?? this.isDefault,
+    openingBalance: openingBalance ?? this.openingBalance,
     createdAt: createdAt ?? this.createdAt,
   );
   Account copyWithCompanion(AccountsCompanion data) {
@@ -329,6 +363,9 @@ class Account extends DataClass implements Insertable<Account> {
           : this.colorValue,
       icon: data.icon.present ? data.icon.value : this.icon,
       isDefault: data.isDefault.present ? data.isDefault.value : this.isDefault,
+      openingBalance: data.openingBalance.present
+          ? data.openingBalance.value
+          : this.openingBalance,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -343,6 +380,7 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('colorValue: $colorValue, ')
           ..write('icon: $icon, ')
           ..write('isDefault: $isDefault, ')
+          ..write('openingBalance: $openingBalance, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -357,6 +395,7 @@ class Account extends DataClass implements Insertable<Account> {
     colorValue,
     icon,
     isDefault,
+    openingBalance,
     createdAt,
   );
   @override
@@ -370,6 +409,7 @@ class Account extends DataClass implements Insertable<Account> {
           other.colorValue == this.colorValue &&
           other.icon == this.icon &&
           other.isDefault == this.isDefault &&
+          other.openingBalance == this.openingBalance &&
           other.createdAt == this.createdAt);
 }
 
@@ -381,6 +421,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<int> colorValue;
   final Value<String> icon;
   final Value<bool> isDefault;
+  final Value<double> openingBalance;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const AccountsCompanion({
@@ -391,6 +432,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.colorValue = const Value.absent(),
     this.icon = const Value.absent(),
     this.isDefault = const Value.absent(),
+    this.openingBalance = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -402,6 +444,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     required int colorValue,
     this.icon = const Value.absent(),
     this.isDefault = const Value.absent(),
+    this.openingBalance = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -417,6 +460,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<int>? colorValue,
     Expression<String>? icon,
     Expression<bool>? isDefault,
+    Expression<double>? openingBalance,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -428,6 +472,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (colorValue != null) 'color_value': colorValue,
       if (icon != null) 'icon': icon,
       if (isDefault != null) 'is_default': isDefault,
+      if (openingBalance != null) 'opening_balance': openingBalance,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -441,6 +486,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Value<int>? colorValue,
     Value<String>? icon,
     Value<bool>? isDefault,
+    Value<double>? openingBalance,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -452,6 +498,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       colorValue: colorValue ?? this.colorValue,
       icon: icon ?? this.icon,
       isDefault: isDefault ?? this.isDefault,
+      openingBalance: openingBalance ?? this.openingBalance,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -481,6 +528,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (isDefault.present) {
       map['is_default'] = Variable<bool>(isDefault.value);
     }
+    if (openingBalance.present) {
+      map['opening_balance'] = Variable<double>(openingBalance.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -500,6 +550,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('colorValue: $colorValue, ')
           ..write('icon: $icon, ')
           ..write('isDefault: $isDefault, ')
+          ..write('openingBalance: $openingBalance, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -5087,6 +5138,7 @@ typedef $$AccountsTableCreateCompanionBuilder = AccountsCompanion Function({
   required int colorValue,
   Value<String> icon,
   Value<bool> isDefault,
+  Value<double> openingBalance,
   Value<DateTime> createdAt,
   Value<int> rowid,
 });
@@ -5098,6 +5150,7 @@ typedef $$AccountsTableUpdateCompanionBuilder = AccountsCompanion Function({
   Value<int> colorValue,
   Value<String> icon,
   Value<bool> isDefault,
+  Value<double> openingBalance,
   Value<DateTime> createdAt,
   Value<int> rowid,
 });
@@ -5187,6 +5240,11 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<bool> get isDefault => $composableBuilder(
     column: $table.isDefault,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get openingBalance => $composableBuilder(
+    column: $table.openingBalance,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5290,6 +5348,11 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get openingBalance => $composableBuilder(
+    column: $table.openingBalance,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -5327,6 +5390,11 @@ class $$AccountsTableAnnotationComposer
 
   GeneratedColumn<bool> get isDefault =>
       $composableBuilder(column: $table.isDefault, builder: (column) => column);
+
+  GeneratedColumn<double> get openingBalance => $composableBuilder(
+    column: $table.openingBalance,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -5421,6 +5489,7 @@ class $$AccountsTableTableManager
                 Value<int> colorValue = const Value.absent(),
                 Value<String> icon = const Value.absent(),
                 Value<bool> isDefault = const Value.absent(),
+                Value<double> openingBalance = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AccountsCompanion(
@@ -5431,6 +5500,7 @@ class $$AccountsTableTableManager
                 colorValue: colorValue,
                 icon: icon,
                 isDefault: isDefault,
+                openingBalance: openingBalance,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -5443,6 +5513,7 @@ class $$AccountsTableTableManager
                 required int colorValue,
                 Value<String> icon = const Value.absent(),
                 Value<bool> isDefault = const Value.absent(),
+                Value<double> openingBalance = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AccountsCompanion.insert(
@@ -5453,6 +5524,7 @@ class $$AccountsTableTableManager
                 colorValue: colorValue,
                 icon: icon,
                 isDefault: isDefault,
+                openingBalance: openingBalance,
                 createdAt: createdAt,
                 rowid: rowid,
               ),

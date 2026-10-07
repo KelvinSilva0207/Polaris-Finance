@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/icons.dart';
@@ -7,6 +8,7 @@ import '../../data/database/app_database.dart';
 import '../../data/database/seeds.dart';
 import '../../data/models/currencies.dart';
 import '../../data/models/enums.dart';
+import '../../shared/utils/transaction_math.dart';
 import '../../shared/widgets/color_picker_row.dart';
 import '../../shared/widgets/icon_picker.dart';
 
@@ -21,11 +23,13 @@ class AccountFormScreen extends ConsumerStatefulWidget {
 
 class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
   late final TextEditingController _nameController;
+  late final TextEditingController _balanceController;
   late AccountType _type;
   late String _currency;
   late int _color;
   late String _icon;
   bool _saving = false;
+  bool _balanceTouched = false;
 
   bool get _isEditing => widget.initial != null;
 
@@ -34,16 +38,38 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
     super.initState();
     final initial = widget.initial;
     _nameController = TextEditingController(text: initial?.name ?? '');
+    _balanceController = TextEditingController();
     _type = AccountType.fromStorage(initial?.type);
     _currency = initial?.currency ?? 'VES';
     _color = initial?.colorValue ?? 0xFF9C6BFF;
     _icon = initial?.icon ?? 'account_balance';
+    if (initial != null) {
+      _loadCurrentBalance(initial);
+    }
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _balanceController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCurrentBalance(Account account) async {
+    final db = ref.read(appDatabaseProvider);
+    final transactions = await db.select(db.transactions).get();
+    final delta = balancesOf(transactions)[account.id] ?? 0;
+    if (!mounted || _balanceTouched) return;
+    setState(() {
+      _balanceController.text = _formatAmount(account.openingBalance + delta);
+    });
+  }
+
+  String _formatAmount(double value) {
+    final rounded = double.parse(value.toStringAsFixed(2));
+    return rounded == rounded.roundToDouble()
+        ? rounded.toStringAsFixed(0)
+        : rounded.toString();
   }
 
   void _applyInstitution(SeedInstitution institution) {
@@ -64,19 +90,38 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
       );
       return;
     }
+    final rawBalance = _balanceController.text.trim().replaceAll(',', '.');
+    double? targetBalance;
+    if (rawBalance.isNotEmpty) {
+      targetBalance = double.tryParse(rawBalance);
+      if (targetBalance == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Saldo no válido: usa números (puede ser negativo)'),
+          ),
+        );
+        return;
+      }
+    }
     setState(() => _saving = true);
     final db = ref.read(appDatabaseProvider);
     try {
       if (_isEditing) {
-        await db.updateAccount(
-          widget.initial!.copyWith(
-            name: name,
-            type: _type.name,
-            currency: _currency,
-            colorValue: _color,
-            icon: _icon,
-          ),
+        var updated = widget.initial!.copyWith(
+          name: name,
+          type: _type.name,
+          currency: _currency,
+          colorValue: _color,
+          icon: _icon,
         );
+        if (targetBalance != null) {
+          final transactions = await db.select(db.transactions).get();
+          final delta = balancesOf(transactions)[widget.initial!.id] ?? 0;
+          updated = updated.copyWith(
+            openingBalance: targetBalance - delta,
+          );
+        }
+        await db.updateAccount(updated);
       } else {
         await db.addAccount(
           name: name,
@@ -84,6 +129,7 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
           currency: _currency,
           colorValue: _color,
           icon: _icon,
+          openingBalance: targetBalance ?? 0,
         );
       }
       if (!mounted) return;
@@ -138,6 +184,21 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
                 if (value != null) setState(() => _currency = value);
               },
             ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _balanceController,
+              onChanged: (_) => _balanceTouched = true,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+                signed: true,
+              ),
+              inputFormatters: [AmountInputFormatter()],
+              decoration: const InputDecoration(
+                labelText: 'Saldo actual',
+                helperText:
+                    'Solo números; puede ser negativo. No se registra como ingreso',
+              ),
+            ),
             const SizedBox(height: 20),
             Text('Sugerencias', style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),
@@ -182,5 +243,18 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
         ),
       ),
     );
+  }
+}
+
+class AmountInputFormatter extends TextInputFormatter {
+  static final RegExp _valid = RegExp(r'^-?\d*([.,]\d*)?$');
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (_valid.hasMatch(newValue.text)) return newValue;
+    return oldValue;
   }
 }
