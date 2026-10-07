@@ -14,7 +14,7 @@ Future<void> main() async {
       overrides: [
         initialSettingsProvider.overrideWithValue(initialSettings),
       ],
-      child: const PolarisFinanceApp(),
+      child: const PolarisFinanceAppWrapper(),
     ),
   );
 }

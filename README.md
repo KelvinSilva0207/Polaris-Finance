@@ -23,9 +23,9 @@ lib/
   shared/        widgets reutilizables
 ```
 
-## Estado actual (Fase 1)
+## Estado actual (Fase 2)
 
-- Base de datos SQLite (drift) con los modelos base: `Account`, `Category`, `Transaction`, `FeeRule`, `SavingsGoal`, `RecurringService`, `CurrencyRate`.
+- Base de datos SQLite (drift) con los modelos base: `Account`, `Category`, `Transaction`, `FeeRule`, `SavingsGoal`, `RecurringService`, `CurrencyRate`, `Loan`, `LoanPayment` (schema v3).
 - Navegación modular: las pestañas se activan/desactivan en Ajustes.
 - Tema dark por defecto con color de acento y modo privacidad (ocultar montos).
 - Dashboard con saldo por cuenta y tasa de referencia.
@@ -33,14 +33,18 @@ lib/
 - Transacciones: ingresos, egresos y transferencias entre cuentas con fecha/hora, nota y etiquetas; CRUD completo y conversión USD ↔ VES según la tasa de referencia.
 - Categorías personalizadas (ingresos/egresos) sobre el set predefinido.
 - Tasas de referencia: BCV (pydolarve.org), Binance P2P (USDT/VES) y manual, con historial guardado.
+- Metas de ahorro: objetivos vinculados a cuentas, aportes (virtuales o con transferencia real), historial de progreso y cierre.
+- Comisiones configurables: reglas fijo + % con mínimo/máximo, aplicadas a movimientos con cálculo en vivo.
+- Préstamos/deudas: "Debo" y "Me deben" con pagos/cobros, historial, estado abierta/cerrada e interés.
+- Onboarding de primer uso: país + creación rápida de cuentas sugeridas (omisible).
 
 ## Roadmap
 
 | Fase | Alcance |
 | ---- | ------- |
 | 0 | Scaffolding, arquitectura, modelos base, navegación modular |
-| 1 | Cuentas, transacciones, categorías/etiquetas, tasas (BCV/Binance P2P/manual) (actual) |
-| 2 | Onboarding país/bancos, comisiones configurables, préstamos/deudas, metas de ahorro |
+| 1 | Cuentas, transacciones, categorías/etiquetas, tasas (BCV/Binance P2P/manual) |
+| 2 | Comisiones configurables, préstamos/deudas, metas de ahorro, onboarding (actual) |
 | 3 | Servicios recurrentes, analítica + gastos hormiga, export PDF/CSV/JSON |
 | 4 | Sincronización/backup (local + Google Drive), presupuestos, widgets, onboarding final |
 

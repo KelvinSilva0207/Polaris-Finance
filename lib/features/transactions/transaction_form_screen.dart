@@ -33,6 +33,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   late final TextEditingController _tagsController;
   late final TextEditingController _noteController;
   late DateTime _date;
+  String? _feeRuleId;
   bool _saving = false;
 
   bool get _isEditing => widget.initial != null;
@@ -40,6 +41,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
   static const _noneCategory = '_none';
   static const _newCategory = '_new';
+  static const _noneFee = '_none';
 
   @override
   void initState() {
@@ -182,6 +184,17 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     final tagsText = tagsList.join(', ');
     final noteText = _noteController.text.trim();
 
+    final feeRules = ref.read(feeRulesProvider).value ?? const [];
+    double feeAmount = 0;
+    if (_feeRuleId != null) {
+      for (final rule in feeRules) {
+        if (rule.isActive && rule.id == _feeRuleId) {
+          feeAmount = feeFor(rule, amount);
+          break;
+        }
+      }
+    }
+
     setState(() => _saving = true);
     final db = ref.read(appDatabaseProvider);
     try {
@@ -197,6 +210,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             note: Value(noteText),
             tags: Value(tagsText),
             date: _date,
+            feeAmount: feeAmount,
           ),
         );
       } else {
@@ -210,6 +224,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
           note: noteText,
           tags: tagsList,
           date: _date,
+          feeAmount: feeAmount,
         );
       }
       if (!mounted) return;
@@ -223,6 +238,49 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  List<Widget> _buildFeeSection() {
+    final feeRules = ref.watch(feeRulesProvider).value ?? const [];
+    final activeFeeRules = feeRules.where((r) => r.isActive).toList();
+    if (activeFeeRules.isEmpty) return const [];
+    FeeRule? selectedRule;
+    if (_feeRuleId != null) {
+      for (final rule in activeFeeRules) {
+        if (rule.id == _feeRuleId) {
+          selectedRule = rule;
+          break;
+        }
+      }
+    }
+    final amount = _parsedAmount();
+    final estimatedFee = selectedRule == null || amount == null
+        ? null
+        : feeFor(selectedRule, amount);
+    return [
+      DropdownButtonFormField<String>(
+        key: ValueKey('fee-${_feeRuleId ?? 'none'}'),
+        initialValue: _feeRuleId,
+        decoration: const InputDecoration(labelText: 'Comisión'),
+        hint: const Text('Sin comisión'),
+        items: [
+          const DropdownMenuItem(value: _noneFee, child: Text('Sin comisión')),
+          for (final rule in activeFeeRules)
+            DropdownMenuItem(value: rule.id, child: Text(rule.name)),
+        ],
+        onChanged: (value) => setState(() => _feeRuleId = value),
+      ),
+      if (estimatedFee != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 8, left: 4),
+          child: Text(
+            'Comisión estimada: $estimatedFee',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+          ),
+        ),
+    ];
   }
 
   Widget _buildConversionHint(Account? source) {
@@ -360,6 +418,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               onChanged: _onCategoryChanged,
             ),
           ],
+          const SizedBox(height: 16),
+          ..._buildFeeSection(),
           const SizedBox(height: 16),
           TextField(
             controller: _amountController,

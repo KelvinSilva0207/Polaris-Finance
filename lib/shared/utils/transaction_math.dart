@@ -48,3 +48,11 @@ CurrencyRate? latestReferenceRate(List<CurrencyRate> rates, RateProvider provide
   }
   return null;
 }
+
+double feeFor(FeeRule rule, double amount) {
+  var fee = rule.fixedAmount + amount * rule.percent / 100;
+  if (rule.minAmount != null && fee < rule.minAmount!) fee = rule.minAmount!;
+  if (rule.maxAmount != null && fee > rule.maxAmount!) fee = rule.maxAmount!;
+  if (fee <= 0) return 0;
+  return double.parse(fee.toStringAsFixed(2));
+}

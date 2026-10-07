@@ -5,6 +5,7 @@ import '../../core/feature_module.dart';
 import '../../core/settings/app_settings.dart';
 import '../../data/models/enums.dart';
 import '../categories/categories_screen.dart';
+import '../fees/fee_rules_screen.dart';
 
 const _accentOptions = <Color>[
   Color(0xFF9C6BFF),
@@ -91,16 +92,32 @@ class SettingsScreen extends ConsumerWidget {
           const Divider(),
           const _SectionHeader('Datos'),
           Card(
-            child: ListTile(
-              leading: const Icon(Icons.category_outlined),
-              title: const Text('Categorías'),
-              subtitle: const Text('Gestiona ingresos y egresos'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (context) => const CategoriesScreen(),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.category_outlined),
+                  title: const Text('Categorías'),
+                  subtitle: const Text('Gestiona ingresos y egresos'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (context) => const CategoriesScreen(),
+                    ),
+                  ),
                 ),
-              ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.sell_outlined),
+                  title: const Text('Comisiones'),
+                  subtitle: const Text('Reglas de comisión aplicables a movimientos'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (context) => const FeeRulesScreen(),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           const Divider(),

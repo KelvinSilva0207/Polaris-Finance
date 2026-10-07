@@ -20,6 +20,22 @@ final ratesProvider = StreamProvider<List<CurrencyRate>>((ref) {
   return ref.watch(appDatabaseProvider).watchRates();
 });
 
+final goalsProvider = StreamProvider<List<SavingsGoal>>((ref) {
+  return ref.watch(appDatabaseProvider).watchGoals();
+});
+
+final feeRulesProvider = StreamProvider<List<FeeRule>>((ref) {
+  return ref.watch(appDatabaseProvider).watchFeeRules();
+});
+
+final loansProvider = StreamProvider<List<Loan>>((ref) {
+  return ref.watch(appDatabaseProvider).watchLoans();
+});
+
+final loanPaymentsProvider = StreamProvider<List<LoanPayment>>((ref) {
+  return ref.watch(appDatabaseProvider).watchLoanPayments();
+});
+
 final seedProvider = FutureProvider<void>((ref) {
   return seedDatabase(ref.watch(appDatabaseProvider));
 });

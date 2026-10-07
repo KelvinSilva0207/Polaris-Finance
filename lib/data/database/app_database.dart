@@ -107,6 +107,34 @@ class CurrencyRates extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+class Loans extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get type => text().withDefault(const Constant('debt'))();
+  TextColumn get currency => text()();
+  RealColumn get principal => real()();
+  RealColumn get paidAmount => real().withDefault(const Constant(0))();
+  RealColumn get interestRate => real().withDefault(const Constant(0))();
+  DateTimeColumn get startDate => dateTime()();
+  DateTimeColumn get dueDate => dateTime().nullable()();
+  TextColumn get note => text().nullable()();
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class LoanPayments extends Table {
+  TextColumn get id => text()();
+  TextColumn get loanId => text().references(Loans, #id)();
+  RealColumn get amount => real()();
+  DateTimeColumn get date => dateTime()();
+  TextColumn get note => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DriftDatabase(
   tables: [
     Accounts,
@@ -116,6 +144,8 @@ class CurrencyRates extends Table {
     SavingsGoals,
     RecurringServices,
     CurrencyRates,
+    Loans,
+    LoanPayments,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -126,7 +156,7 @@ class AppDatabase extends _$AppDatabase {
   factory AppDatabase.memory() => AppDatabase(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -136,6 +166,10 @@ class AppDatabase extends _$AppDatabase {
         onUpgrade: (m, from, to) async {
           if (from < 2) {
             await m.addColumn(transactions, transactions.transferToId);
+          }
+          if (from < 3) {
+            await m.createTable(loans);
+            await m.createTable(loanPayments);
           }
         },
       );
@@ -158,6 +192,12 @@ class AppDatabase extends _$AppDatabase {
   Stream<List<SavingsGoal>> watchGoals() => select(savingsGoals).watch();
 
   Stream<List<RecurringService>> watchServices() => select(recurringServices).watch();
+
+  Stream<List<Loan>> watchLoans() =>
+      (select(loans)..orderBy([(t) => OrderingTerm.asc(t.name)])).watch();
+
+  Stream<List<LoanPayment>> watchLoanPayments() =>
+      (select(loanPayments)..orderBy([(t) => OrderingTerm.desc(t.date)])).watch();
 
   Future<Account> addAccount({
     required String name,
@@ -259,6 +299,135 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> deleteTransaction(String id) =>
       (delete(transactions)..where((t) => t.id.equals(id))).go();
+
+  Future<SavingsGoal> addGoal({
+    required String name,
+    required double targetAmount,
+    required String accountId,
+    DateTime? deadline,
+    String? note,
+  }) {
+    return into(savingsGoals).insertReturning(
+      SavingsGoalsCompanion.insert(
+        id: Uuid().v4(),
+        name: name,
+        targetAmount: targetAmount,
+        accountId: accountId,
+        deadline: Value(deadline),
+        note: Value(note),
+      ),
+    );
+  }
+
+  Future<void> updateGoal(SavingsGoal goal) => update(savingsGoals).replace(goal);
+
+  Future<void> deleteGoal(String id) =>
+      (delete(savingsGoals)..where((t) => t.id.equals(id))).go();
+
+  Future<void> allocateToGoal({
+    required SavingsGoal goal,
+    required double amount,
+    required String fundingAccountId,
+  }) async {
+    if (fundingAccountId != goal.accountId) {
+      final funding = await (select(accounts)
+            ..where((t) => t.id.equals(fundingAccountId)))
+          .getSingle();
+      await addTransaction(
+        type: TransactionType.transfer,
+        accountId: fundingAccountId,
+        transferToId: goal.accountId,
+        amount: amount,
+        currency: funding.currency,
+        date: DateTime.now(),
+        note: 'Aporte a meta: ${goal.name}',
+      );
+    }
+    await (update(savingsGoals)..where((t) => t.id.equals(goal.id)))
+        .write(SavingsGoalsCompanion(
+      allocatedAmount: Value(goal.allocatedAmount + amount),
+    ));
+  }
+
+  Future<FeeRule> addFeeRule({
+    required String name,
+    double fixedAmount = 0,
+    double percent = 0,
+    double? minAmount,
+    double? maxAmount,
+    bool isActive = true,
+  }) {
+    return into(feeRules).insertReturning(
+      FeeRulesCompanion.insert(
+        id: Uuid().v4(),
+        name: name,
+        fixedAmount: Value(fixedAmount),
+        percent: Value(percent),
+        minAmount: Value(minAmount),
+        maxAmount: Value(maxAmount),
+        isActive: Value(isActive),
+      ),
+    );
+  }
+
+  Future<void> updateFeeRule(FeeRule rule) => update(feeRules).replace(rule);
+
+  Future<void> deleteFeeRule(String id) =>
+      (delete(feeRules)..where((t) => t.id.equals(id))).go();
+
+  Future<Loan> addLoan({
+    required String name,
+    required LoanType type,
+    required String currency,
+    required double principal,
+    double interestRate = 0,
+    required DateTime startDate,
+    DateTime? dueDate,
+    String? note,
+  }) {
+    return into(loans).insertReturning(
+      LoansCompanion.insert(
+        id: Uuid().v4(),
+        name: name,
+        type: Value(type.name),
+        currency: currency,
+        principal: principal,
+        interestRate: Value(interestRate),
+        startDate: startDate,
+        dueDate: Value(dueDate),
+        note: Value(note),
+      ),
+    );
+  }
+
+  Future<void> updateLoan(Loan loan) => update(loans).replace(loan);
+
+  Future<void> deleteLoan(String id) async {
+    await (delete(loanPayments)..where((t) => t.loanId.equals(id))).go();
+    await (delete(loans)..where((t) => t.id.equals(id))).go();
+  }
+
+  Future<LoanPayment> addLoanPayment({
+    required Loan loan,
+    required double amount,
+    required DateTime date,
+    String? note,
+  }) async {
+    final payment = await into(loanPayments).insertReturning(
+      LoanPaymentsCompanion.insert(
+        id: Uuid().v4(),
+        loanId: loan.id,
+        amount: amount,
+        date: date,
+        note: Value(note),
+      ),
+    );
+    await (update(loans)..where((t) => t.id.equals(loan.id)))
+        .write(LoansCompanion(
+      paidAmount: Value(loan.paidAmount + amount),
+    ));
+    return payment;
+  }
 
   Future<void> insertRate({
     required String code,

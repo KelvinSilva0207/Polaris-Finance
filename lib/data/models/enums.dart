@@ -51,3 +51,16 @@ enum FeeType {
   percent,
   mixed;
 }
+
+enum LoanType {
+  debt('Debo', Icons.trending_down),
+  lend('Me deben', Icons.trending_up);
+
+  const LoanType(this.label, this.icon);
+
+  final String label;
+  final IconData icon;
+
+  static LoanType fromStorage(String? value) =>
+      LoanType.values.firstWhere((e) => e.name == value, orElse: () => LoanType.debt);
+}

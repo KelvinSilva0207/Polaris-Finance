@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:polaris_finance/app.dart';
 import 'package:polaris_finance/core/providers.dart';
@@ -94,6 +95,49 @@ void main() {
 
     expect(find.textContaining('Banesco'), findsWidgets);
     expect(find.textContaining('100,00'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 100));
+  });
+
+  testWidgets('El onboarding crea las cuentas sugeridas', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final database = AppDatabase.memory();
+    addTearDown(database.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          initialSettingsProvider.overrideWithValue(AppSettingsState.defaults),
+        ],
+        child: const PolarisFinanceAppWrapper(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Venezuela'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Crear cuentas seleccionadas'),
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+    await tester.tap(find.text('Crear cuentas seleccionadas'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Crear cuentas seleccionadas'), findsNothing);
+    expect(find.text('Polaris Finance'), findsOneWidget);
+    expect(find.text('Banco de Venezuela'), findsWidgets);
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getBool(onboardingDoneKey), true);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 100));
