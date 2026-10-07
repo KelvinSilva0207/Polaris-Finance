@@ -35,7 +35,7 @@ lib/
 - Saldo fijado por cuenta: campo "Saldo actual" para reflejar lo que se tiene guardado sin registrarlo como ingreso (saldo inicial `openingBalance`; los movimientos posteriores lo suman/restan).
 - Transacciones: ingresos, egresos y transferencias entre cuentas con fecha/hora, nota y etiquetas; CRUD completo y conversión USD ↔ VES según la tasa de referencia.
 - Categorías personalizadas (ingresos/egresos) sobre el set predefinido.
-- Tasas de referencia: BCV (pydolarve.org), Binance P2P (USDT/VES) y manual, con historial guardado.
+- Tasas de referencia: BCV (bcv.today con fallback al sitio oficial bcv.org.ve), Binance P2P (USDT/VES) y manual, con historial guardado.
 - Metas de ahorro: objetivos vinculados a cuentas, aportes (virtuales o con transferencia real), historial de progreso y cierre.
 - Comisiones configurables: reglas fijo + % con mínimo/máximo, aplicadas a movimientos con cálculo en vivo.
 - Préstamos/deudas: "Debo" y "Me deben" con pagos/cobros, historial, estado abierta/cerrada e interés.
