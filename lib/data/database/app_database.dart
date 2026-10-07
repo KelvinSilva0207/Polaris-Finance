@@ -407,6 +407,61 @@ class AppDatabase extends _$AppDatabase {
     await (delete(loans)..where((t) => t.id.equals(id))).go();
   }
 
+  Future<RecurringService> addService({
+    required String name,
+    required double amount,
+    required String currency,
+    required int dayOfMonth,
+    String? accountId,
+    String? categoryId,
+    bool isActive = true,
+    String? note,
+  }) {
+    return into(recurringServices).insertReturning(
+      RecurringServicesCompanion.insert(
+        id: Uuid().v4(),
+        name: name,
+        amount: amount,
+        currency: currency,
+        dayOfMonth: dayOfMonth,
+        accountId: Value(accountId),
+        categoryId: Value(categoryId),
+        isActive: Value(isActive),
+        note: Value(note),
+      ),
+    );
+  }
+
+  Future<void> updateService(RecurringService service) =>
+      update(recurringServices).replace(service);
+
+  Future<void> deleteService(String id) async {
+    await (delete(recurringServices)..where((t) => t.id.equals(id))).go();
+  }
+
+  Future<Transaction> payService(
+    RecurringService service, {
+    required DateTime date,
+    double? amountOverride,
+  }) async {
+    if (service.accountId == null) {
+      throw StateError('Asigna una cuenta al servicio antes de pagarlo');
+    }
+    final transaction = await addTransaction(
+      type: TransactionType.expense,
+      accountId: service.accountId!,
+      categoryId: service.categoryId,
+      amount: amountOverride ?? service.amount,
+      currency: service.currency,
+      date: date,
+      note: service.name,
+      tags: const ['servicio'],
+    );
+    await (update(recurringServices)..where((t) => t.id.equals(service.id)))
+        .write(RecurringServicesCompanion(lastPaidDate: Value(date)));
+    return transaction;
+  }
+
   Future<LoanPayment> addLoanPayment({
     required Loan loan,
     required double amount,

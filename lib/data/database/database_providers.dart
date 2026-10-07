@@ -36,6 +36,10 @@ final loanPaymentsProvider = StreamProvider<List<LoanPayment>>((ref) {
   return ref.watch(appDatabaseProvider).watchLoanPayments();
 });
 
+final servicesProvider = StreamProvider<List<RecurringService>>((ref) {
+  return ref.watch(appDatabaseProvider).watchServices();
+});
+
 final seedProvider = FutureProvider<void>((ref) {
   return seedDatabase(ref.watch(appDatabaseProvider));
 });

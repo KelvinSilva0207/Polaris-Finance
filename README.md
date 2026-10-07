@@ -23,7 +23,7 @@ lib/
   shared/        widgets reutilizables
 ```
 
-## Estado actual (Fase 2)
+## Estado actual (Fase 3)
 
 - Base de datos SQLite (drift) con los modelos base: `Account`, `Category`, `Transaction`, `FeeRule`, `SavingsGoal`, `RecurringService`, `CurrencyRate`, `Loan`, `LoanPayment` (schema v3).
 - Navegación modular: las pestañas se activan/desactivan en Ajustes.
@@ -37,6 +37,9 @@ lib/
 - Comisiones configurables: reglas fijo + % con mínimo/máximo, aplicadas a movimientos con cálculo en vivo.
 - Préstamos/deudas: "Debo" y "Me deben" con pagos/cobros, historial, estado abierta/cerrada e interés.
 - Onboarding de primer uso: país + creación rápida de cuentas sugeridas (omisible).
+- Servicios recurrentes: pago en 1 clic con ajuste del recibo, día del mes, pausa/activar y estado "Pendiente".
+- Analítica: ingresos/egresos por mes (VES/USD), egresos por categoría, tendencia de 6 meses y gastos hormiga (≤ 5 USD).
+- Exportación: CSV de movimientos, respaldo JSON completo y estado de cuentas en PDF (paquete `pdf`).
 
 ## Roadmap
 
@@ -44,8 +47,8 @@ lib/
 | ---- | ------- |
 | 0 | Scaffolding, arquitectura, modelos base, navegación modular |
 | 1 | Cuentas, transacciones, categorías/etiquetas, tasas (BCV/Binance P2P/manual) |
-| 2 | Comisiones configurables, préstamos/deudas, metas de ahorro, onboarding (actual) |
-| 3 | Servicios recurrentes, analítica + gastos hormiga, export PDF/CSV/JSON |
+| 2 | Comisiones configurables, préstamos/deudas, metas de ahorro, onboarding |
+| 3 | Servicios recurrentes, analítica + gastos hormiga, export PDF/CSV/JSON (actual) |
 | 4 | Sincronización/backup (local + Google Drive), presupuestos, widgets, onboarding final |
 
 ## Ejecución
