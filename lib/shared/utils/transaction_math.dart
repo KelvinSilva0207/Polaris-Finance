@@ -30,10 +30,11 @@ Map<String, double> balancesOf(
       ifAbsent: () => delta,
     );
     if (type == TransactionType.transfer && transaction.transferToId != null) {
+      final credit = transaction.credAmount ?? transaction.amount;
       balances.update(
         transaction.transferToId!,
-        (current) => current + transaction.amount,
-        ifAbsent: () => transaction.amount,
+        (current) => current + credit,
+        ifAbsent: () => credit,
       );
     }
   }
@@ -45,6 +46,32 @@ double? convertedAmount(double amount, String currency, double? vesPerUsd) {
   if (currency == 'VES') return amount / vesPerUsd;
   if (currency == 'USD') return amount * vesPerUsd;
   return null;
+}
+
+double? usdEquivalent(double balance, String currency, double vesPerUsd) {
+  if (currency == 'VES') return balance / vesPerUsd;
+  if (currency == 'USD') return balance;
+  return null;
+}
+
+({double total, Set<String> currenciesExcluded})? totalUsdOf(
+  Map<String, double> balances,
+  Iterable<Account> accounts,
+  double vesPerUsd,
+) {
+  var total = 0.0;
+  final excluded = <String>{};
+  var any = false;
+  for (final account in accounts) {
+    final usd = usdEquivalent(balances[account.id] ?? 0, account.currency, vesPerUsd);
+    if (usd == null) {
+      excluded.add(account.currency);
+    } else {
+      total += usd;
+      any = true;
+    }
+  }
+  return any ? (total: total, currenciesExcluded: excluded) : null;
 }
 
 CurrencyRate? latestReferenceRate(List<CurrencyRate> rates, RateProvider provider) {

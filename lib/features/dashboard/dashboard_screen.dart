@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/settings/app_settings.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
 import '../../data/models/enums.dart';
+import '../../shared/utils/amount_format.dart';
 import '../../shared/utils/transaction_math.dart';
 import '../../shared/widgets/account_card.dart';
 import '../../shared/widgets/amount_text.dart';
+import '../../shared/widgets/brand_logo.dart';
 import '../accounts/account_form_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -27,12 +30,12 @@ class DashboardScreen extends ConsumerWidget {
     final controller = ref.read(appSettingsProvider.notifier);
     final accountsAsync = ref.watch(accountsProvider);
     final transactionsAsync = ref.watch(transactionsProvider);
-    final ratesAsync = ref.watch(ratesProvider);
+    final rates = ref.watch(ratesProvider).value ?? const [];
     final hasAccounts = (accountsAsync.value ?? const []).isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Polaris Finance'),
+        title: const BrandLogo(height: 30),
         actions: [
           IconButton(
             tooltip: settings.hideBalances ? 'Mostrar montos' : 'Ocultar montos',
@@ -62,23 +65,16 @@ class DashboardScreen extends ConsumerWidget {
             error: (error, stack) => Center(child: Text(error.toString())),
             data: (transactions) {
               final balances = balancesOf(transactions, accounts: accounts);
-              final singleCurrency = accounts.map((a) => a.currency).toSet().length == 1;
-              final total = accounts.fold<double>(
-                0,
-                (sum, account) => sum + (balances[account.id] ?? 0),
-              );
-              final rate = latestReferenceRate(
-                ratesAsync.value ?? const [],
-                settings.referenceProvider,
-              );
+              final bcvRate = latestReferenceRate(rates, RateProvider.bcv);
+              final binanceRate = latestReferenceRate(rates, RateProvider.binance);
               return ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
                   _SummaryCard(
-                    total: total,
-                    currency: singleCurrency ? accounts.first.currency : null,
-                    rate: rate,
-                    provider: settings.referenceProvider,
+                    accounts: accounts,
+                    balances: balances,
+                    bcvRate: bcvRate,
+                    binanceRate: binanceRate,
                     hidden: settings.hideBalances,
                   ),
                   const SizedBox(height: 24),
@@ -93,6 +89,13 @@ class DashboardScreen extends ConsumerWidget {
                       child: AccountCard(
                         account: account,
                         balance: balances[account.id] ?? 0,
+                        usdValue: bcvRate == null
+                            ? null
+                            : usdEquivalent(
+                                balances[account.id] ?? 0,
+                                account.currency,
+                                bcvRate.rate,
+                              ),
                         hidden: settings.hideBalances,
                         onTap: () => _openAccountEditor(context, initial: account),
                       ),
@@ -107,20 +110,99 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
-class _SummaryCard extends StatelessWidget {
+class _SummaryCard extends StatefulWidget {
   const _SummaryCard({
-    required this.total,
-    required this.currency,
-    required this.rate,
-    required this.provider,
+    required this.accounts,
+    required this.balances,
+    required this.bcvRate,
+    required this.binanceRate,
     required this.hidden,
   });
 
-  final double total;
-  final String? currency;
-  final CurrencyRate? rate;
-  final RateProvider provider;
+  final List<Account> accounts;
+  final Map<String, double> balances;
+  final CurrencyRate? bcvRate;
+  final CurrencyRate? binanceRate;
   final bool hidden;
+
+  @override
+  State<_SummaryCard> createState() => _SummaryCardState();
+}
+
+class _SummaryCardState extends State<_SummaryCard> {
+  int _page = 0;
+
+  Widget _buildPage({
+    required CurrencyRate? rate,
+    required String title,
+  }) {
+    final theme = Theme.of(context);
+    final converted = rate == null
+        ? null
+        : totalUsdOf(widget.balances, widget.accounts, rate.rate);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: theme.textTheme.bodySmall),
+          const SizedBox(height: 4),
+          if (converted != null) ...[
+            AmountText(
+              converted.total,
+              currency: 'USD',
+              hidden: widget.hidden,
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (converted.currenciesExcluded.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Sin incluir: ${converted.currenciesExcluded.join(', ')}',
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
+          ] else ...[
+            Text(
+              '—',
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              rate == null
+                  ? 'Sin tasa guardada. Abre Monedas para obtener la referencia.'
+                  : 'Sin cuentas convertibles (solo VES/USD).',
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(
+                Icons.currency_exchange,
+                size: 16,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  rate == null
+                      ? 'Activa la referencia en Monedas'
+                      : '1 USD = ${formatVeNumber(rate.rate)} VES · '
+                          '${DateFormat('dd/MM HH:mm').format(rate.date)}',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -128,47 +210,47 @@ class _SummaryCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Saldo total',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 4),
-            AmountText(
-              total,
-              currency: currency,
-              hidden: hidden,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            if (currency == null) ...[
-              const SizedBox(height: 4),
-              Text(
-                'Múltiples monedas: la tasa de referencia no suma directamente.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-            if (rate != null) ...[
-              const SizedBox(height: 12),
-              Row(
+            SizedBox(
+              height: 160,
+              child: PageView(
+                onPageChanged: (index) => setState(() => _page = index),
                 children: [
-                  Icon(
-                    Icons.currency_exchange,
-                    size: 16,
-                    color: Theme.of(context).colorScheme.primary,
+                  _buildPage(
+                    rate: widget.bcvRate,
+                    title: 'Saldo en USD · BCV',
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      '1 USD = ${rate!.rate.toStringAsFixed(2)} VES · ${provider.label}',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                  _buildPage(
+                    rate: widget.binanceRate,
+                    title: 'Saldo en USD · Binance P2P',
                   ),
                 ],
               ),
-            ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (var i = 0; i < 2; i++)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: i == _page ? 18 : 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: i == _page
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.outlineVariant,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Desliza para ver la referencia de Binance',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ],
         ),
       ),
@@ -181,7 +263,6 @@ class _WelcomeView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -190,8 +271,8 @@ class _WelcomeView extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.savings_outlined, size: 72, color: scheme.primary),
-              const SizedBox(height: 16),
+              const BrandLogo(height: 96),
+              const SizedBox(height: 20),
               Text(
                 'Bienvenido a Polaris Finance',
                 textAlign: TextAlign.center,

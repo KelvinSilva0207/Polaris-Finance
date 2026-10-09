@@ -25,15 +25,19 @@ lib/
   shared/        widgets reutilizables
 ```
 
-## Estado actual (Fase 5)
+## Estado actual (Fase 7)
 
-- Base de datos SQLite (drift) con los modelos base: `Account`, `Category`, `Transaction`, `FeeRule`, `SavingsGoal`, `RecurringService`, `CurrencyRate`, `Loan`, `LoanPayment`, `Budget` (schema v5).
+- Base de datos SQLite (drift) con los modelos base: `Account`, `Category`, `Transaction`, `FeeRule`, `SavingsGoal`, `RecurringService`, `CurrencyRate`, `Loan`, `LoanPayment`, `Budget` (schema v6; las transferencias entre monedas guardan el monto acreditado en `credAmount`/`credCurrency`).
 - Navegación modular: las pestañas se activan/desactivan en Ajustes.
 - Tema dark por defecto con color de acento y modo privacidad (ocultar montos).
-- Dashboard con saldo por cuenta y tasa de referencia.
+- Dashboard con saldo por cuenta, saldo total en USD según la tasa de referencia y equivalente USD por cuenta; card deslizable entre referencia BCV y Binance P2P.
+- Montos en formato bancario venezolano (miles con punto, decimales con coma, p. ej. `1.234.567,89`) al escribir y al desplegar.
+- Tasas de referencia: BCV (bcv.today con fallback al sitio oficial bcv.org.ve), Binance P2P (USDT/VES) y manual, con historial guardado; en la pantalla Monedas las tasas se actualizan en vivo cada 60 s.
+- Transacciones: ingresos, egresos y transferencias entre cuentas con fecha/hora, nota y etiquetas; CRUD completo y conversión USD ↔ VES según la tasa de referencia; las transferencias entre monedas acreditan el equivalente convertido.
+- Navegación inferior solo con iconos en móvil (etiquetas como tooltip) y rail con etiquetas en escritorio.
 - Cuentas: alta, edición y borrado (tipos banco/billetera/cripto/efectivo), sugerencias de instituciones venezolanas, selector de icono y color.
 - Saldo fijado por cuenta: campo "Saldo actual" para reflejar lo que se tiene guardado sin registrarlo como ingreso (saldo inicial `openingBalance`; los movimientos posteriores lo suman/restan).
-- Transacciones: ingresos, egresos y transferencias entre cuentas con fecha/hora, nota y etiquetas; CRUD completo y conversión USD ↔ VES según la tasa de referencia.
+- Transacciones: ingresos, egresos y transferencias entre cuentas con fecha/hora, nota y etiquetas; CRUD completo y conversión USD ↔ VES según la tasa de referencia; las transferencias entre monedas acreditan el equivalente convertido.
 - Categorías personalizadas (ingresos/egresos) sobre el set predefinido.
 - Tasas de referencia: BCV (bcv.today con fallback al sitio oficial bcv.org.ve), Binance P2P (USDT/VES) y manual, con historial guardado.
 - Metas de ahorro: objetivos vinculados a cuentas, aportes (virtuales o con transferencia real), historial de progreso y cierre.
@@ -46,7 +50,7 @@ lib/
 - Presupuestos: límite mensual por categoría de egreso con barra de progreso y semáforo (verde/naranja/rojo).
 - Restauración de respaldos: copiar respaldo al portapapeles y restaurarlo sobre la app (reemplaza todos los datos).
 - Web: `flutter build web` funciona con drift_wasm (`web/sqlite3.wasm` + `web/drift_worker.js`); las exportaciones descarchan en el navegador.
-- Iconos de app generados desde `logo.png` con `flutter_launcher_icons` (Android, Windows y Web); fuente cuadrada en `icon_square.png`, config en `flutter_launcher_icons.yaml`.
+- Iconos y marca: logo del usuario (`logo.png`/`logo.ico`) usado en iconos de app generados con `flutter_launcher_icons` (Android, Windows y Web) y dentro de la app (dashboard, bienvenida, ajustes, onboarding) vía `BrandLogo`; fuente cuadrada en `icon_square.png`, config en `flutter_launcher_icons.yaml`.
 
 ## Roadmap
 
@@ -57,7 +61,9 @@ lib/
 | 2 | Comisiones configurables, préstamos/deudas, metas de ahorro, onboarding |
 | 3 | Servicios recurrentes, analítica + gastos hormiga, export PDF/CSV/JSON |
 | 4 | Backup/restauración, presupuestos, web drift_wasm |
-| 5 | Icono de app desde el logo, saldo fijado por cuenta (actual) |
+| 5 | Icono de app desde el logo, saldo fijado por cuenta |
+| 6 | Formato de montos VES, dashboard USD (BCV/Binance deslizable), transferencias entre monedas, navegación solo iconos, schema v6 |
+| 7 | Tasas en vivo (auto-refresh 60 s), logo de marca en iconos y dentro de la app (actual) |
 
 ## Ejecución
 

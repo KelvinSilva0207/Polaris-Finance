@@ -96,10 +96,11 @@ void main() {
         .widgetList<TextField>(balanceField)
         .map((field) => field.controller!)
         .toList();
-    expect(controllers[1].text, '400');
+    expect(controllers[1].text, '400,00');
 
     await tester.enterText(find.byType(TextField).at(1), '1000');
     await tester.pump();
+    expect(controllers[1].text, '1.000');
 
     final saveButton = find.text('Guardar cambios');
     await tester.scrollUntilVisible(
@@ -161,16 +162,16 @@ void main() {
         )
         .map((field) => field.controller!)
         .toList();
-    expect(controllers[1].text, '0');
+    expect(controllers[1].text, '0,00');
 
     await tester.enterText(find.byType(TextField).at(1), 'abc');
-    expect(controllers[1].text, '0');
+    expect(controllers[1].text, '');
 
     await tester.enterText(find.byType(TextField).at(1), '12.5x');
-    expect(controllers[1].text, '0');
+    expect(controllers[1].text, '12,5');
 
     await tester.enterText(find.byType(TextField).at(1), '-250.5');
-    expect(controllers[1].text, '-250.5');
+    expect(controllers[1].text, '-250,5');
 
     final saveButton = find.text('Guardar cambios');
     await tester.scrollUntilVisible(

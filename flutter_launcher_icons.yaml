@@ -1,4 +1,4 @@
-# Genera los iconos de la app desde icon_square.png (derivado de logo.jpg).
+# Genera los iconos de la app desde icon_square.png (derivado de logo.png).
 # Ejecutar con: dart run flutter_launcher_icons
 flutter_launcher_icons:
   image_path: "icon_square.png"

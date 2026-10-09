@@ -8,6 +8,12 @@ import 'memory_database.dart'
 
 part 'app_database.g.dart';
 
+double? _convertVesUsd(String fromCurrency, double amount, double vesPerUsd) {
+  if (fromCurrency == 'VES') return amount / vesPerUsd;
+  if (fromCurrency == 'USD') return amount * vesPerUsd;
+  return null;
+}
+
 class Accounts extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
@@ -48,6 +54,8 @@ class Transactions extends Table {
   TextColumn get note => text().nullable()();
   TextColumn get tags => text().nullable()();
   RealColumn get feeAmount => real().withDefault(const Constant(0))();
+  RealColumn get credAmount => real().nullable()();
+  TextColumn get credCurrency => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -178,7 +186,7 @@ class AppDatabase extends _$AppDatabase {
   factory AppDatabase.memory() => createMemoryDatabase();
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -198,6 +206,10 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 5) {
             await m.addColumn(accounts, accounts.openingBalance);
+          }
+          if (from < 6) {
+            await m.addColumn(transactions, transactions.credAmount);
+            await m.addColumn(transactions, transactions.credCurrency);
           }
         },
       );
@@ -306,6 +318,8 @@ class AppDatabase extends _$AppDatabase {
     String? note,
     List<String> tags = const [],
     double feeAmount = 0,
+    double? creditedAmount,
+    String? creditedCurrency,
   }) {
     return into(transactions).insertReturning(
       TransactionsCompanion.insert(
@@ -320,6 +334,8 @@ class AppDatabase extends _$AppDatabase {
         note: Value(note),
         tags: Value(tags.join(',')),
         feeAmount: Value(feeAmount),
+        credAmount: Value(creditedAmount),
+        credCurrency: Value(creditedCurrency),
       ),
     );
   }
@@ -477,12 +493,29 @@ class AppDatabase extends _$AppDatabase {
     if (service.accountId == null) {
       throw StateError('Asigna una cuenta al servicio antes de pagarlo');
     }
+    final account = await (select(accounts)
+          ..where((t) => t.id.equals(service.accountId!)))
+        .getSingle();
+    var amount = amountOverride ?? service.amount;
+    if (service.currency != account.currency) {
+      final rate = await latestRate();
+      if (rate == null) {
+        throw StateError('Guarda una tasa de referencia en Monedas para pagar en otra moneda');
+      }
+      final converted = _convertVesUsd(service.currency, amount, rate.rate);
+      if (converted == null) {
+        throw StateError(
+          'No se puede pagar ${service.currency} desde una cuenta ${account.currency} (solo VES/USD)',
+        );
+      }
+      amount = converted;
+    }
     final transaction = await addTransaction(
       type: TransactionType.expense,
       accountId: service.accountId!,
       categoryId: service.categoryId,
-      amount: amountOverride ?? service.amount,
-      currency: service.currency,
+      amount: amount,
+      currency: account.currency,
       date: date,
       note: service.name,
       tags: const ['servicio'],
@@ -490,6 +523,14 @@ class AppDatabase extends _$AppDatabase {
     await (update(recurringServices)..where((t) => t.id.equals(service.id)))
         .write(RecurringServicesCompanion(lastPaidDate: Value(date)));
     return transaction;
+  }
+
+  Future<CurrencyRate?> latestRate() async {
+    final rows = await (select(currencyRates)
+          ..orderBy([(t) => OrderingTerm.desc(t.date)])
+          ..limit(1))
+        .get();
+    return rows.isEmpty ? null : rows.first;
   }
 
   Future<LoanPayment> addLoanPayment({

@@ -1138,6 +1138,28 @@ class $TransactionsTable extends Transactions
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _credAmountMeta = const VerificationMeta(
+    'credAmount',
+  );
+  @override
+  late final GeneratedColumn<double> credAmount = GeneratedColumn<double>(
+    'cred_amount',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _credCurrencyMeta = const VerificationMeta(
+    'credCurrency',
+  );
+  @override
+  late final GeneratedColumn<String> credCurrency = GeneratedColumn<String>(
+    'cred_currency',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1151,6 +1173,8 @@ class $TransactionsTable extends Transactions
     note,
     tags,
     feeAmount,
+    credAmount,
+    credCurrency,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1242,6 +1266,21 @@ class $TransactionsTable extends Transactions
         feeAmount.isAcceptableOrUnknown(data['fee_amount']!, _feeAmountMeta),
       );
     }
+    if (data.containsKey('cred_amount')) {
+      context.handle(
+        _credAmountMeta,
+        credAmount.isAcceptableOrUnknown(data['cred_amount']!, _credAmountMeta),
+      );
+    }
+    if (data.containsKey('cred_currency')) {
+      context.handle(
+        _credCurrencyMeta,
+        credCurrency.isAcceptableOrUnknown(
+          data['cred_currency']!,
+          _credCurrencyMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1295,6 +1334,14 @@ class $TransactionsTable extends Transactions
         DriftSqlType.double,
         data['${effectivePrefix}fee_amount'],
       )!,
+      credAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}cred_amount'],
+      ),
+      credCurrency: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cred_currency'],
+      ),
     );
   }
 
@@ -1316,6 +1363,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String? note;
   final String? tags;
   final double feeAmount;
+  final double? credAmount;
+  final String? credCurrency;
   const Transaction({
     required this.id,
     required this.accountId,
@@ -1328,6 +1377,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     this.note,
     this.tags,
     required this.feeAmount,
+    this.credAmount,
+    this.credCurrency,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1351,6 +1402,12 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       map['tags'] = Variable<String>(tags);
     }
     map['fee_amount'] = Variable<double>(feeAmount);
+    if (!nullToAbsent || credAmount != null) {
+      map['cred_amount'] = Variable<double>(credAmount);
+    }
+    if (!nullToAbsent || credCurrency != null) {
+      map['cred_currency'] = Variable<String>(credCurrency);
+    }
     return map;
   }
 
@@ -1371,6 +1428,12 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
       tags: tags == null && nullToAbsent ? const Value.absent() : Value(tags),
       feeAmount: Value(feeAmount),
+      credAmount: credAmount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(credAmount),
+      credCurrency: credCurrency == null && nullToAbsent
+          ? const Value.absent()
+          : Value(credCurrency),
     );
   }
 
@@ -1391,6 +1454,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       note: serializer.fromJson<String?>(json['note']),
       tags: serializer.fromJson<String?>(json['tags']),
       feeAmount: serializer.fromJson<double>(json['feeAmount']),
+      credAmount: serializer.fromJson<double?>(json['credAmount']),
+      credCurrency: serializer.fromJson<String?>(json['credCurrency']),
     );
   }
   @override
@@ -1408,6 +1473,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'note': serializer.toJson<String?>(note),
       'tags': serializer.toJson<String?>(tags),
       'feeAmount': serializer.toJson<double>(feeAmount),
+      'credAmount': serializer.toJson<double?>(credAmount),
+      'credCurrency': serializer.toJson<String?>(credCurrency),
     };
   }
 
@@ -1423,6 +1490,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     Value<String?> note = const Value.absent(),
     Value<String?> tags = const Value.absent(),
     double? feeAmount,
+    Value<double?> credAmount = const Value.absent(),
+    Value<String?> credCurrency = const Value.absent(),
   }) => Transaction(
     id: id ?? this.id,
     accountId: accountId ?? this.accountId,
@@ -1435,6 +1504,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     note: note.present ? note.value : this.note,
     tags: tags.present ? tags.value : this.tags,
     feeAmount: feeAmount ?? this.feeAmount,
+    credAmount: credAmount.present ? credAmount.value : this.credAmount,
+    credCurrency: credCurrency.present ? credCurrency.value : this.credCurrency,
   );
   Transaction copyWithCompanion(TransactionsCompanion data) {
     return Transaction(
@@ -1453,6 +1524,12 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       note: data.note.present ? data.note.value : this.note,
       tags: data.tags.present ? data.tags.value : this.tags,
       feeAmount: data.feeAmount.present ? data.feeAmount.value : this.feeAmount,
+      credAmount: data.credAmount.present
+          ? data.credAmount.value
+          : this.credAmount,
+      credCurrency: data.credCurrency.present
+          ? data.credCurrency.value
+          : this.credCurrency,
     );
   }
 
@@ -1469,7 +1546,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('date: $date, ')
           ..write('note: $note, ')
           ..write('tags: $tags, ')
-          ..write('feeAmount: $feeAmount')
+          ..write('feeAmount: $feeAmount, ')
+          ..write('credAmount: $credAmount, ')
+          ..write('credCurrency: $credCurrency')
           ..write(')'))
         .toString();
   }
@@ -1487,6 +1566,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     note,
     tags,
     feeAmount,
+    credAmount,
+    credCurrency,
   );
   @override
   bool operator ==(Object other) =>
@@ -1502,7 +1583,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.date == this.date &&
           other.note == this.note &&
           other.tags == this.tags &&
-          other.feeAmount == this.feeAmount);
+          other.feeAmount == this.feeAmount &&
+          other.credAmount == this.credAmount &&
+          other.credCurrency == this.credCurrency);
 }
 
 class TransactionsCompanion extends UpdateCompanion<Transaction> {
@@ -1517,6 +1600,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String?> note;
   final Value<String?> tags;
   final Value<double> feeAmount;
+  final Value<double?> credAmount;
+  final Value<String?> credCurrency;
   final Value<int> rowid;
   const TransactionsCompanion({
     this.id = const Value.absent(),
@@ -1530,6 +1615,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.note = const Value.absent(),
     this.tags = const Value.absent(),
     this.feeAmount = const Value.absent(),
+    this.credAmount = const Value.absent(),
+    this.credCurrency = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   TransactionsCompanion.insert({
@@ -1544,6 +1631,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.note = const Value.absent(),
     this.tags = const Value.absent(),
     this.feeAmount = const Value.absent(),
+    this.credAmount = const Value.absent(),
+    this.credCurrency = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        accountId = Value(accountId),
@@ -1563,6 +1652,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? note,
     Expression<String>? tags,
     Expression<double>? feeAmount,
+    Expression<double>? credAmount,
+    Expression<String>? credCurrency,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1577,6 +1668,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (note != null) 'note': note,
       if (tags != null) 'tags': tags,
       if (feeAmount != null) 'fee_amount': feeAmount,
+      if (credAmount != null) 'cred_amount': credAmount,
+      if (credCurrency != null) 'cred_currency': credCurrency,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1593,6 +1686,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Value<String?>? note,
     Value<String?>? tags,
     Value<double>? feeAmount,
+    Value<double?>? credAmount,
+    Value<String?>? credCurrency,
     Value<int>? rowid,
   }) {
     return TransactionsCompanion(
@@ -1607,6 +1702,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       note: note ?? this.note,
       tags: tags ?? this.tags,
       feeAmount: feeAmount ?? this.feeAmount,
+      credAmount: credAmount ?? this.credAmount,
+      credCurrency: credCurrency ?? this.credCurrency,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1647,6 +1744,12 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (feeAmount.present) {
       map['fee_amount'] = Variable<double>(feeAmount.value);
     }
+    if (credAmount.present) {
+      map['cred_amount'] = Variable<double>(credAmount.value);
+    }
+    if (credCurrency.present) {
+      map['cred_currency'] = Variable<String>(credCurrency.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1667,6 +1770,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('note: $note, ')
           ..write('tags: $tags, ')
           ..write('feeAmount: $feeAmount, ')
+          ..write('credAmount: $credAmount, ')
+          ..write('credCurrency: $credCurrency, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6168,6 +6273,8 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       Value<String?> note,
       Value<String?> tags,
       Value<double> feeAmount,
+      Value<double?> credAmount,
+      Value<String?> credCurrency,
       Value<int> rowid,
     });
 typedef $$TransactionsTableUpdateCompanionBuilder =
@@ -6183,6 +6290,8 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<String?> note,
       Value<String?> tags,
       Value<double> feeAmount,
+      Value<double?> credAmount,
+      Value<String?> credCurrency,
       Value<int> rowid,
     });
 
@@ -6288,6 +6397,16 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<double> get feeAmount => $composableBuilder(
     column: $table.feeAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get credAmount => $composableBuilder(
+    column: $table.credAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get credCurrency => $composableBuilder(
+    column: $table.credCurrency,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6410,6 +6529,16 @@ class $$TransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get credAmount => $composableBuilder(
+    column: $table.credAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get credCurrency => $composableBuilder(
+    column: $table.credCurrency,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$AccountsTableOrderingComposer get accountId {
     final $$AccountsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -6512,6 +6641,16 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<double> get feeAmount =>
       $composableBuilder(column: $table.feeAmount, builder: (column) => column);
+
+  GeneratedColumn<double> get credAmount => $composableBuilder(
+    column: $table.credAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get credCurrency => $composableBuilder(
+    column: $table.credCurrency,
+    builder: (column) => column,
+  );
 
   $$AccountsTableAnnotationComposer get accountId {
     final $$AccountsTableAnnotationComposer composer = $composerBuilder(
@@ -6626,6 +6765,8 @@ class $$TransactionsTableTableManager
                 Value<String?> note = const Value.absent(),
                 Value<String?> tags = const Value.absent(),
                 Value<double> feeAmount = const Value.absent(),
+                Value<double?> credAmount = const Value.absent(),
+                Value<String?> credCurrency = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TransactionsCompanion(
                 id: id,
@@ -6639,6 +6780,8 @@ class $$TransactionsTableTableManager
                 note: note,
                 tags: tags,
                 feeAmount: feeAmount,
+                credAmount: credAmount,
+                credCurrency: credCurrency,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6654,6 +6797,8 @@ class $$TransactionsTableTableManager
                 Value<String?> note = const Value.absent(),
                 Value<String?> tags = const Value.absent(),
                 Value<double> feeAmount = const Value.absent(),
+                Value<double?> credAmount = const Value.absent(),
+                Value<String?> credCurrency = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TransactionsCompanion.insert(
                 id: id,
@@ -6667,6 +6812,8 @@ class $$TransactionsTableTableManager
                 note: note,
                 tags: tags,
                 feeAmount: feeAmount,
+                credAmount: credAmount,
+                credCurrency: credCurrency,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

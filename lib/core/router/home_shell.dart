@@ -34,7 +34,11 @@ class HomeShell extends ConsumerWidget {
 
     final barDestinations = [
       for (final module in modules)
-        NavigationDestination(icon: Icon(module.icon), label: module.label),
+        NavigationDestination(
+          icon: Icon(module.icon),
+          label: module.label,
+          tooltip: module.label,
+        ),
     ];
 
     return Scaffold(
@@ -62,6 +66,7 @@ class HomeShell extends ConsumerWidget {
           if (constraints.maxWidth >= 900) return const SizedBox.shrink();
           return NavigationBar(
             selectedIndex: index,
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
             onDestinationSelected: (i) => context.go(modules[i].route),
             destinations: barDestinations,
           );

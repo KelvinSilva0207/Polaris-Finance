@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/icons.dart';
 import '../../core/providers.dart';
 import '../../data/database/seeds.dart';
+import '../../shared/widgets/brand_logo.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key, required this.onDone});
@@ -67,14 +68,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
             const SizedBox(height: 24),
-            Icon(Icons.savings_outlined, size: 72, color: scheme.primary),
+            const Center(child: BrandLogo(height: 72)),
             const SizedBox(height: 16),
             Text(
               'Bienvenido a Polaris Finance',

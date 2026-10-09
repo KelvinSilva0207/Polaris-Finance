@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/feature_module.dart';
 import '../../core/settings/app_settings.dart';
 import '../../data/models/enums.dart';
+import '../../shared/widgets/brand_logo.dart';
 import '../categories/categories_screen.dart';
 import '../fees/fee_rules_screen.dart';
 
@@ -39,6 +40,8 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const Center(child: BrandLogo(height: 64)),
+          const SizedBox(height: 8),
           const _SectionHeader('Aspecto'),
           Card(
             child: Padding(

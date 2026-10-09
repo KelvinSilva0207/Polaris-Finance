@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/icons.dart';
@@ -8,6 +7,7 @@ import '../../data/database/app_database.dart';
 import '../../data/database/seeds.dart';
 import '../../data/models/currencies.dart';
 import '../../data/models/enums.dart';
+import '../../shared/utils/amount_format.dart';
 import '../../shared/utils/transaction_math.dart';
 import '../../shared/widgets/color_picker_row.dart';
 import '../../shared/widgets/icon_picker.dart';
@@ -65,12 +65,7 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
     });
   }
 
-  String _formatAmount(double value) {
-    final rounded = double.parse(value.toStringAsFixed(2));
-    return rounded == rounded.roundToDouble()
-        ? rounded.toStringAsFixed(0)
-        : rounded.toString();
-  }
+  String _formatAmount(double value) => formatVeNumber(value);
 
   void _applyInstitution(SeedInstitution institution) {
     setState(() {
@@ -90,18 +85,14 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
       );
       return;
     }
-    final rawBalance = _balanceController.text.trim().replaceAll(',', '.');
-    double? targetBalance;
-    if (rawBalance.isNotEmpty) {
-      targetBalance = double.tryParse(rawBalance);
-      if (targetBalance == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Saldo no válido: usa números (puede ser negativo)'),
-          ),
-        );
-        return;
-      }
+    final targetBalance = parseAmountInput(_balanceController.text);
+    if (_balanceController.text.trim().isNotEmpty && targetBalance == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Saldo no válido: usa números (puede ser negativo)'),
+        ),
+      );
+      return;
     }
     setState(() => _saving = true);
     final db = ref.read(appDatabaseProvider);
@@ -192,11 +183,11 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
                 decimal: true,
                 signed: true,
               ),
-              inputFormatters: [AmountInputFormatter()],
+              inputFormatters: [veAmountFormatter(allowNegative: true)],
               decoration: const InputDecoration(
                 labelText: 'Saldo actual',
                 helperText:
-                    'Solo números; puede ser negativo. No se registra como ingreso',
+                    'Se formatean los miles automáticamente; puede ser negativo. No se registra como ingreso',
               ),
             ),
             const SizedBox(height: 20),
@@ -243,18 +234,5 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
         ),
       ),
     );
-  }
-}
-
-class AmountInputFormatter extends TextInputFormatter {
-  static final RegExp _valid = RegExp(r'^-?\d*([.,]\d*)?$');
-
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    if (_valid.hasMatch(newValue.text)) return newValue;
-    return oldValue;
   }
 }

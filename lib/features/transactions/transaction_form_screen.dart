@@ -8,12 +8,11 @@ import '../../core/settings/app_settings.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
 import '../../data/models/enums.dart';
+import '../../shared/utils/amount_format.dart';
 import '../../shared/utils/transaction_math.dart';
 import '../categories/category_editor.dart';
 
-String _amountInput(double value) {
-  return value % 1 == 0 ? value.toStringAsFixed(0) : value.toString();
-}
+String _amountInput(double value) => formatVeNumber(value);
 
 class TransactionFormScreen extends ConsumerStatefulWidget {
   const TransactionFormScreen({super.key, this.initial});
@@ -84,8 +83,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     });
   }
 
-  double? _parsedAmount() =>
-      double.tryParse(_amountController.text.trim().replaceAll(',', '.'));
+  double? _parsedAmount() => parseAmountInput(_amountController.text);
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -174,7 +172,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     }
 
     final accounts = ref.read(accountsProvider).value ?? const [];
-    final currency = accounts.firstWhere((a) => a.id == sourceId).currency;
+    final sourceAccount = accounts.firstWhere((a) => a.id == sourceId);
+    final currency = sourceAccount.currency;
     final categoryId = _isTransfer ? null : _categoryId;
     final tagsList = _tagsController.text
         .split(',')
@@ -195,6 +194,34 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       }
     }
 
+    double? creditedAmount;
+    String? creditedCurrency;
+    if (_isTransfer && destinationId != null) {
+      final destinationAccount = accounts.firstWhere((a) => a.id == destinationId);
+      creditedCurrency = destinationAccount.currency;
+      if (destinationAccount.currency == sourceAccount.currency) {
+        creditedAmount = amount;
+      } else {
+        final rates = ref.read(ratesProvider).value ?? const [];
+        final referenceProvider = ref.read(appSettingsProvider).referenceProvider;
+        final rate = latestReferenceRate(rates, referenceProvider);
+        if (rate == null) {
+          _showMessage(
+            'Necesitas actualizar la tasa de referencia en Monedas para transferir entre monedas',
+          );
+          return;
+        }
+        final converted = convertedAmount(amount, sourceAccount.currency, rate.rate);
+        if (converted == null) {
+          _showMessage(
+            'No se puede transferir entre ${sourceAccount.currency} y ${destinationAccount.currency}: usa cuentas en VES o USD',
+          );
+          return;
+        }
+        creditedAmount = converted;
+      }
+    }
+
     setState(() => _saving = true);
     final db = ref.read(appDatabaseProvider);
     try {
@@ -211,6 +238,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             tags: Value(tagsText),
             date: _date,
             feeAmount: feeAmount,
+            credAmount: Value(creditedAmount),
+            credCurrency: Value(creditedCurrency),
           ),
         );
       } else {
@@ -225,6 +254,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
           tags: tagsList,
           date: _date,
           feeAmount: feeAmount,
+          creditedAmount: creditedAmount,
+          creditedCurrency: creditedCurrency,
         );
       }
       if (!mounted) return;
@@ -305,6 +336,46 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               color: Theme.of(context).colorScheme.primary,
             ),
       ),
+    );
+  }
+
+  Widget _transferCreditHint(List<Account> accounts) {
+    if (!_isTransfer) return const SizedBox.shrink();
+    final sourceAcc = _sourceAccountId == null
+        ? null
+        : accounts.firstWhere((a) => a.id == _sourceAccountId);
+    final destAcc = _destinationAccountId == null
+        ? null
+        : accounts.firstWhere((a) => a.id == _destinationAccountId);
+    if (sourceAcc == null ||
+        destAcc == null ||
+        sourceAcc.currency == destAcc.currency) {
+      return const Text(
+        'Descuenta el monto de origen y acredita el equivalente al destino.',
+        style: TextStyle(fontSize: 12),
+      );
+    }
+    final rates = ref.read(ratesProvider).value ?? const [];
+    final provider = ref.read(appSettingsProvider).referenceProvider;
+    final rate = latestReferenceRate(rates, provider);
+    if (rate == null) {
+      return const Text(
+        'Monedas distintas: actualiza la tasa de referencia en Monedas para calcular el equivalente.',
+        style: TextStyle(fontSize: 12),
+      );
+    }
+    final amount = _parsedAmount();
+    final converted =
+        amount == null ? null : convertedAmount(amount, sourceAcc.currency, rate.rate);
+    if (converted == null) {
+      return const Text(
+        'No se puede convertir entre estas monedas (solo VES ↔ USD).',
+        style: TextStyle(fontSize: 12),
+      );
+    }
+    return Text(
+      'Se acreditará ${formatVeNumber(converted)} ${destAcc.currency} (tasa ${formatVeNumber(rate.rate)}).',
+      style: const TextStyle(fontSize: 12),
     );
   }
 
@@ -423,7 +494,11 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
           const SizedBox(height: 16),
           TextField(
             controller: _amountController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: const TextInputType.numberWithOptions(
+              decimal: true,
+              signed: false,
+            ),
+            inputFormatters: [veAmountFormatter()],
             decoration: InputDecoration(
               labelText: 'Monto',
               prefixText: source == null ? null : '${source.currency} ',
@@ -464,10 +539,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
           ),
           if (_isTransfer) ...[
             const SizedBox(height: 12),
-            const Text(
-              'Descuenta el monto de origen y acredita el equivalente al destino.',
-              style: TextStyle(fontSize: 12),
-            ),
+            _transferCreditHint(accounts),
           ],
           const SizedBox(height: 24),
           FilledButton.icon(

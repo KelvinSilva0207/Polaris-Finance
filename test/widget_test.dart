@@ -24,7 +24,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Polaris Finance'), findsOneWidget);
+    expect(find.byType(AppBar), findsOneWidget);
     expect(find.text('Bienvenido a Polaris Finance'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -133,7 +133,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Crear cuentas seleccionadas'), findsNothing);
-    expect(find.text('Polaris Finance'), findsOneWidget);
+    expect(find.byType(AppBar), findsOneWidget);
     expect(find.text('Banco de Venezuela'), findsWidgets);
 
     final prefs = await SharedPreferences.getInstance();
