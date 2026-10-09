@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/settings/app_settings.dart';
 import '../../data/database/app_database.dart';
@@ -167,13 +166,6 @@ class _SummaryCardState extends State<_SummaryCard> {
                 color: theme.colorScheme.primary,
               ),
             ),
-            if (converted.currenciesExcluded.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                'Sin incluir: ${converted.currenciesExcluded.join(', ')}',
-                style: theme.textTheme.bodySmall,
-              ),
-            ],
           ] else ...[
             Text(
               '—',
@@ -189,26 +181,6 @@ class _SummaryCardState extends State<_SummaryCard> {
               style: theme.textTheme.bodySmall,
             ),
           ],
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Icon(
-                Icons.currency_exchange,
-                size: 16,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  rate == null
-                      ? 'Activa la referencia en Monedas'
-                      : '1 USD = ${formatVeNumber(rate.rate)} VES · '
-                          '${DateFormat('dd/MM HH:mm').format(rate.date)}',
-                  style: theme.textTheme.bodySmall,
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -222,7 +194,7 @@ class _SummaryCardState extends State<_SummaryCard> {
         child: Column(
           children: [
             SizedBox(
-              height: 176,
+              height: 140,
               child: PageView(
                 onPageChanged: (index) => setState(() => _page = index),
                 children: [
