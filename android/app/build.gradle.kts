@@ -8,6 +8,7 @@ android {
     namespace = "com.polarisfinance.polaris_finance"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+    archivesName = "polaris-finance"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
