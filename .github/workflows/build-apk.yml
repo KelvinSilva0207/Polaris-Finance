@@ -42,13 +42,15 @@ jobs:
         run: flutter test
 
       - name: Build release APK
-        run: flutter build apk --release
+        run: |
+          flutter build apk --release
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/polaris-finance.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
           name: apks
-          path: build/app/outputs/flutter-apk/*-release.apk
+          path: build/app/outputs/flutter-apk/polaris-finance.apk
           if-no-files-found: error
 
       - name: Publish "latest" release
@@ -57,5 +59,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release view latest >/dev/null 2>&1 || gh release create latest --title "Última versión" --notes "APK más reciente generado automáticamente."
-          APK=$(ls build/app/outputs/flutter-apk/*-release.apk)
-          gh release upload latest "$APK" --clobber
+          gh release upload latest build/app/outputs/flutter-apk/polaris-finance.apk --clobber
