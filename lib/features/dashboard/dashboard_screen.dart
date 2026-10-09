@@ -157,6 +157,16 @@ class _SummaryCardState extends State<_SummaryCard> {
                 fontWeight: FontWeight.bold,
               ),
             ),
+            const SizedBox(height: 2),
+            Text(
+              widget.hidden
+                  ? '≈ ···· Bs'
+                  : '≈ ${formatVeNumber(converted.total * rate!.rate)} Bs',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.primary,
+              ),
+            ),
             if (converted.currenciesExcluded.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(
@@ -212,7 +222,7 @@ class _SummaryCardState extends State<_SummaryCard> {
         child: Column(
           children: [
             SizedBox(
-              height: 160,
+              height: 176,
               child: PageView(
                 onPageChanged: (index) => setState(() => _page = index),
                 children: [

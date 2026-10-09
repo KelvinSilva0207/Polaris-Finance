@@ -1,14 +1,20 @@
-# Genera los iconos de la app desde icon_square.png (derivado de logo.png).
+# Genera los iconos de la app desde los derivados transparentes de logo.png.
+# - icon_square.png: logo al 92% (icono clásico).
+# - icon_foreground.png: logo al 64% dentro de la zona segura adaptativa.
+# - adaptive_icon_background usa el azul de marca (#0C3A88).
+# Windows conserva el logo.ico del usuario (app_icon.ico).
 # Ejecutar con: dart run flutter_launcher_icons
 flutter_launcher_icons:
   image_path: "icon_square.png"
   android: true
+  adaptive_icon_background: "#0C3A88"
+  adaptive_icon_foreground: "icon_foreground.png"
   ios: false
   web:
     generate: true
     image_path: "icon_square.png"
-    background_color: "#ffffff"
+    background_color: "#0C3A88"
   windows:
-    generate: true
+    generate: false
     image_path: "icon_square.png"
     icon_size: 256
