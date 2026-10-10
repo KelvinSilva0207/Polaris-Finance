@@ -26,10 +26,17 @@ jobs:
       - name: Decode Android keystore
         env:
           ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEYSTORE_ALIAS: ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
         run: |
           if [ -n "$ANDROID_KEYSTORE_B64" ]; then
-            echo "$ANDROID_KEYSTORE_B64" | base64 -d > keystore.p12
+            if [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEYSTORE_ALIAS" ]; then
+              echo "::error::Faltan ANDROID_KEYSTORE_PASSWORD o ANDROID_KEYSTORE_ALIAS"; exit 1
+            fi
+            echo "$ANDROID_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/keystore.p12"
             echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/keystore.p12" >> "$GITHUB_ENV"
+            echo "ANDROID_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+            echo "ANDROID_KEYSTORE_ALIAS=$ANDROID_KEYSTORE_ALIAS" >> "$GITHUB_ENV"
           fi
 
       - name: Set up Flutter
@@ -54,6 +61,13 @@ jobs:
         run: |
           flutter build apk --release --build-number=${{ github.run_number }}
           cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/polaris-finance.apk
+
+      - name: Verify APK signing
+        if: env.ANDROID_KEYSTORE_PATH != ''
+        run: |
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          APKSIGNER=$(ls "$SDK"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)
+          "$APKSIGNER" verify --print-certs build/app/outputs/flutter-apk/polaris-finance.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
