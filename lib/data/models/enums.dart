@@ -19,7 +19,8 @@ enum AccountType {
 enum TransactionType {
   income('Ingreso'),
   expense('Egreso'),
-  transfer('Transferencia');
+  transfer('Transferencia'),
+  pagoMovil('Pago Móvil');
 
   const TransactionType(this.label);
 

@@ -7,6 +7,8 @@ import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
 import '../../data/models/currencies.dart';
 import '../../data/models/enums.dart';
+import '../../shared/utils/amount_format.dart';
+import '../../shared/widgets/money_field.dart';
 import 'loan_detail_screen.dart';
 
 final _numberFormat = NumberFormat.decimalPatternDigits(
@@ -16,8 +18,7 @@ final _numberFormat = NumberFormat.decimalPatternDigits(
 
 String _fmt(double value) => _numberFormat.format(value);
 
-double? _parseAmount(String text) =>
-    double.tryParse(text.trim().replaceAll(',', '.'));
+double? _parseAmount(String text) => parseAmountInput(text);
 
 class LoansScreen extends ConsumerWidget {
   const LoansScreen({super.key});
@@ -370,10 +371,10 @@ class _LoanEditorDialogState extends State<_LoanEditorDialog> {
               },
             ),
             const SizedBox(height: 16),
-            TextField(
+            MoneyField(
               controller: _principalController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(labelText: 'Monto original', prefixText: '$_currency '),
+              label: 'Monto original',
+              currency: _currency,
             ),
             const SizedBox(height: 16),
             TextField(

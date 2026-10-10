@@ -23,6 +23,15 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Decode Android keystore
+        env:
+          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_B64" ]; then
+            echo "$ANDROID_KEYSTORE_B64" | base64 -d > keystore.p12
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/keystore.p12" >> "$GITHUB_ENV"
+          fi
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -43,7 +52,7 @@ jobs:
 
       - name: Build release APK
         run: |
-          flutter build apk --release
+          flutter build apk --release --build-number=${{ github.run_number }}
           cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/polaris-finance.apk
 
       - name: Upload APK artifact

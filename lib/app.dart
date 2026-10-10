@@ -19,7 +19,9 @@ class PolarisFinanceApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Polaris Finance',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark(settings.accentColor),
+      theme: AppTheme.light(settings.accentColor),
+      darkTheme: AppTheme.dark(settings.accentColor),
+      themeMode: settings.themeMode,
       routerConfig: router,
     );
   }
@@ -58,12 +60,16 @@ class _PolarisFinanceAppWrapperState extends ConsumerState<PolarisFinanceAppWrap
   Widget build(BuildContext context) {
     final settings = ref.watch(appSettingsProvider);
     final router = ref.watch(appRouterProvider);
-    final theme = AppTheme.dark(settings.accentColor);
+    final theme = AppTheme.light(settings.accentColor);
+    final darkTheme = AppTheme.dark(settings.accentColor);
+    final themeMode = settings.themeMode;
 
     if (_onboardingDone == null) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: theme,
+        darkTheme: darkTheme,
+        themeMode: themeMode,
         home: const Scaffold(
           body: Center(child: CircularProgressIndicator()),
         ),
@@ -74,6 +80,8 @@ class _PolarisFinanceAppWrapperState extends ConsumerState<PolarisFinanceAppWrap
         title: 'Polaris Finance',
         debugShowCheckedModeBanner: false,
         theme: theme,
+        darkTheme: darkTheme,
+        themeMode: themeMode,
         home: OnboardingScreen(onDone: _finishOnboarding),
       );
     }
@@ -81,6 +89,8 @@ class _PolarisFinanceAppWrapperState extends ConsumerState<PolarisFinanceAppWrap
       title: 'Polaris Finance',
       debugShowCheckedModeBanner: false,
       theme: theme,
+      darkTheme: darkTheme,
+      themeMode: themeMode,
       routerConfig: router,
     );
   }

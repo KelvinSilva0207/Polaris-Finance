@@ -82,5 +82,61 @@ void main() {
       expect(result.text, '1.234.567');
       expect(result.selection.baseOffset, greaterThan(0));
     });
+
+    test('permite escribir cifras grandes (miles, millones, billones)', () {
+      final formatter = veAmountFormatter();
+      TextEditingValue value(String text) => TextEditingValue(
+            text: text,
+            selection: TextSelection.collapsed(offset: text.length),
+          );
+      var previous = value('');
+      const digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
+      const expected = [
+        '1',
+        '12',
+        '123',
+        '1.234',
+        '12.345',
+        '123.456',
+        '1.234.567',
+        '12.345.678',
+        '123.456.789',
+        '1.234.567.890',
+      ];
+      for (var index = 0; index < digits.length; index++) {
+        final typed = value(previous.text + digits[index]);
+        final next = formatter.formatEditUpdate(previous, typed);
+        expect(next.text, expected[index], reason: 'dígito ${index + 1}');
+        previous = next;
+      }
+    });
+
+    test('el punto seguido de 0-2 dígitos es decimal, si no, es miles', () {
+      final formatter = veAmountFormatter();
+      TextEditingValue value(String text) => TextEditingValue(
+            text: text,
+            selection: TextSelection.collapsed(offset: text.length),
+          );
+      expect(
+        formatter.formatEditUpdate(value('1234'), value('1.234')).text,
+        '1.234',
+      );
+      expect(
+        formatter.formatEditUpdate(value('1.234'), value('1.2345')).text,
+        '12.345',
+      );
+      expect(
+        formatter.formatEditUpdate(value('1234'), value('1.234.')).text,
+        '1.234,',
+      );
+      expect(
+        formatter.formatEditUpdate(value('12'), value('12.50')).text,
+        '12,50',
+      );
+      expect(
+        formatter.formatEditUpdate(value('12,5'), value('12,50')).text,
+        '12,50',
+      );
+    });
   });
 }

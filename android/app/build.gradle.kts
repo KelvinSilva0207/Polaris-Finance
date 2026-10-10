@@ -4,6 +4,15 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Firma release estable: en CI se decodifica el keystore desde el secret
+// ANDROID_KEYSTORE_B64 y se activa esta firma. Sin el keystore (p. ej. en
+// desarrollo) se sigue usando la firma de debug.
+val releaseKeystorePath: String? = System.getenv("ANDROID_KEYSTORE_PATH")
+val releaseStorePassword: String? = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+val releaseKeyAlias: String? =
+    System.getenv("ANDROID_KEYSTORE_ALIAS") ?: "polaris"
+val useReleaseSigning = releaseKeystorePath != null && releaseStorePassword != null
+
 android {
     namespace = "com.polarisfinance.polaris_finance"
     compileSdk = flutter.compileSdkVersion
@@ -12,6 +21,17 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    signingConfigs {
+        if (useReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseKeystorePath!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseStorePassword
+            }
+        }
     }
 
     defaultConfig {
@@ -31,9 +51,13 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Firmado con la clave estable cuando está disponible; si no, debug.
+            signingConfig =
+                if (useReleaseSigning) {
+                    signingConfigs.getByName("release")
+                } else {
+                    signingConfigs.getByName("debug")
+                }
         }
     }
 }

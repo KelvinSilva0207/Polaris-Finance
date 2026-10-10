@@ -66,6 +66,7 @@ class DashboardScreen extends ConsumerWidget {
               final balances = balancesOf(transactions, accounts: accounts);
               final bcvRate = latestReferenceRate(rates, RateProvider.bcv);
               final binanceRate = latestReferenceRate(rates, RateProvider.binance);
+              final eurRate = latestEurRate(rates)?.rate;
               return ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -74,6 +75,7 @@ class DashboardScreen extends ConsumerWidget {
                     balances: balances,
                     bcvRate: bcvRate,
                     binanceRate: binanceRate,
+                    eurPerUsd: eurRate,
                     hidden: settings.hideBalances,
                   ),
                   const SizedBox(height: 24),
@@ -94,6 +96,7 @@ class DashboardScreen extends ConsumerWidget {
                                 balances[account.id] ?? 0,
                                 account.currency,
                                 bcvRate.rate,
+                                eurPerUsd: eurRate,
                               ),
                         hidden: settings.hideBalances,
                         onTap: () => _openAccountEditor(context, initial: account),
@@ -115,6 +118,7 @@ class _SummaryCard extends StatefulWidget {
     required this.balances,
     required this.bcvRate,
     required this.binanceRate,
+    required this.eurPerUsd,
     required this.hidden,
   });
 
@@ -122,6 +126,7 @@ class _SummaryCard extends StatefulWidget {
   final Map<String, double> balances;
   final CurrencyRate? bcvRate;
   final CurrencyRate? binanceRate;
+  final double? eurPerUsd;
   final bool hidden;
 
   @override
@@ -129,110 +134,91 @@ class _SummaryCard extends StatefulWidget {
 }
 
 class _SummaryCardState extends State<_SummaryCard> {
-  int _page = 0;
-
-  Widget _buildPage({
-    required CurrencyRate? rate,
-    required String title,
-  }) {
-    final theme = Theme.of(context);
-    final converted = rate == null
-        ? null
-        : totalUsdOf(widget.balances, widget.accounts, rate.rate);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: theme.textTheme.bodySmall),
-          const SizedBox(height: 4),
-          if (converted != null) ...[
-            AmountText(
-              converted.total,
-              currency: 'USD',
-              hidden: widget.hidden,
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              widget.hidden
-                  ? '≈ ···· Bs'
-                  : '≈ ${formatVeNumber(converted.total * rate!.rate)} Bs',
-              style: theme.textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-          ] else ...[
-            Text(
-              '—',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              rate == null
-                  ? 'Sin tasa guardada. Abre Monedas para obtener la referencia.'
-                  : 'Sin cuentas convertibles (solo VES/USD).',
-              style: theme.textTheme.bodySmall,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
+  RateProvider _provider = RateProvider.bcv;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final rate = _provider == RateProvider.binance
+        ? widget.binanceRate
+        : widget.bcvRate;
+    final converted = rate == null
+        ? null
+        : totalUsdOf(
+            widget.balances,
+            widget.accounts,
+            rate.rate,
+            eurPerUsd: widget.eurPerUsd,
+          );
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              height: 140,
-              child: PageView(
-                onPageChanged: (index) => setState(() => _page = index),
-                children: [
-                  _buildPage(
-                    rate: widget.bcvRate,
-                    title: 'Saldo en USD · BCV',
-                  ),
-                  _buildPage(
-                    rate: widget.binanceRate,
-                    title: 'Saldo en USD · Binance P2P',
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                for (var i = 0; i < 2; i++)
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: i == _page ? 18 : 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: i == _page
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.outlineVariant,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+                Expanded(
+                  child: Text(
+                    'Saldo total en USD',
+                    style: theme.textTheme.bodySmall,
                   ),
+                ),
+                SegmentedButton<RateProvider>(
+                  segments: const [
+                    ButtonSegment(value: RateProvider.bcv, label: Text('BCV')),
+                    ButtonSegment(
+                      value: RateProvider.binance,
+                      label: Text('Binance'),
+                    ),
+                  ],
+                  selected: {_provider},
+                  onSelectionChanged: (selection) =>
+                      setState(() => _provider = selection.first),
+                  showSelectedIcon: false,
+                  style: const ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Desliza para ver la referencia de Binance',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            const SizedBox(height: 8),
+            if (converted != null) ...[
+              AmountText(
+                converted.total,
+                currency: 'USD',
+                hidden: widget.hidden,
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                widget.hidden
+                    ? '≈ ···· Bs'
+                    : '≈ ${formatVeNumber(converted.total * rate!.rate)} Bs',
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ] else ...[
+              Text(
+                '—',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                rate == null
+                    ? 'Sin tasa guardada. Abre Monedas para obtener la referencia.'
+                    : 'Sin cuentas convertibles (solo VES/USD).',
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
           ],
         ),
       ),

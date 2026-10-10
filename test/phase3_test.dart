@@ -10,6 +10,16 @@ import 'package:polaris_finance/data/models/enums.dart';
 import 'package:polaris_finance/features/export/export_screen.dart';
 
 void main() {
+  Future<void> openFromMore(WidgetTester tester, String label) async {
+    await tester.tap(find.text('Más'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text(label));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('Servicio recurrente se crea y se paga', (WidgetTester tester) async {
     final database = AppDatabase.memory();
     addTearDown(database.close);
@@ -33,10 +43,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Servicios'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.pumpAndSettle();
+    await openFromMore(tester, 'Servicios');
 
     expect(find.text('Aún no hay servicios'), findsOneWidget);
 
@@ -125,10 +132,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Analítica'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.pumpAndSettle();
+    await openFromMore(tester, 'Analítica');
 
     expect(find.text('Ingresos vs egresos'), findsOneWidget);
     expect(find.text('Egresos por categoría'), findsOneWidget);

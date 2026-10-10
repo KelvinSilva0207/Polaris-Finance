@@ -6,6 +6,8 @@ import '../../core/providers.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
 import '../../data/models/enums.dart';
+import '../../shared/utils/amount_format.dart';
+import '../../shared/widgets/money_field.dart';
 
 final _numberFormat = NumberFormat.decimalPatternDigits(
   locale: 'es',
@@ -14,8 +16,7 @@ final _numberFormat = NumberFormat.decimalPatternDigits(
 
 String _fmt(double value) => _numberFormat.format(value);
 
-double? _parseAmount(String text) =>
-    double.tryParse(text.trim().replaceAll(',', '.'));
+double? _parseAmount(String text) => parseAmountInput(text);
 
 class LoanPaymentDraft {
   const LoanPaymentDraft(this.amount, this.date, this.note);
@@ -89,14 +90,11 @@ class _LoanPaymentDialogState extends State<_LoanPaymentDialog> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          TextField(
+          MoneyField(
             controller: _amountController,
+            label: 'Monto',
+            currency: widget.currency,
             autofocus: true,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              labelText: 'Monto',
-              prefixText: '${widget.currency} ',
-            ),
           ),
           const SizedBox(height: 16),
           Row(

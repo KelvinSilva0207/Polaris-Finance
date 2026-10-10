@@ -9,6 +9,7 @@ const _moduleKeyPrefix = 'module_';
 const _accentKey = 'accent_color';
 const _providerKey = 'rate_provider';
 const _hideBalancesKey = 'hide_balances';
+const _themeModeKey = 'theme_mode';
 
 final initialSettingsProvider = Provider<AppSettingsState>((ref) {
   throw UnimplementedError('Debe sobrescribirse en ProviderScope');
@@ -24,6 +25,7 @@ class AppSettingsState {
     this.accentColorValue = 0xFF9C6BFF,
     this.referenceProvider = RateProvider.bcv,
     this.hideBalances = false,
+    this.themeMode = ThemeMode.system,
   });
 
   static const defaults = AppSettingsState();
@@ -32,6 +34,7 @@ class AppSettingsState {
   final int accentColorValue;
   final RateProvider referenceProvider;
   final bool hideBalances;
+  final ThemeMode themeMode;
 
   Color get accentColor => Color(accentColorValue);
 
@@ -45,11 +48,16 @@ class AppSettingsState {
       for (final module in FeatureModule.all)
         if (module.core || (prefs.getBool('$_moduleKeyPrefix${module.id}') ?? true)) module.id,
     ];
+    final themeName = prefs.getString(_themeModeKey);
     return AppSettingsState(
       enabledModules: enabled,
       accentColorValue: prefs.getInt(_accentKey) ?? defaults.accentColorValue,
       referenceProvider: RateProvider.fromStorage(prefs.getString(_providerKey)),
       hideBalances: prefs.getBool(_hideBalancesKey) ?? false,
+      themeMode: ThemeMode.values.firstWhere(
+        (mode) => mode.name == themeName,
+        orElse: () => ThemeMode.system,
+      ),
     );
   }
 
@@ -58,12 +66,14 @@ class AppSettingsState {
     int? accentColorValue,
     RateProvider? referenceProvider,
     bool? hideBalances,
+    ThemeMode? themeMode,
   }) {
     return AppSettingsState(
       enabledModules: enabledModules ?? this.enabledModules,
       accentColorValue: accentColorValue ?? this.accentColorValue,
       referenceProvider: referenceProvider ?? this.referenceProvider,
       hideBalances: hideBalances ?? this.hideBalances,
+      themeMode: themeMode ?? this.themeMode,
     );
   }
 }
@@ -101,5 +111,11 @@ class AppSettingsController extends Notifier<AppSettingsState> {
     final prefs = await SharedPreferences.getInstance();
     state = state.copyWith(hideBalances: value);
     await prefs.setBool(_hideBalancesKey, value);
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    state = state.copyWith(themeMode: mode);
+    await prefs.setString(_themeModeKey, mode.name);
   }
 }

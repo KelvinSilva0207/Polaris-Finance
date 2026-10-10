@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import '../../core/providers.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
+import '../../shared/utils/amount_format.dart';
+import '../../shared/widgets/money_field.dart';
 
 final _numberFormat = NumberFormat.decimalPatternDigits(
   locale: 'es',
@@ -14,12 +16,9 @@ final _numberFormat = NumberFormat.decimalPatternDigits(
 
 String _fmt(double value) => _numberFormat.format(value);
 
-String _amountInput(double value) {
-  return value % 1 == 0 ? value.toStringAsFixed(0) : value.toString();
-}
+String _amountInput(double value) => formatVeNumber(value);
 
-double? _parseAmount(String text) =>
-    double.tryParse(text.trim().replaceAll(',', '.'));
+double? _parseAmount(String text) => parseAmountInput(text);
 
 class GoalsScreen extends ConsumerWidget {
   const GoalsScreen({super.key});
@@ -302,6 +301,15 @@ class _GoalDialogState extends State<_GoalDialog> {
     _deadline = initial?.deadline;
   }
 
+  String get _targetCurrency {
+    for (final account in widget.accounts) {
+      if (account.id == _accountId && account.currency.isNotEmpty) {
+        return account.currency;
+      }
+    }
+    return 'VES';
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -354,10 +362,10 @@ class _GoalDialogState extends State<_GoalDialog> {
               decoration: const InputDecoration(labelText: 'Nombre'),
             ),
             const SizedBox(height: 16),
-            TextField(
+            MoneyField(
               controller: _targetController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: 'Objetivo'),
+              label: 'Objetivo',
+              currency: _targetCurrency,
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
@@ -449,6 +457,15 @@ class _AllocateDialogState extends State<_AllocateDialog> {
     _accountId = widget.initialAccountId;
   }
 
+  String get _sourceCurrency {
+    for (final account in widget.accounts) {
+      if (account.id == _accountId && account.currency.isNotEmpty) {
+        return account.currency;
+      }
+    }
+    return 'VES';
+  }
+
   @override
   void dispose() {
     _amountController.dispose();
@@ -475,11 +492,11 @@ class _AllocateDialogState extends State<_AllocateDialog> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          TextField(
+          MoneyField(
             controller: _amountController,
+            label: 'Monto',
+            currency: _sourceCurrency,
             autofocus: true,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'Monto'),
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
@@ -520,11 +537,11 @@ Future<double?> _showAmountDialog(BuildContext context, String title) {
     context: context,
     builder: (context) => AlertDialog(
       title: Text(title),
-      content: TextField(
+      content: MoneyField(
         controller: controller,
+        label: 'Monto',
+        currency: 'VES',
         autofocus: true,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: const InputDecoration(labelText: 'Monto'),
       ),
       actions: [
         TextButton(

@@ -7,6 +7,7 @@ import '../../core/providers.dart';
 import '../../core/settings/app_settings.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
+import '../../data/models/currencies.dart';
 import '../../data/models/enums.dart';
 import '../../shared/utils/amount_format.dart';
 import '../../shared/utils/transaction_math.dart';
@@ -36,7 +37,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   bool _saving = false;
 
   bool get _isEditing => widget.initial != null;
-  bool get _isTransfer => _type == TransactionType.transfer;
+  bool get _isTransfer =>
+      _type == TransactionType.transfer || _type == TransactionType.pagoMovil;
 
   static const _noneCategory = '_none';
   static const _newCategory = '_new';
@@ -162,11 +164,11 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
           : 'Selecciona la cuenta');
       return;
     }
-    if (_isTransfer && destinationId == null) {
+    if (_type == TransactionType.transfer && destinationId == null) {
       _showMessage('Selecciona la cuenta de destino');
       return;
     }
-    if (_isTransfer && destinationId == sourceId) {
+    if (destinationId != null && destinationId == sourceId) {
       _showMessage('La cuenta de destino debe ser distinta');
       return;
     }
@@ -184,11 +186,23 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     final noteText = _noteController.text.trim();
 
     final feeRules = ref.read(feeRulesProvider).value ?? const [];
+    final rates = ref.read(ratesProvider).value ?? const [];
+    final referenceRate = latestReferenceRate(
+      rates,
+      ref.read(appSettingsProvider).referenceProvider,
+    );
+    final eurRate = latestEurRate(rates);
     double feeAmount = 0;
     if (_feeRuleId != null) {
       for (final rule in feeRules) {
         if (rule.isActive && rule.id == _feeRuleId) {
-          feeAmount = feeFor(rule, amount);
+          feeAmount = feeFor(
+            rule,
+            amount,
+            accountCurrency: sourceAccount.currency,
+            vesPerUsd: referenceRate?.rate,
+            eurPerUsd: eurRate?.rate,
+          );
           break;
         }
       }
@@ -202,19 +216,17 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       if (destinationAccount.currency == sourceAccount.currency) {
         creditedAmount = amount;
       } else {
-        final rates = ref.read(ratesProvider).value ?? const [];
-        final referenceProvider = ref.read(appSettingsProvider).referenceProvider;
-        final rate = latestReferenceRate(rates, referenceProvider);
-        if (rate == null) {
-          _showMessage(
-            'Necesitas actualizar la tasa de referencia en Monedas para transferir entre monedas',
-          );
-          return;
-        }
-        final converted = convertedAmount(amount, sourceAccount.currency, rate.rate);
+        final converted = convertBetween(
+          amount,
+          sourceAccount.currency,
+          destinationAccount.currency,
+          vesPerUsd: referenceRate?.rate,
+          eurPerUsd: eurRate?.rate,
+        );
         if (converted == null) {
           _showMessage(
-            'No se puede transferir entre ${sourceAccount.currency} y ${destinationAccount.currency}: usa cuentas en VES o USD',
+            'No se puede convertir de ${sourceAccount.currency} a '
+            '${destinationAccount.currency}: actualiza las tasas en Monedas',
           );
           return;
         }
@@ -271,7 +283,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  List<Widget> _buildFeeSection() {
+  List<Widget> _buildFeeSection(Account? source) {
     final feeRules = ref.watch(feeRulesProvider).value ?? const [];
     final activeFeeRules = feeRules.where((r) => r.isActive).toList();
     if (activeFeeRules.isEmpty) return const [];
@@ -285,9 +297,22 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       }
     }
     final amount = _parsedAmount();
+    final accountCurrency = source?.currency ?? 'VES';
+    final rates = ref.watch(ratesProvider).value ?? const [];
+    final rate = latestReferenceRate(
+      rates,
+      ref.watch(appSettingsProvider).referenceProvider,
+    );
+    final eurRate = latestEurRate(rates);
     final estimatedFee = selectedRule == null || amount == null
         ? null
-        : feeFor(selectedRule, amount);
+        : feeFor(
+            selectedRule,
+            amount,
+            accountCurrency: accountCurrency,
+            vesPerUsd: rate?.rate,
+            eurPerUsd: eurRate?.rate,
+          );
     return [
       DropdownButtonFormField<String>(
         key: ValueKey('fee-${_feeRuleId ?? 'none'}'),
@@ -305,7 +330,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         Padding(
           padding: const EdgeInsets.only(top: 8, left: 4),
           child: Text(
-            'Comisión estimada: $estimatedFee',
+            'Comisión estimada: ${formatVeNumber(estimatedFee)} ${currencySymbol(accountCurrency)}',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.primary,
                 ),
@@ -317,17 +342,21 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   Widget _buildConversionHint(Account? source) {
     final rates = ref.watch(ratesProvider).value ?? const [];
     final referenceProvider = ref.watch(appSettingsProvider).referenceProvider;
-    final rate = latestReferenceRate(rates, referenceProvider);
+    final vesRate = latestReferenceRate(rates, referenceProvider)?.rate;
+    final eurRate = latestEurRate(rates)?.rate;
     final amount = _parsedAmount();
-    final vesPerUsd = rate?.rate;
-    if (source == null || amount == null || vesPerUsd == null) {
-      return const SizedBox.shrink();
-    }
-    final converted = convertedAmount(amount, source.currency, vesPerUsd);
+    if (source == null || amount == null) return const SizedBox.shrink();
+    final target = source.currency == 'VES' ? 'USD' : 'VES';
+    final converted = convertBetween(
+      amount,
+      source.currency,
+      target,
+      vesPerUsd: vesRate,
+      eurPerUsd: eurRate,
+    );
     if (converted == null) return const SizedBox.shrink();
-    final text = source.currency == 'VES'
-        ? '≈ ${converted.toStringAsFixed(2)} USD (tasa ${vesPerUsd.toStringAsFixed(2)})'
-        : '≈ ${converted.toStringAsFixed(2)} VES (tasa ${vesPerUsd.toStringAsFixed(2)})';
+    final rateLine = vesRate == null ? '' : ' (1 USD = ${formatVeNumber(vesRate)} Bs)';
+    final text = '≈ ${currencySymbol(target)} ${formatVeNumber(converted)}$rateLine';
     return Padding(
       padding: const EdgeInsets.only(top: 8, left: 4),
       child: Text(
@@ -347,34 +376,43 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     final destAcc = _destinationAccountId == null
         ? null
         : accounts.firstWhere((a) => a.id == _destinationAccountId);
-    if (sourceAcc == null ||
-        destAcc == null ||
-        sourceAcc.currency == destAcc.currency) {
+    if (sourceAcc == null || destAcc == null) {
       return const Text(
-        'Descuenta el monto de origen y acredita el equivalente al destino.',
+        'Sin cuenta destino: el dinero sale de la cuenta de origen (se descuenta el monto y la comisión).',
+        style: TextStyle(fontSize: 12),
+      );
+    }
+    if (sourceAcc.currency == destAcc.currency) {
+      return const Text(
+        'Mismo monto: ambas cuentas usan la misma moneda, no se convierte. La comisión se descuenta aparte.',
         style: TextStyle(fontSize: 12),
       );
     }
     final rates = ref.read(ratesProvider).value ?? const [];
     final provider = ref.read(appSettingsProvider).referenceProvider;
-    final rate = latestReferenceRate(rates, provider);
-    if (rate == null) {
-      return const Text(
-        'Monedas distintas: actualiza la tasa de referencia en Monedas para calcular el equivalente.',
-        style: TextStyle(fontSize: 12),
-      );
-    }
+    final vesRate = latestReferenceRate(rates, provider)?.rate;
+    final eurRate = latestEurRate(rates)?.rate;
     final amount = _parsedAmount();
-    final converted =
-        amount == null ? null : convertedAmount(amount, sourceAcc.currency, rate.rate);
+    final converted = amount == null
+        ? null
+        : convertBetween(
+            amount,
+            sourceAcc.currency,
+            destAcc.currency,
+            vesPerUsd: vesRate,
+            eurPerUsd: eurRate,
+          );
     if (converted == null) {
       return const Text(
-        'No se puede convertir entre estas monedas (solo VES ↔ USD).',
+        'No se puede convertir entre estas monedas: actualiza las tasas en Monedas.',
         style: TextStyle(fontSize: 12),
       );
     }
+    final rateLine =
+        vesRate == null ? '' : ' (1 USD = ${formatVeNumber(vesRate)} Bs)';
     return Text(
-      'Se acreditará ${formatVeNumber(converted)} ${destAcc.currency} (tasa ${formatVeNumber(rate.rate)}).',
+      'Se acreditará ${formatVeNumber(converted)} '
+      '${currencySymbol(destAcc.currency)}$rateLine.',
       style: const TextStyle(fontSize: 12),
     );
   }
@@ -414,27 +452,35 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          SegmentedButton<TransactionType>(
-            segments: const [
-              ButtonSegment(
-                value: TransactionType.income,
-                label: Text('Ingreso'),
-                icon: Icon(Icons.arrow_downward),
-              ),
-              ButtonSegment(
-                value: TransactionType.expense,
-                label: Text('Egreso'),
-                icon: Icon(Icons.arrow_upward),
-              ),
-              ButtonSegment(
-                value: TransactionType.transfer,
-                label: Text('Transferencia'),
-                icon: Icon(Icons.swap_horiz),
-              ),
-            ],
-            selected: {_type},
-            onSelectionChanged: _onTypeChanged,
-            showSelectedIcon: false,
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SegmentedButton<TransactionType>(
+              segments: const [
+                ButtonSegment(
+                  value: TransactionType.income,
+                  label: Text('Ingreso'),
+                  icon: Icon(Icons.arrow_downward),
+                ),
+                ButtonSegment(
+                  value: TransactionType.expense,
+                  label: Text('Egreso'),
+                  icon: Icon(Icons.arrow_upward),
+                ),
+                ButtonSegment(
+                  value: TransactionType.transfer,
+                  label: Text('Transferencia'),
+                  icon: Icon(Icons.swap_horiz),
+                ),
+                ButtonSegment(
+                  value: TransactionType.pagoMovil,
+                  label: Text('Pago Móvil'),
+                  icon: Icon(Icons.phone_android),
+                ),
+              ],
+              selected: {_type},
+              onSelectionChanged: _onTypeChanged,
+              showSelectedIcon: false,
+            ),
           ),
           const SizedBox(height: 20),
           if (_isTransfer)
@@ -464,12 +510,24 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             DropdownButtonFormField<String>(
               key: ValueKey('dest-${_destinationAccountId ?? 'none'}'),
               initialValue: _destinationAccountId,
-              decoration: const InputDecoration(labelText: 'Cuenta de destino'),
+              decoration: InputDecoration(
+                labelText:
+                    _type == TransactionType.pagoMovil ? 'Destino' : 'Cuenta de destino',
+              ),
+              hint: Text(_type == TransactionType.pagoMovil ? 'Cuenta externa' : ''),
               items: [
+                if (_type == TransactionType.pagoMovil)
+                  const DropdownMenuItem(
+                    value: _noneCategory,
+                    child: Text('Cuenta externa'),
+                  ),
                 for (final account in accounts)
                   DropdownMenuItem(value: account.id, child: Text(account.name)),
               ],
-              onChanged: (value) => setState(() => _destinationAccountId = value),
+              onChanged: (value) => setState(
+                () => _destinationAccountId =
+                    value == _noneCategory ? null : value,
+              ),
             ),
           ],
           if (!_isTransfer) ...[
@@ -490,7 +548,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             ),
           ],
           const SizedBox(height: 16),
-          ..._buildFeeSection(),
+          ..._buildFeeSection(source),
           const SizedBox(height: 16),
           TextField(
             controller: _amountController,
@@ -501,7 +559,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             inputFormatters: [veAmountFormatter()],
             decoration: InputDecoration(
               labelText: 'Monto',
-              prefixText: source == null ? null : '${source.currency} ',
+              prefixText: source == null ? null : '${currencySymbol(source.currency)} ',
             ),
           ),
           _buildConversionHint(source),

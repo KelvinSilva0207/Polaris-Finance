@@ -14,6 +14,7 @@ import 'transaction_form_screen.dart';
     TransactionType.income => (Icons.arrow_downward, const Color(0xFF66BB6A)),
     TransactionType.expense => (Icons.arrow_upward, const Color(0xFFEF5350)),
     TransactionType.transfer => (Icons.swap_horiz, const Color(0xFF4FC3F7)),
+    TransactionType.pagoMovil => (Icons.phone_android, const Color(0xFF7E57C2)),
   };
 }
 
@@ -73,7 +74,8 @@ class TransactionsScreen extends ConsumerWidget {
                     child: Icon(icon, color: color),
                   ),
                   title: Text(
-                    type == TransactionType.transfer
+                    type == TransactionType.transfer ||
+                            type == TransactionType.pagoMovil
                         ? '${account?.name ?? 'Cuenta'} → ${destination?.name ?? '…'}'
                         : category?.name ?? account?.name ?? 'Sin categoría',
                   ),

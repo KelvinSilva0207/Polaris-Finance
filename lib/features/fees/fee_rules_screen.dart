@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import '../../core/providers.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
+import '../../shared/utils/amount_format.dart';
+import '../../shared/widgets/money_field.dart';
 
 final _numberFormat = NumberFormat.decimalPatternDigits(
   locale: 'es',
@@ -14,8 +16,7 @@ final _numberFormat = NumberFormat.decimalPatternDigits(
 
 String _fmt(double value) => _numberFormat.format(value);
 
-double? _parseAmount(String text) =>
-    double.tryParse(text.trim().replaceAll(',', '.'));
+double? _parseAmount(String text) => parseAmountInput(text);
 
 class FeeRulesScreen extends ConsumerWidget {
   const FeeRulesScreen({super.key});
@@ -188,13 +189,13 @@ class _FeeEditorDialogState extends State<_FeeEditorDialog> {
     super.initState();
     final initial = widget.initial;
     _nameController = TextEditingController(text: initial?.name ?? '');
-    _fixedController = TextEditingController(text: _field(initial?.fixedAmount));
+    _fixedController = TextEditingController(text: _moneyField(initial?.fixedAmount));
     _percentController = TextEditingController(text: _field(initial?.percent));
     _minController = TextEditingController(
-      text: initial?.minAmount == null ? '' : _field(initial!.minAmount),
+      text: initial?.minAmount == null ? '' : _moneyField(initial!.minAmount),
     );
     _maxController = TextEditingController(
-      text: initial?.maxAmount == null ? '' : _field(initial!.maxAmount),
+      text: initial?.maxAmount == null ? '' : _moneyField(initial!.maxAmount),
     );
     _isActive = widget.initial?.isActive ?? true;
   }
@@ -203,6 +204,9 @@ class _FeeEditorDialogState extends State<_FeeEditorDialog> {
     if (value == null) return '';
     return value % 1 == 0 ? value.toStringAsFixed(0) : value.toString();
   }
+
+  static String _moneyField(double? value) =>
+      value == null ? '' : formatVeNumber(value);
 
   @override
   void dispose() {
@@ -249,10 +253,10 @@ class _FeeEditorDialogState extends State<_FeeEditorDialog> {
             Row(
               children: [
                 Expanded(
-                  child: TextField(
+                  child: MoneyField(
                     controller: _fixedController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'Fijo'),
+                    label: 'Fijo',
+                    currency: 'VES',
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -269,18 +273,18 @@ class _FeeEditorDialogState extends State<_FeeEditorDialog> {
             Row(
               children: [
                 Expanded(
-                  child: TextField(
+                  child: MoneyField(
                     controller: _minController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'Mínimo (opc.)'),
+                    label: 'Mínimo (opc.)',
+                    currency: 'VES',
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: TextField(
+                  child: MoneyField(
                     controller: _maxController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'Máximo (opc.)'),
+                    label: 'Máximo (opc.)',
+                    currency: 'VES',
                   ),
                 ),
               ],

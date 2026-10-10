@@ -13,12 +13,18 @@ class RateResult {
     required this.source,
     required this.date,
     this.error,
+    this.unchanged = false,
   });
 
   final double rate;
   final String source;
   final DateTime date;
   final String? error;
+
+  /// Indica que el valor recibido era igual al ya guardado: no se creó
+  /// registro nuevo (el dólar suele moverse 1-2 veces al día laborable y no
+  /// cambia los fines de semana).
+  final bool unchanged;
 }
 
 class RateFetchException implements Exception {
@@ -165,45 +171,133 @@ class BinanceRateSource implements RateProviderSource {
   }
 }
 
+/// Tasa del euro expresada en USD (`USD/EUR`): cuántos euros vale un dólar.
+double parseEuroUsdRate(String body) {
+  final json = jsonDecode(body);
+  final rates = json is Map<String, dynamic> ? json['rates'] : null;
+  final price = rates is Map<String, dynamic> ? rates['EUR'] : null;
+  final rate = price == null ? null : double.tryParse(price.toString());
+  if (rate == null || rate <= 0) {
+    throw const RateFetchException('Euro: respuesta inesperada');
+  }
+  return rate;
+}
+
+class EuroRateSource {
+  EuroRateSource({http.Client? client}) : _client = client ?? http.Client();
+
+  final http.Client _client;
+
+  static const _url = 'https://open.er-api.com/v6/latest/USD';
+
+  Future<double> fetchEurPerUsd() async {
+    final res = await _client
+        .get(Uri.parse(_url), headers: const {'accept': 'application/json'})
+        .timeout(_timeout);
+    if (res.statusCode != 200) {
+      throw RateFetchException('Euro: HTTP ${res.statusCode}');
+    }
+    return parseEuroUsdRate(res.body);
+  }
+}
+
 class RateService {
-  RateService(this._db, {Map<RateProvider, RateProviderSource>? sources})
-      : _sources = sources ??
+  RateService(
+    this._db, {
+    Map<RateProvider, RateProviderSource>? sources,
+    EuroRateSource? euroSource,
+  })  : _sources = sources ??
             {
               RateProvider.bcv: BcvRateSource(),
               RateProvider.binance: BinanceRateSource(),
-            };
+            },
+        _euroSource = euroSource ?? EuroRateSource();
 
   final AppDatabase _db;
   final Map<RateProvider, RateProviderSource> _sources;
+  final EuroRateSource _euroSource;
 
   Future<RateResult> refresh(RateProvider provider, {double? manualRate}) async {
     if (provider == RateProvider.manual) {
       final value = manualRate ?? 0;
-      await _db.insertRate(
-        code: 'VES',
-        rateCode: 'USD/VES',
-        provider: provider.name,
+      final last = await _db.latestRateFor('USD/VES', provider.name);
+      final unchanged = last != null && (last.rate - value).abs() < 0.005;
+      if (!unchanged) {
+        await _db.insertRate(
+          code: 'VES',
+          rateCode: 'USD/VES',
+          provider: provider.name,
+          rate: value,
+          isManual: true,
+        );
+      }
+      return RateResult(
         rate: value,
-        isManual: true,
+        source: 'Manual',
+        date: unchanged ? last.date : DateTime.now(),
+        unchanged: unchanged,
       );
-      return RateResult(rate: value, source: 'Manual', date: DateTime.now());
     }
     try {
       final value = await _sources[provider]!.fetchVesPerUsd();
-      await _db.insertRate(
-        code: 'VES',
-        rateCode: 'USD/VES',
-        provider: provider.name,
-        rate: value,
-        isManual: false,
+      final rounded = double.parse(value.toStringAsFixed(4));
+      final last = await _db.latestRateFor('USD/VES', provider.name);
+      final unchanged = last != null && (last.rate - rounded).abs() < 0.005;
+      if (!unchanged) {
+        await _db.insertRate(
+          code: 'VES',
+          rateCode: 'USD/VES',
+          provider: provider.name,
+          rate: rounded,
+          isManual: false,
+        );
+      }
+      return RateResult(
+        rate: rounded,
+        source: provider.label,
+        date: unchanged ? last.date : DateTime.now(),
+        unchanged: unchanged,
       );
-      return RateResult(rate: value, source: provider.label, date: DateTime.now());
     } on RateFetchException catch (error) {
       return RateResult(rate: 0, source: provider.label, date: DateTime.now(), error: error.message);
     } catch (error) {
       return RateResult(
         rate: 0,
         source: provider.label,
+        date: DateTime.now(),
+        error: 'Error de red: $error',
+      );
+    }
+  }
+
+  /// Actualiza la tasa `USD/EUR` (euros por dólar) desde open.er-api.com.
+  Future<RateResult> refreshEuro() async {
+    const source = 'Euro';
+    try {
+      final value = await _euroSource.fetchEurPerUsd();
+      final rounded = double.parse(value.toStringAsFixed(4));
+      final last = await _db.latestRateFor('USD/EUR', 'api');
+      final unchanged = last != null && (last.rate - rounded).abs() < 0.0005;
+      if (!unchanged) {
+        await _db.insertRate(
+          code: 'EUR',
+          rateCode: 'USD/EUR',
+          provider: 'api',
+          rate: rounded,
+        );
+      }
+      return RateResult(
+        rate: rounded,
+        source: source,
+        date: unchanged ? last.date : DateTime.now(),
+        unchanged: unchanged,
+      );
+    } on RateFetchException catch (error) {
+      return RateResult(rate: 0, source: source, date: DateTime.now(), error: error.message);
+    } catch (error) {
+      return RateResult(
+        rate: 0,
+        source: source,
         date: DateTime.now(),
         error: 'Error de red: $error',
       );

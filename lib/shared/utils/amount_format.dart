@@ -31,8 +31,11 @@ double? parseAmountInput(String raw) {
 }
 
 /// Formatea el texto mientras se escribe: inserta los separadores de miles,
-/// acepta un único separador decimal (`,` o `.`, mostrado como `,`) y hasta
-/// dos decimales. Si [allowNegative] es true admite un `-` inicial.
+/// acepta un único separador decimal (mostrado como `,`) y hasta dos decimales.
+/// Un `.` se interpreta como decimal solo si es el último y tiene 0-2 dígitos
+/// después; en cualquier otro caso se trata como separador de miles, de modo
+/// que se pueden escribir cifras largas (millones, billones, etc.). Si
+/// [allowNegative] es true admite un `-` inicial.
 class VeAmountFormatter extends TextInputFormatter {
   VeAmountFormatter({this.allowNegative = false});
 
@@ -62,39 +65,45 @@ class VeAmountFormatter extends TextInputFormatter {
   }
 
   String _formatEntry(String raw) {
-    var buffer = StringBuffer();
-    var sign = '';
-    var integer = '';
-    var decimals = '';
-    var hasSeparator = false;
-    var afterSeparator = false;
+    final negative = allowNegative && raw.startsWith('-');
+    final working = raw.replaceAll('-', '');
 
-    for (final ch in raw.split('')) {
-      if (ch == '-' && allowNegative && buffer.isEmpty && sign.isEmpty) {
-        sign = '-';
-        continue;
-      }
-      if (ch == ',' || ch == '.') {
-        if (!afterSeparator) {
-          hasSeparator = true;
-          afterSeparator = true;
-        }
-        continue;
-      }
-      if (ch.codeUnitAt(0) >= 48 && ch.codeUnitAt(0) <= 57) {
-        if (afterSeparator) {
-          if (decimals.length < 2) decimals += ch;
-        } else {
-          integer += ch;
-        }
+    int? separatorIndex;
+    if (working.contains(',')) {
+      separatorIndex = working.indexOf(',');
+    } else if (working.contains('.')) {
+      final lastDot = working.lastIndexOf('.');
+      final after = working.substring(lastDot + 1);
+      // Un `.` es decimal solo si va al final o va seguido de 0-2 dígitos
+      // (ignorando basura que se descartará, p.ej. `12.5x`); si no, es miles.
+      final digitsAfter = after.replaceAll(RegExp(r'[^0-9]'), '');
+      if (after.isEmpty ||
+          (digitsAfter.isNotEmpty && digitsAfter.length <= 2)) {
+        separatorIndex = lastDot;
       }
     }
 
-    if (integer.isEmpty && decimals.isEmpty && !afterSeparator) return '';
+    final hasSeparator = separatorIndex != null;
+    final String integer;
+    var decimals = '';
+    if (hasSeparator) {
+      integer = working.substring(0, separatorIndex).replaceAll(RegExp(r'[^0-9]'), '');
+      decimals = working
+          .substring(separatorIndex + 1)
+          .replaceAll(RegExp(r'[^0-9]'), '');
+      if (decimals.length > 2) decimals = decimals.substring(0, 2);
+    } else {
+      integer = working.replaceAll(RegExp(r'[^0-9]'), '');
+    }
 
     final grouped = _groupThousands(integer);
-    buffer.write(sign);
-    buffer.write(grouped);
+    if (grouped.isEmpty && decimals.isEmpty && !hasSeparator) {
+      return negative ? '-' : '';
+    }
+
+    final buffer = StringBuffer();
+    if (negative) buffer.write('-');
+    buffer.write(grouped.isEmpty && hasSeparator ? '0' : grouped);
     if (hasSeparator) {
       buffer.write(',');
       buffer.write(decimals);

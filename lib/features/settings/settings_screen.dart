@@ -19,6 +19,18 @@ const _accentOptions = <Color>[
   Color(0xFFEC407A),
 ];
 
+const _themeLabels = <ThemeMode, String>{
+  ThemeMode.system: 'Sistema',
+  ThemeMode.light: 'Claro',
+  ThemeMode.dark: 'Oscuro',
+};
+
+const _themeIcons = <ThemeMode, IconData>{
+  ThemeMode.system: Icons.brightness_auto_outlined,
+  ThemeMode.light: Icons.light_mode_outlined,
+  ThemeMode.dark: Icons.dark_mode_outlined,
+};
+
 IconData _providerIcon(RateProvider provider) {
   return switch (provider) {
     RateProvider.bcv => Icons.account_balance_outlined,
@@ -56,6 +68,35 @@ class SettingsScreen extends ConsumerWidget {
                       selected: settings.accentColorValue == color.toARGB32(),
                       onTap: () => controller.setAccentColor(color),
                     ),
+                ],
+              ),
+            ),
+          ),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Tema',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  SegmentedButton<ThemeMode>(
+                    showSelectedIcon: false,
+                    segments: [
+                      for (final mode in ThemeMode.values)
+                        ButtonSegment<ThemeMode>(
+                          value: mode,
+                          label: Text(_themeLabels[mode]!),
+                          icon: Icon(_themeIcons[mode], size: 18),
+                        ),
+                    ],
+                    selected: {settings.themeMode},
+                    onSelectionChanged: (selection) =>
+                        controller.setThemeMode(selection.first),
+                  ),
                 ],
               ),
             ),

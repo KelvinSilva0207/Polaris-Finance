@@ -7,6 +7,8 @@ import '../../core/providers.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
 import '../../data/models/currencies.dart';
+import '../../shared/utils/amount_format.dart';
+import '../../shared/widgets/money_field.dart';
 
 final _numberFormat = NumberFormat.decimalPatternDigits(
   locale: 'es',
@@ -15,8 +17,7 @@ final _numberFormat = NumberFormat.decimalPatternDigits(
 
 String _fmt(double value) => _numberFormat.format(value);
 
-double? _parseAmount(String text) =>
-    double.tryParse(text.trim().replaceAll(',', '.'));
+double? _parseAmount(String text) => parseAmountInput(text);
 
 const _noneCategory = '__none__';
 
@@ -326,9 +327,7 @@ Future<_PayDraft?> _showPayDialog(
   RecurringService service,
 ) async {
   final amountController = TextEditingController(
-    text: service.amount % 1 == 0
-        ? service.amount.toStringAsFixed(0)
-        : service.amount.toString(),
+    text: formatVeNumber(service.amount),
   );
   var date = DateTime.now();
 
@@ -341,13 +340,10 @@ Future<_PayDraft?> _showPayDialog(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
+            MoneyField(
               controller: amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                labelText: 'Monto del recibo',
-                prefixText: '${service.currency} ',
-              ),
+              label: 'Monto del recibo',
+              currency: service.currency,
             ),
             const SizedBox(height: 12),
             Row(
@@ -399,11 +395,7 @@ Future<_ServiceDraft?> _showServiceEditor(
 }) async {
   final nameController = TextEditingController(text: initial?.name ?? '');
   final amountController = TextEditingController(
-    text: initial == null
-        ? ''
-        : (initial.amount % 1 == 0
-            ? initial.amount.toStringAsFixed(0)
-            : initial.amount.toString()),
+    text: initial == null ? '' : formatVeNumber(initial.amount),
   );
   final noteController = TextEditingController(text: initial?.note ?? '');
   var currency = initial?.currency ?? 'VES';
@@ -435,11 +427,10 @@ Future<_ServiceDraft?> _showServiceEditor(
               Row(
                 children: [
                   Expanded(
-                    child: TextField(
+                    child: MoneyField(
                       controller: amountController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(labelText: 'Monto'),
+                      label: 'Monto',
+                      currency: currency,
                     ),
                   ),
                   const SizedBox(width: 12),

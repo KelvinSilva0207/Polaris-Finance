@@ -21,6 +21,7 @@ class RatesScreen extends ConsumerStatefulWidget {
 
 class _RatesScreenState extends ConsumerState<RatesScreen> {
   final Set<RateProvider> _busy = {};
+  bool _euroBusy = false;
   Timer? _autoRefreshTimer;
 
   @override
@@ -49,16 +50,31 @@ class _RatesScreenState extends ConsumerState<RatesScreen> {
       setState(() => _busy.remove(provider));
       if (!silent) _notify(result);
     }
+    await _refreshEuro(silent: silent);
+  }
+
+  Future<void> _refreshEuro({bool silent = true}) async {
+    if (_euroBusy) return;
+    setState(() => _euroBusy = true);
+    final result = await ref.read(rateServiceProvider).refreshEuro();
+    if (!mounted) return;
+    setState(() => _euroBusy = false);
+    if (!silent) _notify(result);
   }
 
   Future<void> _refresh(RateProvider provider) => _refreshLive(silent: false);
 
   void _notify(RateResult result) {
     if (result.error == null) {
+      final isEuro = result.source == 'Euro';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Tasa ${result.source}: ${formatVeNumber(result.rate)} VES/USD',
+            isEuro
+                ? 'Euro: ${formatVeNumber(result.rate)} EUR/USD'
+                    '${result.unchanged ? ' (sin cambios)' : ''}'
+                : 'Tasa ${result.source}: ${formatVeNumber(result.rate)} VES/USD'
+                    '${result.unchanged ? ' (sin cambios)' : ''}',
           ),
         ),
       );
@@ -112,6 +128,7 @@ class _RatesScreenState extends ConsumerState<RatesScreen> {
     required CurrencyRate? rate,
     required bool busy,
     required bool isManual,
+    String unit = 'VES',
   }) {
     final theme = Theme.of(context);
     return ListTile(
@@ -131,7 +148,7 @@ class _RatesScreenState extends ConsumerState<RatesScreen> {
           : Text(
               rate == null
                   ? '—'
-                  : '${formatVeNumber(rate.rate)} VES'
+                  : '${formatVeNumber(rate.rate)} $unit'
                       '\n${DateFormat('HH:mm:ss').format(rate.date)}',
               textAlign: TextAlign.right,
               style: theme.textTheme.bodyMedium?.copyWith(
@@ -148,6 +165,7 @@ class _RatesScreenState extends ConsumerState<RatesScreen> {
     final rates = ratesAsync.value ?? const [];
     final bcv = latestReferenceRate(rates, RateProvider.bcv);
     final binance = latestReferenceRate(rates, RateProvider.binance);
+    final eur = latestEurRate(rates);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Monedas')),
@@ -193,6 +211,15 @@ class _RatesScreenState extends ConsumerState<RatesScreen> {
                         rate: binance,
                         busy: _busy.contains(RateProvider.binance),
                         isManual: binance?.isManual == true,
+                      ),
+                      _liveRow(
+                        title: 'Euro',
+                        subtitle: 'open.er-api.com · USD/EUR',
+                        debugLabel: 'eur',
+                        rate: eur,
+                        busy: _euroBusy,
+                        isManual: false,
+                        unit: 'EUR',
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -258,6 +285,19 @@ class _RatesScreenState extends ConsumerState<RatesScreen> {
                                 : _refreshManual,
                             icon: const Icon(Icons.edit_outlined, size: 18),
                             label: const Text('Manual'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: _euroBusy
+                                ? null
+                                : () => _refreshEuro(silent: false),
+                            icon: _euroBusy
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.refresh, size: 18),
+                            label: const Text('Actualizar EUR'),
                           ),
                         ],
                       ),

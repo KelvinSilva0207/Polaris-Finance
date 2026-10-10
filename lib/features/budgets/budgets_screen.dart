@@ -7,6 +7,8 @@ import '../../core/providers.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
 import '../../data/models/currencies.dart';
+import '../../shared/utils/amount_format.dart';
+import '../../shared/widgets/money_field.dart';
 
 final _numberFormat = NumberFormat.decimalPatternDigits(
   locale: 'es',
@@ -15,8 +17,7 @@ final _numberFormat = NumberFormat.decimalPatternDigits(
 
 String _fmt(double value) => _numberFormat.format(value);
 
-double? _parseAmount(String text) =>
-    double.tryParse(text.trim().replaceAll(',', '.'));
+double? _parseAmount(String text) => parseAmountInput(text);
 
 class _BudgetDraft {
   const _BudgetDraft(this.categoryId, this.amount, this.currency);
@@ -240,11 +241,7 @@ Future<_BudgetDraft?> _showBudgetDialog(
   required List<Budget> existing,
 }) async {
   final amountController = TextEditingController(
-    text: initial == null
-        ? ''
-        : (initial.amount % 1 == 0
-            ? initial.amount.toStringAsFixed(0)
-            : initial.amount.toString()),
+    text: initial == null ? '' : formatVeNumber(initial.amount),
   );
   var categoryId = initial?.categoryId;
   var currency = initial?.currency ?? 'VES';
@@ -298,14 +295,11 @@ Future<_BudgetDraft?> _showBudgetDialog(
                   Row(
                     children: [
                       Expanded(
-                        child: TextField(
+                        child: MoneyField(
                           controller: amountController,
-                          keyboardType:
-                              const TextInputType.numberWithOptions(decimal: true),
+                          label: 'Límite mensual',
+                          currency: currency,
                           onChanged: (_) => setState(() {}),
-                          decoration: const InputDecoration(
-                            labelText: 'Límite mensual',
-                          ),
                         ),
                       ),
                       const SizedBox(width: 12),

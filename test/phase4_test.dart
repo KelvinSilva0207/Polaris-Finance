@@ -12,6 +12,16 @@ import 'package:polaris_finance/data/models/enums.dart';
 import 'package:polaris_finance/features/export/export_screen.dart';
 
 void main() {
+  Future<void> openFromMore(WidgetTester tester, String label) async {
+    await tester.tap(find.text('Más'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text(label));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('Se crea un presupuesto desde Analítica',
       (WidgetTester tester) async {
     final database = AppDatabase.memory();
@@ -30,10 +40,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Analítica'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.pumpAndSettle();
+    await openFromMore(tester, 'Analítica');
 
     await tester.tap(find.byTooltip('Presupuestos'));
     await tester.pump();

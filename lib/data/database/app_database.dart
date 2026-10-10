@@ -8,10 +8,35 @@ import 'memory_database.dart'
 
 part 'app_database.g.dart';
 
-double? _convertVesUsd(String fromCurrency, double amount, double vesPerUsd) {
-  if (fromCurrency == 'VES') return amount / vesPerUsd;
-  if (fromCurrency == 'USD') return amount * vesPerUsd;
-  return null;
+/// Factor para llevar un importe de [currency] a USD (USDT vale como USD).
+double? _usdFactor(String currency, {double? vesPerUsd, double? eurPerUsd}) {
+  switch (currency) {
+    case 'USD' || 'USDT':
+      return 1;
+    case 'VES':
+      if (vesPerUsd == null || vesPerUsd <= 0) return null;
+      return 1 / vesPerUsd;
+    case 'EUR':
+      if (eurPerUsd == null || eurPerUsd <= 0) return null;
+      return 1 / eurPerUsd;
+    default:
+      return null;
+  }
+}
+
+/// Convierte [amount] de [from] a [to] pasando por USD; null si falta tasa.
+double? _convertBetween(
+  double amount,
+  String from,
+  String to, {
+  double? vesPerUsd,
+  double? eurPerUsd,
+}) {
+  if (from == to) return amount;
+  final fromFactor = _usdFactor(from, vesPerUsd: vesPerUsd, eurPerUsd: eurPerUsd);
+  final toFactor = _usdFactor(to, vesPerUsd: vesPerUsd, eurPerUsd: eurPerUsd);
+  if (fromFactor == null || toFactor == null) return null;
+  return amount * fromFactor / toFactor;
 }
 
 class Accounts extends Table {
@@ -498,14 +523,22 @@ class AppDatabase extends _$AppDatabase {
         .getSingle();
     var amount = amountOverride ?? service.amount;
     if (service.currency != account.currency) {
-      final rate = await latestRate();
-      if (rate == null) {
+      final vesRate = await latestVesRate();
+      if (vesRate == null) {
         throw StateError('Guarda una tasa de referencia en Monedas para pagar en otra moneda');
       }
-      final converted = _convertVesUsd(service.currency, amount, rate.rate);
+      final eurRate = await latestRateFor('USD/EUR', 'api');
+      final converted = _convertBetween(
+        amount,
+        service.currency,
+        account.currency,
+        vesPerUsd: vesRate.rate,
+        eurPerUsd: eurRate?.rate,
+      );
       if (converted == null) {
         throw StateError(
-          'No se puede pagar ${service.currency} desde una cuenta ${account.currency} (solo VES/USD)',
+          'No se puede pagar ${service.currency} desde una cuenta ${account.currency} '
+          '(usa VES, USD o EUR con sus tasas actualizadas)',
         );
       }
       amount = converted;
@@ -527,6 +560,27 @@ class AppDatabase extends _$AppDatabase {
 
   Future<CurrencyRate?> latestRate() async {
     final rows = await (select(currencyRates)
+          ..orderBy([(t) => OrderingTerm.desc(t.date)])
+          ..limit(1))
+        .get();
+    return rows.isEmpty ? null : rows.first;
+  }
+
+  /// Última tasa VES guardada (cualquier proveedor del par `USD/VES`), sin
+  /// mezclar con otras monedas como el euro.
+  Future<CurrencyRate?> latestVesRate() async {
+    final rows = await (select(currencyRates)
+          ..where((t) => t.rateCode.equals('USD/VES'))
+          ..orderBy([(t) => OrderingTerm.desc(t.date)])
+          ..limit(1))
+        .get();
+    return rows.isEmpty ? null : rows.first;
+  }
+
+  /// Última tasa guardada para un [rateCode] de un [provider] concreto.
+  Future<CurrencyRate?> latestRateFor(String rateCode, String provider) async {
+    final rows = await (select(currencyRates)
+          ..where((t) => t.rateCode.equals(rateCode) & t.provider.equals(provider))
           ..orderBy([(t) => OrderingTerm.desc(t.date)])
           ..limit(1))
         .get();
