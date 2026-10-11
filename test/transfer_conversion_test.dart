@@ -5,44 +5,46 @@ import 'package:polaris_finance/data/models/enums.dart';
 import 'package:polaris_finance/shared/utils/transaction_math.dart';
 
 void main() {
-  test('Transferencia entre monedas acredita el equivalente (credAmount)',
-      () async {
-    final db = AppDatabase.memory();
-    addTearDown(db.close);
-    final ves = await db.addAccount(
-      name: 'Banesco',
-      type: AccountType.bank,
-      currency: 'VES',
-      colorValue: 0xFF42A5F5,
-      openingBalance: 100000,
-    );
-    final usd = await db.addAccount(
-      name: 'Dólares',
-      type: AccountType.bank,
-      currency: 'USD',
-      colorValue: 0xFF42A5F5,
-      openingBalance: 100,
-    );
-    const amount = 9000.0;
-    const credited = 100.0; // 9000 VES ÷ 90
-    await db.addTransaction(
-      accountId: ves.id,
-      transferToId: usd.id,
-      type: TransactionType.transfer,
-      amount: amount,
-      currency: 'VES',
-      date: DateTime(2026, 10, 9),
-      creditedAmount: credited,
-      creditedCurrency: 'USD',
-    );
+  test(
+    'Transferencia entre monedas acredita el equivalente (credAmount)',
+    () async {
+      final db = AppDatabase.memory();
+      addTearDown(db.close);
+      final ves = await db.addAccount(
+        name: 'Banesco',
+        type: AccountType.bank,
+        currency: 'VES',
+        colorValue: 0xFF42A5F5,
+        openingBalance: 100000,
+      );
+      final usd = await db.addAccount(
+        name: 'Dólares',
+        type: AccountType.bank,
+        currency: 'USD',
+        colorValue: 0xFF42A5F5,
+        openingBalance: 100,
+      );
+      const amount = 9000.0;
+      const credited = 100.0; // 9000 VES ÷ 90
+      await db.addTransaction(
+        accountId: ves.id,
+        transferToId: usd.id,
+        type: TransactionType.transfer,
+        amount: amount,
+        currency: 'VES',
+        date: DateTime(2026, 10, 9),
+        creditedAmount: credited,
+        creditedCurrency: 'USD',
+      );
 
-    final txs = await db.select(db.transactions).get();
-    final balances = balancesOf(txs, accounts: [ves, usd]);
-    expect(balances[ves.id], closeTo(100000 - amount, 0.001));
-    expect(balances[usd.id], closeTo(100 + credited, 0.001));
-    expect(txs.single.credAmount, credited);
-    expect(txs.single.credCurrency, 'USD');
-  });
+      final txs = await db.select(db.transactions).get();
+      final balances = balancesOf(txs, accounts: [ves, usd]);
+      expect(balances[ves.id], closeTo(100000 - amount, 0.001));
+      expect(balances[usd.id], closeTo(100 + credited, 0.001));
+      expect(txs.single.credAmount, credited);
+      expect(txs.single.credCurrency, 'USD');
+    },
+  );
 
   test('Transferencia legada sin credAmount acredita el monto bruto', () async {
     final db = AppDatabase.memory();
@@ -107,9 +109,98 @@ void main() {
       openingBalance: 5,
     );
     const rate = 90.0;
-    final result = totalUsdOf({ves.id: 900, usd.id: 10, eur.id: 5}, [ves, usd, eur], rate);
+    final result = totalUsdOf(
+      {ves.id: 900, usd.id: 10, eur.id: 5},
+      [ves, usd, eur],
+      rate,
+    );
     expect(result, isNotNull);
     expect(result!.total, closeTo(20, 0.001)); // 900/90 + 10
     expect(result.currenciesExcluded, {'EUR'});
+  });
+
+  test('convertBetween y usdEquivalent con euros (eurPerUsd)', () {
+    const ves = 90.0;
+    const eur = 1.08;
+    expect(
+      convertBetween(9000, 'VES', 'EUR', vesPerUsd: ves, eurPerUsd: eur),
+      closeTo(108, 0.001),
+    );
+    expect(
+      convertBetween(108, 'EUR', 'VES', vesPerUsd: ves, eurPerUsd: eur),
+      closeTo(9000, 0.001),
+    );
+    expect(
+      convertBetween(100, 'USD', 'EUR', vesPerUsd: ves, eurPerUsd: eur),
+      closeTo(108, 0.001),
+    );
+    expect(
+      convertBetween(108, 'EUR', 'USD', vesPerUsd: ves, eurPerUsd: eur),
+      closeTo(100, 0.001),
+    );
+    expect(
+      usdEquivalent(10, 'EUR', ves, eurPerUsd: eur),
+      closeTo(10 / eur, 0.001),
+    );
+    expect(usdEquivalent(90, 'VES', ves, eurPerUsd: eur), closeTo(1, 0.001));
+  });
+
+  test('totalUsdOf incluye EUR al pasar eurPerUsd', () async {
+    final db = AppDatabase.memory();
+    addTearDown(db.close);
+    final ves = await db.addAccount(
+      name: 'VES',
+      type: AccountType.bank,
+      currency: 'VES',
+      colorValue: 1,
+      openingBalance: 900,
+    );
+    final usd = await db.addAccount(
+      name: 'USD',
+      type: AccountType.bank,
+      currency: 'USD',
+      colorValue: 2,
+      openingBalance: 10,
+    );
+    final eur = await db.addAccount(
+      name: 'EUR',
+      type: AccountType.bank,
+      currency: 'EUR',
+      colorValue: 3,
+      openingBalance: 5,
+    );
+    const rate = 90.0;
+    const eurPerUsd = 1.08;
+    final result = totalUsdOf(
+      {ves.id: 900, usd.id: 10, eur.id: 5},
+      [ves, usd, eur],
+      rate,
+      eurPerUsd: eurPerUsd,
+    );
+    expect(result, isNotNull);
+    expect(result!.currenciesExcluded, isEmpty);
+    expect(result.total, closeTo(20 + 5 / eurPerUsd, 0.001));
+  });
+
+  test('feeFor convierte una regla en VES a la moneda de la cuenta', () {
+    const rule = FeeRule(
+      id: 'r',
+      name: 'Comisión',
+      fixedAmount: 3,
+      percent: 0,
+      isActive: true,
+    );
+    expect(
+      feeFor(rule, 100, accountCurrency: 'USD', vesPerUsd: 90),
+      closeTo(0.03, 0.001),
+    );
+    expect(
+      feeFor(rule, 100, accountCurrency: 'EUR', vesPerUsd: 90, eurPerUsd: 1.08),
+      closeTo(0.04, 0.001),
+    );
+    expect(
+      feeFor(rule, 100, accountCurrency: 'VES', vesPerUsd: 90, eurPerUsd: 1.08),
+      closeTo(3, 0.001),
+    );
   });
 }

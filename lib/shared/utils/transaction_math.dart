@@ -29,7 +29,8 @@ Map<String, double> balancesOf(
       TransactionType.income => transaction.amount,
       TransactionType.expense ||
       TransactionType.transfer ||
-      TransactionType.pagoMovil => -(transaction.amount + transaction.feeAmount),
+      TransactionType.pagoMovil =>
+        -(transaction.amount + transaction.feeAmount),
     };
     balances.update(
       transaction.accountId,
@@ -75,7 +76,11 @@ double? convertBetween(
   double? eurPerUsd,
 }) {
   if (from == to) return value;
-  final fromFactor = usdFactor(from, vesPerUsd: vesPerUsd, eurPerUsd: eurPerUsd);
+  final fromFactor = usdFactor(
+    from,
+    vesPerUsd: vesPerUsd,
+    eurPerUsd: eurPerUsd,
+  );
   final toFactor = usdFactor(to, vesPerUsd: vesPerUsd, eurPerUsd: eurPerUsd);
   if (fromFactor == null || toFactor == null) return null;
   return value * fromFactor / toFactor;
@@ -105,7 +110,11 @@ double? usdEquivalent(
   double vesPerUsd, {
   double? eurPerUsd,
 }) {
-  final factor = usdFactor(currency, vesPerUsd: vesPerUsd, eurPerUsd: eurPerUsd);
+  final factor = usdFactor(
+    currency,
+    vesPerUsd: vesPerUsd,
+    eurPerUsd: eurPerUsd,
+  );
   if (factor == null) return null;
   return balance * factor;
 }
@@ -136,9 +145,14 @@ double? usdEquivalent(
   return any ? (total: total, currenciesExcluded: excluded) : null;
 }
 
-CurrencyRate? latestReferenceRate(List<CurrencyRate> rates, RateProvider provider) {
+CurrencyRate? latestReferenceRate(
+  List<CurrencyRate> rates,
+  RateProvider provider,
+) {
   for (final rate in rates) {
-    if (rate.rateCode == 'USD/VES' && rate.provider == provider.name) return rate;
+    if (rate.rateCode == 'USD/VES' && rate.provider == provider.name) {
+      return rate;
+    }
   }
   return null;
 }

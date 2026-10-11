@@ -27,7 +27,7 @@ class HomeShell extends ConsumerWidget {
     final railDestinations = [
       for (final module in modules)
         NavigationRailDestination(
-          icon: Icon(module.icon),
+          icon: Icon(module.icon, size: 28),
           label: Text(module.label),
         ),
     ];
@@ -39,19 +39,21 @@ class HomeShell extends ConsumerWidget {
     final barDestinations = [
       for (final module in primaryModules)
         NavigationDestination(
-          icon: Icon(module.icon),
+          icon: Icon(module.icon, size: 26),
           label: module.label,
           tooltip: module.label,
         ),
       if (overflowModules.isNotEmpty)
         const NavigationDestination(
-          icon: Icon(Icons.more_horiz),
+          icon: Icon(Icons.more_horiz, size: 26),
           label: 'Más',
           tooltip: 'Más secciones',
         ),
     ];
 
-    final primaryIndex = primaryModules.indexWhere((m) => m.route == currentPath);
+    final primaryIndex = primaryModules.indexWhere(
+      (m) => m.route == currentPath,
+    );
     final barIndex = primaryIndex >= 0
         ? primaryIndex
         : (overflowModules.isEmpty ? index : primaryModules.length);
@@ -109,7 +111,7 @@ class HomeShell extends ConsumerWidget {
           children: [
             for (final module in overflowModules)
               ListTile(
-                leading: Icon(module.icon),
+                leading: Icon(module.icon, size: 26),
                 title: Text(module.label),
                 onTap: () {
                   Navigator.of(sheetContext).pop();

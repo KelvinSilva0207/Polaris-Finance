@@ -7,6 +7,7 @@ import '../../data/models/enums.dart';
 import '../../shared/widgets/brand_logo.dart';
 import '../categories/categories_screen.dart';
 import '../fees/fee_rules_screen.dart';
+import 'backup_screen.dart';
 
 const _accentOptions = <Color>[
   Color(0xFF9C6BFF),
@@ -78,10 +79,7 @@ class SettingsScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Tema',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
+                  Text('Tema', style: Theme.of(context).textTheme.bodyMedium),
                   const SizedBox(height: 12),
                   SegmentedButton<ThemeMode>(
                     showSelectedIcon: false,
@@ -153,11 +151,25 @@ class SettingsScreen extends ConsumerWidget {
                 ListTile(
                   leading: const Icon(Icons.sell_outlined),
                   title: const Text('Comisiones'),
-                  subtitle: const Text('Reglas de comisión aplicables a movimientos'),
+                  subtitle: const Text(
+                    'Reglas de comisión aplicables a movimientos',
+                  ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (context) => const FeeRulesScreen(),
+                    ),
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.backup_outlined),
+                  title: const Text('Copia de seguridad'),
+                  subtitle: const Text('Respalda y restaura tus datos'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (context) => const BackupScreen(),
                     ),
                   ),
                 ),
@@ -203,16 +215,19 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
       child: Text(
         label,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-            ),
+        style: Theme.of(context).textTheme.labelLarge
+            ?.copyWith(color: Theme.of(context).colorScheme.primary),
       ),
     );
   }
 }
 
 class _ColorDot extends StatelessWidget {
-  const _ColorDot({required this.color, required this.selected, required this.onTap});
+  const _ColorDot({
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
 
   final Color color;
   final bool selected;
