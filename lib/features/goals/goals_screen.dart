@@ -7,6 +7,7 @@ import '../../core/providers.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
 import '../../shared/utils/amount_format.dart';
+import '../../shared/utils/savings_plan.dart';
 import '../../shared/widgets/money_field.dart';
 
 final _numberFormat = NumberFormat.decimalPatternDigits(
@@ -73,6 +74,24 @@ class GoalsScreen extends ConsumerWidget {
     await ref.read(appDatabaseProvider).updateGoal(
           goal.copyWith(allocatedAmount: nuevo),
         );
+  }
+
+  Future<void> _showPlan(BuildContext context, SavingsGoal goal, String currency) async {
+    final plan = buildSavingsPlan(goal);
+    final suggested = plan.requiredMonthly ??
+        (goal.targetAmount - goal.allocatedAmount) / 12;
+    final controller = TextEditingController(
+      text: formatVeNumber(suggested > 0 ? suggested : 0),
+    );
+    await showDialog<void>(
+      context: context,
+      builder: (context) => _GoalPlanDialog(
+        goal: goal,
+        currency: currency,
+        controller: controller,
+      ),
+    );
+    controller.dispose();
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref, SavingsGoal goal) async {
@@ -165,6 +184,8 @@ class GoalsScreen extends ConsumerWidget {
                                   _allocate(context, ref, goal, accounts);
                                 case 'reduce':
                                   _reduce(context, ref, goal);
+                                case 'plan':
+                                  _showPlan(context, goal, currency);
                                 case 'edit':
                                   _edit(context, ref, goal, accounts);
                                 case 'delete':
@@ -174,6 +195,7 @@ class GoalsScreen extends ConsumerWidget {
                             itemBuilder: (context) => const [
                               PopupMenuItem(value: 'allocate', child: Text('Aportar')),
                               PopupMenuItem(value: 'reduce', child: Text('Reducir aporte')),
+                              PopupMenuItem(value: 'plan', child: Text('Plan de ahorro')),
                               PopupMenuItem(value: 'edit', child: Text('Editar')),
                               PopupMenuItem(value: 'delete', child: Text('Eliminar')),
                             ],
@@ -207,6 +229,13 @@ class GoalsScreen extends ConsumerWidget {
                             ),
                         ],
                       ),
+                      if (goal.allocatedAmount < goal.targetAmount) ...[
+                        const SizedBox(height: 10),
+                        _PlanLine(
+                          plan: buildSavingsPlan(goal),
+                          currency: currency,
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -558,4 +587,139 @@ Future<double?> _showAmountDialog(BuildContext context, String title) {
       ],
     ),
   ).whenComplete(controller.dispose);
+}
+
+class _PlanLine extends StatelessWidget {
+  const _PlanLine({required this.plan, required this.currency});
+
+  final SavingsPlan plan;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    if (plan.reached) return const SizedBox.shrink();
+
+    if (plan.overdue) {
+      return Row(
+        children: [
+          const Icon(Icons.error_outline, size: 15, color: Color(0xFFEF5350)),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              'Meta vencida · faltan ${_fmt(plan.remaining)} $currency',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: const Color(0xFFEF5350),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (plan.requiredMonthly != null) {
+      return Row(
+        children: [
+          const Icon(Icons.savings_outlined, size: 15, color: Color(0xFF42A5F5)),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              'Ahorra ~${_fmt(plan.requiredMonthly!)} $currency/mes para llegar '
+              'a tiempo',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: const Color(0xFF42A5F5),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Text(
+      'Faltan ${_fmt(plan.remaining)} $currency',
+      style: theme.textTheme.labelSmall,
+    );
+  }
+}
+
+class _GoalPlanDialog extends StatefulWidget {
+  const _GoalPlanDialog({
+    required this.goal,
+    required this.currency,
+    required this.controller,
+  });
+
+  final SavingsGoal goal;
+  final String currency;
+  final TextEditingController controller;
+
+  @override
+  State<_GoalPlanDialog> createState() => _GoalPlanDialogState();
+}
+
+class _GoalPlanDialogState extends State<_GoalPlanDialog> {
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onChanged);
+    super.dispose();
+  }
+
+  void _onChanged() => setState(() {});
+
+  @override
+  Widget build(BuildContext context) {
+    final plan = buildSavingsPlan(widget.goal);
+    final perMonth = _parseAmount(widget.controller.text) ?? 0;
+    final months = monthsToComplete(plan.remaining, perMonth);
+    final date = estimatedCompletionDate(plan.remaining, perMonth);
+
+    String summary;
+    if (plan.remaining <= 0) {
+      summary = 'La meta ya está completa.';
+    } else if (perMonth <= 0) {
+      summary = 'Ingresa un aporte mensual mayor que cero.';
+    } else {
+      final monthsText = months! < 1
+          ? 'menos de un mes'
+          : '${months.toStringAsFixed(months >= 10 ? 0 : 1)} meses';
+      summary = 'A ese ritmo alcanzarás la meta en ~$monthsText'
+          '${date != null ? ' (${DateFormat('dd/MM/yyyy').format(date)})' : ''}.';
+    }
+
+    return AlertDialog(
+      title: Text('Plan: ${widget.goal.name}'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Faltan ${_fmt(plan.remaining)} ${widget.currency}'
+            '${plan.requiredMonthly != null ? ' · sugerido ${_fmt(plan.requiredMonthly!)}/mes' : ''}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 12),
+          MoneyField(
+            controller: widget.controller,
+            label: 'Aporte mensual',
+            currency: widget.currency,
+            autofocus: true,
+          ),
+          const SizedBox(height: 12),
+          Text(summary, style: Theme.of(context).textTheme.bodySmall),
+        ],
+      ),
+      actions: [
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cerrar'),
+        ),
+      ],
+    );
+  }
 }
