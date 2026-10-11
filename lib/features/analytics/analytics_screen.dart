@@ -10,6 +10,7 @@ import '../../shared/utils/transaction_math.dart';
 import '../budgets/budgets_screen.dart';
 import '../export/export_screen.dart';
 import 'inflation_screen.dart';
+import 'net_worth_screen.dart';
 
 const _monthNames = [
   'enero',
@@ -241,6 +242,17 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (context) => const InflationScreen(),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            tooltip: 'Patrimonio neto',
+            icon: const Icon(Icons.account_balance_outlined),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (context) => const NetWorthScreen(),
                 ),
               );
             },
