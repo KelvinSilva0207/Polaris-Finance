@@ -8,6 +8,7 @@ import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
 import '../../data/models/currencies.dart';
 import '../../shared/utils/amount_format.dart';
+import '../../shared/utils/budget_status.dart';
 import '../../shared/widgets/money_field.dart';
 
 final _numberFormat = NumberFormat.decimalPatternDigits(
@@ -135,7 +136,20 @@ class BudgetsScreen extends ConsumerWidget {
               ),
             );
           }
-          return ListView.separated(
+          final alerts = buildBudgetAlerts(
+            budgets: budgets,
+            transactions: transactions,
+            now: now,
+          );
+          return Column(
+            children: [
+              if (alerts.hasAlerts)
+                _BudgetAlertBanner(
+                  summary: alerts,
+                  categoryById: categoryById,
+                ),
+              Expanded(
+                child: ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: budgets.length,
             separatorBuilder: (_, _) => const SizedBox(height: 8),
@@ -227,6 +241,9 @@ class BudgetsScreen extends ConsumerWidget {
                 ),
               );
             },
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -343,4 +360,82 @@ Future<_BudgetDraft?> _showBudgetDialog(
       },
     ),
   );
+}
+
+class _BudgetAlertBanner extends StatelessWidget {
+  const _BudgetAlertBanner({
+    required this.summary,
+    required this.categoryById,
+  });
+
+  final BudgetAlertSummary summary;
+  final Map<String, Category> categoryById;
+
+  String _names(List<BudgetStatus> statuses) => statuses
+      .map((status) =>
+          categoryById[status.budget.categoryId]?.name ?? 'Sin categoría')
+      .join(', ');
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final exceeded = summary.exceeded;
+    final warning = summary.warning;
+    final accent = exceeded.isNotEmpty
+        ? const Color(0xFFEF5350)
+        : const Color(0xFFFFA726);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Card(
+        color: accent.withValues(alpha: 0.12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: accent.withValues(alpha: 0.4)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                exceeded.isNotEmpty
+                    ? Icons.error_outline
+                    : Icons.warning_amber_outlined,
+                color: accent,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Alertas de presupuesto',
+                      style: theme.textTheme.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    if (exceeded.isNotEmpty)
+                      Text(
+                        '${exceeded.length} excedido(s): ${_names(exceeded)}',
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: const Color(0xFFEF5350)),
+                      ),
+                    if (warning.isNotEmpty) ...[
+                      if (exceeded.isNotEmpty) const SizedBox(height: 2),
+                      Text(
+                        '${warning.length} cerca del límite: ${_names(warning)}',
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: const Color(0xFFFFA726)),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
