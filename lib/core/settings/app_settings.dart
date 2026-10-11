@@ -11,6 +11,17 @@ const _providerKey = 'rate_provider';
 const _hideBalancesKey = 'hide_balances';
 const _themeModeKey = 'theme_mode';
 const _remindersKey = 'reminders_enabled';
+const _dashboardOrderKey = 'dashboard_order';
+
+/// Secciones del dashboard que el usuario puede reordenar.
+const dashboardSectionIds = <String>[
+  'summary',
+  'accounts',
+  'services',
+  'goals',
+  'loans',
+  'recent',
+];
 
 final initialSettingsProvider = Provider<AppSettingsState>((ref) {
   throw UnimplementedError('Debe sobrescribirse en ProviderScope');
@@ -28,6 +39,7 @@ class AppSettingsState {
     this.hideBalances = false,
     this.themeMode = ThemeMode.system,
     this.remindersEnabled = false,
+    this.dashboardOrder = dashboardSectionIds,
   });
 
   static const defaults = AppSettingsState();
@@ -38,6 +50,7 @@ class AppSettingsState {
   final bool hideBalances;
   final ThemeMode themeMode;
   final bool remindersEnabled;
+  final List<String> dashboardOrder;
 
   Color get accentColor => Color(accentColorValue);
 
@@ -52,6 +65,7 @@ class AppSettingsState {
         if (module.core || (prefs.getBool('$_moduleKeyPrefix${module.id}') ?? true)) module.id,
     ];
     final themeName = prefs.getString(_themeModeKey);
+    final storedOrder = prefs.getStringList(_dashboardOrderKey) ?? const [];
     return AppSettingsState(
       enabledModules: enabled,
       accentColorValue: prefs.getInt(_accentKey) ?? defaults.accentColorValue,
@@ -62,6 +76,12 @@ class AppSettingsState {
         orElse: () => ThemeMode.system,
       ),
       remindersEnabled: prefs.getBool(_remindersKey) ?? false,
+      dashboardOrder: [
+        for (final id in storedOrder)
+          if (dashboardSectionIds.contains(id)) id,
+        for (final id in dashboardSectionIds)
+          if (!storedOrder.contains(id)) id,
+      ],
     );
   }
 
@@ -72,6 +92,7 @@ class AppSettingsState {
     bool? hideBalances,
     ThemeMode? themeMode,
     bool? remindersEnabled,
+    List<String>? dashboardOrder,
   }) {
     return AppSettingsState(
       enabledModules: enabledModules ?? this.enabledModules,
@@ -80,6 +101,7 @@ class AppSettingsState {
       hideBalances: hideBalances ?? this.hideBalances,
       themeMode: themeMode ?? this.themeMode,
       remindersEnabled: remindersEnabled ?? this.remindersEnabled,
+      dashboardOrder: dashboardOrder ?? this.dashboardOrder,
     );
   }
 }
@@ -129,5 +151,15 @@ class AppSettingsController extends Notifier<AppSettingsState> {
     final prefs = await SharedPreferences.getInstance();
     state = state.copyWith(remindersEnabled: value);
     await prefs.setBool(_remindersKey, value);
+  }
+
+  Future<void> setDashboardOrder(List<String> order) async {
+    final prefs = await SharedPreferences.getInstance();
+    final valid = [
+      for (final id in order)
+        if (dashboardSectionIds.contains(id)) id,
+    ];
+    state = state.copyWith(dashboardOrder: valid);
+    await prefs.setStringList(_dashboardOrderKey, valid);
   }
 }
