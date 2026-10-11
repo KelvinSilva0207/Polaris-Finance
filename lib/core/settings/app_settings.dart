@@ -10,6 +10,7 @@ const _accentKey = 'accent_color';
 const _providerKey = 'rate_provider';
 const _hideBalancesKey = 'hide_balances';
 const _themeModeKey = 'theme_mode';
+const _remindersKey = 'reminders_enabled';
 
 final initialSettingsProvider = Provider<AppSettingsState>((ref) {
   throw UnimplementedError('Debe sobrescribirse en ProviderScope');
@@ -26,6 +27,7 @@ class AppSettingsState {
     this.referenceProvider = RateProvider.bcv,
     this.hideBalances = false,
     this.themeMode = ThemeMode.system,
+    this.remindersEnabled = false,
   });
 
   static const defaults = AppSettingsState();
@@ -35,6 +37,7 @@ class AppSettingsState {
   final RateProvider referenceProvider;
   final bool hideBalances;
   final ThemeMode themeMode;
+  final bool remindersEnabled;
 
   Color get accentColor => Color(accentColorValue);
 
@@ -58,6 +61,7 @@ class AppSettingsState {
         (mode) => mode.name == themeName,
         orElse: () => ThemeMode.system,
       ),
+      remindersEnabled: prefs.getBool(_remindersKey) ?? false,
     );
   }
 
@@ -67,6 +71,7 @@ class AppSettingsState {
     RateProvider? referenceProvider,
     bool? hideBalances,
     ThemeMode? themeMode,
+    bool? remindersEnabled,
   }) {
     return AppSettingsState(
       enabledModules: enabledModules ?? this.enabledModules,
@@ -74,6 +79,7 @@ class AppSettingsState {
       referenceProvider: referenceProvider ?? this.referenceProvider,
       hideBalances: hideBalances ?? this.hideBalances,
       themeMode: themeMode ?? this.themeMode,
+      remindersEnabled: remindersEnabled ?? this.remindersEnabled,
     );
   }
 }
@@ -117,5 +123,11 @@ class AppSettingsController extends Notifier<AppSettingsState> {
     final prefs = await SharedPreferences.getInstance();
     state = state.copyWith(themeMode: mode);
     await prefs.setString(_themeModeKey, mode.name);
+  }
+
+  Future<void> setRemindersEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    state = state.copyWith(remindersEnabled: value);
+    await prefs.setBool(_remindersKey, value);
   }
 }

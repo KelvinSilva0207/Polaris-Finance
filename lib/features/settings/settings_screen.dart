@@ -6,6 +6,7 @@ import '../../core/security/app_lock.dart';
 import '../../core/security/biometric_service.dart';
 import '../../core/settings/app_settings.dart';
 import '../../data/models/enums.dart';
+import '../../data/services/reminder_service.dart';
 import '../../shared/widgets/brand_logo.dart';
 import '../categories/categories_screen.dart';
 import '../fees/fee_rules_screen.dart';
@@ -41,6 +42,29 @@ IconData _providerIcon(RateProvider provider) {
     RateProvider.binance => Icons.currency_exchange,
     RateProvider.manual => Icons.edit_outlined,
   };
+}
+
+Future<void> _toggleReminders(
+  BuildContext context,
+  AppSettingsController controller,
+  bool value,
+) async {
+  if (value) {
+    final granted = await ReminderService.instance.requestPermission();
+    if (!granted) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Activa las notificaciones en los ajustes del sistema',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+  }
+  await controller.setRemindersEnabled(value);
 }
 
 Future<void> _toggleLock(
@@ -198,6 +222,20 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 ],
               ],
+            ),
+          ),
+          const Divider(),
+          const _SectionHeader('Notificaciones'),
+          Card(
+            child: SwitchListTile(
+              secondary: const Icon(Icons.notifications_active_outlined),
+              title: const Text('Recordatorios de pagos'),
+              subtitle: const Text(
+                'Avisa cuando vence un servicio o préstamo',
+              ),
+              value: settings.remindersEnabled,
+              onChanged: (value) =>
+                  _toggleReminders(context, controller, value),
             ),
           ),
           const Divider(),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'core/reminders/reminder_providers.dart';
 import 'core/router/app_router.dart';
 import 'core/security/app_lock.dart';
 import 'core/settings/app_settings.dart';
@@ -80,6 +81,7 @@ class _PolarisFinanceAppWrapperState extends ConsumerState<PolarisFinanceAppWrap
     final theme = AppTheme.light(settings.accentColor);
     final darkTheme = AppTheme.dark(settings.accentColor);
     final themeMode = settings.themeMode;
+    ref.watch(reminderSyncProvider);
 
     if (_onboardingDone == null) {
       return MaterialApp(
