@@ -6,6 +6,7 @@ import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
 import '../../data/models/enums.dart';
 import '../../shared/utils/forecast.dart';
+import '../../shared/utils/month_compare.dart';
 import '../../shared/utils/transaction_math.dart';
 import '../budgets/budgets_screen.dart';
 import '../export/export_screen.dart';
@@ -126,6 +127,13 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       }
     }
     final balance = income - expense;
+
+    final comparison = buildMonthComparison(
+      transactions: transactions,
+      month: _month,
+      convert: conv,
+    );
+    final previousMonth = DateTime(_month.year, _month.month - 1);
 
     final eurRate = latestEurRate(rates)?.rate;
     final balances = balancesOf(transactions, accounts: accounts);
@@ -430,6 +438,13 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               ),
             ),
             const SizedBox(height: 8),
+            _MonthCompareCard(
+              comparison: comparison,
+              target: target,
+              previousLabel:
+                  '${_monthNames[previousMonth.month - 1]} ${previousMonth.year}',
+            ),
+            const SizedBox(height: 8),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -631,6 +646,139 @@ class _ForecastLine extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _MonthCompareCard extends StatelessWidget {
+  const _MonthCompareCard({
+    required this.comparison,
+    required this.target,
+    required this.previousLabel,
+  });
+
+  final MonthComparison comparison;
+  final String target;
+  final String previousLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Comparación mensual', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(
+              'vs $previousLabel',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            _CompareRow(
+              label: 'Ingresos',
+              current: comparison.current.income,
+              delta: comparison.incomeDelta,
+              percent: comparison.incomePercent,
+              goodWhenUp: true,
+              target: target,
+            ),
+            const SizedBox(height: 10),
+            _CompareRow(
+              label: 'Egresos',
+              current: comparison.current.expense,
+              delta: comparison.expenseDelta,
+              percent: comparison.expensePercent,
+              goodWhenUp: false,
+              target: target,
+            ),
+            const Divider(height: 24),
+            _CompareRow(
+              label: 'Balance',
+              current: comparison.current.balance,
+              delta: comparison.balanceDelta,
+              percent: comparison.balancePercent,
+              goodWhenUp: true,
+              target: target,
+              bold: true,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CompareRow extends StatelessWidget {
+  const _CompareRow({
+    required this.label,
+    required this.current,
+    required this.delta,
+    required this.percent,
+    required this.goodWhenUp,
+    required this.target,
+    this.bold = false,
+  });
+
+  final String label;
+  final double current;
+  final double delta;
+  final double? percent;
+  final bool goodWhenUp;
+  final String target;
+  final bool bold;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final unchanged = delta.abs() < 0.01;
+    final good = goodWhenUp ? delta > 0 : delta < 0;
+    final color = unchanged
+        ? theme.colorScheme.onSurfaceVariant
+        : (good ? const Color(0xFF66BB6A) : const Color(0xFFEF5350));
+    final icon = unchanged
+        ? Icons.remove
+        : (delta > 0 ? Icons.arrow_upward : Icons.arrow_downward);
+    final percentText =
+        percent == null ? '' : ' (${percent!.abs().toStringAsFixed(0)}%)';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            Text(
+              '${_fmt(current)} $target',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Row(
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                '${unchanged ? 'Sin cambios' : '${delta > 0 ? '+' : '-'}${_fmt(delta.abs())} $target$percentText'} '
+                'vs mes anterior',
+                style: theme.textTheme.labelSmall?.copyWith(color: color),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
