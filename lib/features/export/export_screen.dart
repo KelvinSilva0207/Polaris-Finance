@@ -11,6 +11,7 @@ import '../../core/providers.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
 import '../../data/models/enums.dart';
+import 'csv_import.dart';
 import 'file_saver.dart';
 
 String _timestamp() {
@@ -297,6 +298,115 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
     }
   }
 
+  Future<void> _importCsv() async {
+    final csv = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        final controller = TextEditingController();
+        return AlertDialog(
+          title: const Text('Importar movimientos (CSV)'),
+          content: SizedBox(
+            width: 480,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Pega aquí el contenido del CSV exportado. Las cuentas y '
+                  'categorías deben existir con el mismo nombre.',
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controller,
+                  maxLines: 10,
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                  decoration: const InputDecoration(
+                    hintText: 'fecha;tipo;monto;moneda;comision;cuenta;categoria;nota;etiquetas',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(controller.text),
+              child: const Text('Importar'),
+            ),
+          ],
+        );
+      },
+    );
+    if (csv == null || csv.trim().isEmpty || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final result = await importTransactionsCsv(
+        csv: csv,
+        db: ref.read(appDatabaseProvider),
+        accounts: ref.read(accountsProvider).value ?? const [],
+        categories: ref.read(categoriesProvider).value ?? const [],
+      );
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Importados: ${result.imported}, sin importar: ${result.skipped + result.errors.length}',
+          ),
+        ),
+      );
+      if (result.errors.isNotEmpty) {
+        if (!mounted) return;
+        await showDialog<void>(
+          context: context,
+          builder: (context) {
+            final lines = result.errors.length <= 60
+                ? result.errors
+                : result.errors.take(60).toList();
+            return AlertDialog(
+              title: Text('${result.errors.length} líneas sin importar'),
+              content: SizedBox(
+                width: 480,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final line in lines)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Text(
+                            line,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                      if (result.errors.length > 60)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Text('… y más.'),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cerrar'),
+                ),
+              ],
+            );
+          },
+        );
+      }
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Error al importar: $error')),
+      );
+    }
+  }
+
   Future<String> _exportPdf() async {
     final bytes = await buildExportPdf(
       transactions: ref.read(transactionsProvider).value ?? const [],
@@ -396,6 +506,29 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
               padding: EdgeInsets.all(16),
               child: Center(child: CircularProgressIndicator()),
             ),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Importar movimientos (CSV)',
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Pega los movimientos exportados en formato CSV. Se añaden '
+                    'a las cuentas y categorías existentes (mismo nombre).',
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _importCsv,
+                    icon: const Icon(Icons.upload_file_outlined),
+                    label: const Text('Pegar e importar'),
+                  ),
+                ],
+              ),
+            ),
+          ),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
