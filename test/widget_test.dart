@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:polaris_finance/app.dart';
 import 'package:polaris_finance/core/providers.dart';
+import 'package:polaris_finance/core/security/app_lock.dart';
 import 'package:polaris_finance/core/settings/app_settings.dart';
 import 'package:polaris_finance/data/database/app_database.dart';
 
@@ -110,6 +111,7 @@ void main() {
         overrides: [
           appDatabaseProvider.overrideWithValue(database),
           initialSettingsProvider.overrideWithValue(AppSettingsState.defaults),
+          initialAppLockProvider.overrideWithValue(const AppLockState()),
         ],
         child: const PolarisFinanceAppWrapper(),
       ),

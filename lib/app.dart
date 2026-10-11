@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/router/app_router.dart';
+import 'core/security/app_lock.dart';
 import 'core/settings/app_settings.dart';
 import 'core/theme/app_theme.dart';
+import 'features/lock/lock_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
 
 const onboardingDoneKey = 'onboarding_done';
@@ -34,13 +36,28 @@ class PolarisFinanceAppWrapper extends ConsumerStatefulWidget {
   ConsumerState<PolarisFinanceAppWrapper> createState() => _PolarisFinanceAppWrapperState();
 }
 
-class _PolarisFinanceAppWrapperState extends ConsumerState<PolarisFinanceAppWrapper> {
+class _PolarisFinanceAppWrapperState extends ConsumerState<PolarisFinanceAppWrapper>
+    with WidgetsBindingObserver {
   bool? _onboardingDone;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadFlag();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      ref.read(appLockProvider.notifier).lock();
+    }
   }
 
   Future<void> _loadFlag() async {
@@ -83,6 +100,17 @@ class _PolarisFinanceAppWrapperState extends ConsumerState<PolarisFinanceAppWrap
         darkTheme: darkTheme,
         themeMode: themeMode,
         home: OnboardingScreen(onDone: _finishOnboarding),
+      );
+    }
+    final lock = ref.watch(appLockProvider);
+    if (lock.requiresUnlock) {
+      return MaterialApp(
+        title: 'Polaris Finance',
+        debugShowCheckedModeBanner: false,
+        theme: theme,
+        darkTheme: darkTheme,
+        themeMode: themeMode,
+        home: const LockScreen(),
       );
     }
     return MaterialApp.router(

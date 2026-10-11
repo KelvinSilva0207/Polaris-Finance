@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/feature_module.dart';
+import '../../core/security/app_lock.dart';
+import '../../core/security/biometric_service.dart';
 import '../../core/settings/app_settings.dart';
 import '../../data/models/enums.dart';
 import '../../shared/widgets/brand_logo.dart';
 import '../categories/categories_screen.dart';
 import '../fees/fee_rules_screen.dart';
+import '../lock/pin_setup_screen.dart';
 import 'backup_screen.dart';
 
 const _accentOptions = <Color>[
@@ -40,6 +43,37 @@ IconData _providerIcon(RateProvider provider) {
   };
 }
 
+Future<void> _toggleLock(
+  BuildContext context,
+  AppLockController controller,
+  bool value,
+) async {
+  if (value) {
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(builder: (context) => const PinSetupScreen()),
+    );
+    return;
+  }
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Desactivar bloqueo'),
+      content: const Text('¿Quitar el PIN de Polaris Finance?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Desactivar'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed == true) await controller.disable();
+}
+
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -47,6 +81,10 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(appSettingsProvider);
     final controller = ref.read(appSettingsProvider.notifier);
+    final lock = ref.watch(appLockProvider);
+    final lockController = ref.read(appLockProvider.notifier);
+    final biometricAvailable =
+        ref.watch(biometricAvailableProvider).asData?.value ?? false;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Ajustes')),
@@ -129,6 +167,37 @@ class SettingsScreen extends ConsumerWidget {
               subtitle: const Text('Difumina los saldos dentro de la app'),
               value: settings.hideBalances,
               onChanged: controller.setHideBalances,
+            ),
+          ),
+          const Divider(),
+          const _SectionHeader('Seguridad'),
+          Card(
+            child: Column(
+              children: [
+                SwitchListTile(
+                  secondary: const Icon(Icons.pin_outlined),
+                  title: const Text('Bloqueo con PIN'),
+                  subtitle: const Text('Pide un PIN al abrir la app'),
+                  value: lock.enabled,
+                  onChanged: (value) => _toggleLock(context, lockController, value),
+                ),
+                if (lock.enabled) ...[
+                  const Divider(height: 1),
+                  SwitchListTile(
+                    secondary: const Icon(Icons.fingerprint),
+                    title: const Text('Desbloqueo biométrico'),
+                    subtitle: Text(
+                      biometricAvailable
+                          ? 'Usa tu huella o rostro'
+                          : 'No disponible en este dispositivo',
+                    ),
+                    value: lock.biometricEnabled,
+                    onChanged: biometricAvailable
+                        ? lockController.setBiometricEnabled
+                        : null,
+                  ),
+                ],
+              ],
             ),
           ),
           const Divider(),
