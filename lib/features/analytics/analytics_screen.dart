@@ -12,6 +12,7 @@ import '../budgets/budgets_screen.dart';
 import '../export/export_screen.dart';
 import 'inflation_screen.dart';
 import 'net_worth_screen.dart';
+import 'cash_flow_screen.dart';
 
 const _monthNames = [
   'enero',
@@ -243,27 +244,56 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               );
             },
           ),
-          IconButton(
-            tooltip: 'Inflación y valor real',
-            icon: const Icon(Icons.trending_down_outlined),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (context) => const InflationScreen(),
-                ),
-              );
+          PopupMenuButton<String>(
+            tooltip: 'Más herramientas',
+            onSelected: (value) {
+              switch (value) {
+                case 'inflation':
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (context) => const InflationScreen(),
+                    ),
+                  );
+                case 'netWorth':
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (context) => const NetWorthScreen(),
+                    ),
+                  );
+                case 'cashFlow':
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (context) => const CashFlowScreen(),
+                    ),
+                  );
+              }
             },
-          ),
-          IconButton(
-            tooltip: 'Patrimonio neto',
-            icon: const Icon(Icons.account_balance_outlined),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (context) => const NetWorthScreen(),
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'inflation',
+                child: ListTile(
+                  leading: Icon(Icons.trending_down_outlined),
+                  title: Text('Inflación y valor real'),
+                  contentPadding: EdgeInsets.zero,
                 ),
-              );
-            },
+              ),
+              PopupMenuItem(
+                value: 'netWorth',
+                child: ListTile(
+                  leading: Icon(Icons.account_balance_outlined),
+                  title: Text('Patrimonio neto'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'cashFlow',
+                child: ListTile(
+                  leading: Icon(Icons.stacked_line_chart),
+                  title: Text('Flujo de caja proyectado'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
         ],
       ),
