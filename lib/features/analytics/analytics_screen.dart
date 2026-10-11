@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
 import '../../data/models/enums.dart';
+import '../../shared/utils/forecast.dart';
+import '../../shared/utils/transaction_math.dart';
 import '../budgets/budgets_screen.dart';
 import '../export/export_screen.dart';
 
@@ -65,6 +67,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final categories =
         ref.watch(categoriesProvider).value ?? const <Category>[];
     final rates = ref.watch(ratesProvider).value ?? const <CurrencyRate>[];
+    final accounts = ref.watch(accountsProvider).value ?? const <Account>[];
+    final services =
+        ref.watch(servicesProvider).value ?? const <RecurringService>[];
+    final loans = ref.watch(loansProvider).value ?? const <Loan>[];
 
     double? rate;
     DateTime? rateDate;
@@ -118,6 +124,24 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       }
     }
     final balance = income - expense;
+
+    final eurRate = latestEurRate(rates)?.rate;
+    final balances = balancesOf(transactions, accounts: accounts);
+    final totalUsd = rate == null
+        ? null
+        : totalUsdOf(balances, accounts, rate, eurPerUsd: eurRate);
+    double? toUsd(double amount, String currency) {
+      final factor = usdFactor(currency, vesPerUsd: rate, eurPerUsd: eurRate);
+      return factor == null ? null : amount * factor;
+    }
+
+    final forecast = buildForecast(
+      currentUsd: totalUsd?.total ?? 0,
+      services: services,
+      loans: loans,
+      from: DateTime.now(),
+      toUsd: toUsd,
+    );
 
     final categoryNames = {for (final category in categories) category.id: category};
     final categoryColors = {
@@ -456,6 +480,89 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               ),
             ),
           ],
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Proyección de saldo (30 días)',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  if (totalUsd == null || rate == null)
+                    const Text(
+                      'Se necesita una tasa de referencia para proyectar el saldo.',
+                    )
+                  else ...[
+                    _ForecastLine(
+                      label: 'Saldo actual',
+                      valueUsd: forecast.currentUsd,
+                    ),
+                    _ForecastLine(
+                      label: 'Compromisos próximos',
+                      valueUsd: -forecast.committedUsd,
+                      color: const Color(0xFFEF5350),
+                    ),
+                    const Divider(),
+                    _ForecastLine(
+                      label: 'Saldo proyectado',
+                      valueUsd: forecast.projectedUsd,
+                      bold: true,
+                      color: forecast.projectedUsd >= 0
+                          ? const Color(0xFF42A5F5)
+                          : const Color(0xFFFFA726),
+                    ),
+                    if (forecast.commitments.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      for (final commitment in forecast.commitments.take(6))
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Row(
+                            children: [
+                              Icon(
+                                commitment.kind == CommitmentKind.service
+                                    ? Icons.receipt_long_outlined
+                                    : Icons.request_quote_outlined,
+                                size: 16,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  commitment.label,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Text(
+                                '${DateFormat('dd/MM').format(commitment.date)} · '
+                                '${_amountFormat.format(commitment.amountUsd)} USD',
+                                style: Theme.of(context).textTheme.labelMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (forecast.commitments.length > 6)
+                        Text(
+                          '+ ${forecast.commitments.length - 6} más',
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                    ],
+                    if (forecast.skippedCurrencies.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Sin tasa para: ${forecast.skippedCurrencies.join(', ')}',
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ],
+                  ],
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -466,6 +573,42 @@ double _ratio(double value, double income, double expense) {
   final max = income > expense ? income : expense;
   if (max <= 0) return 0;
   return value / max;
+}
+
+class _ForecastLine extends StatelessWidget {
+  const _ForecastLine({
+    required this.label,
+    required this.valueUsd,
+    this.color,
+    this.bold = false,
+  });
+
+  final String label;
+  final double valueUsd;
+  final Color? color;
+  final bool bold;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final style = (bold ? theme.textTheme.titleMedium : theme.textTheme.bodyMedium)
+        ?.copyWith(
+      color: color,
+      fontWeight: bold ? FontWeight.bold : null,
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: style)),
+          Text(
+            '${valueUsd < 0 ? '-' : ''}${_amountFormat.format(valueUsd.abs())} USD',
+            style: style,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _MetricCard extends StatelessWidget {

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -315,6 +316,46 @@ class _RatesScreenState extends ConsumerState<RatesScreen> {
                   ),
                 )
               else ...[
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Variación últimos 30 días',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            _LegendDot(
+                              color: const Color(0xFF42A5F5),
+                              label: 'BCV',
+                            ),
+                            const SizedBox(width: 12),
+                            _LegendDot(
+                              color: const Color(0xFFFFA726),
+                              label: 'Binance',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        _RateChart(
+                          primary: dailyRateSeries(
+                            rates,
+                            provider: RateProvider.bcv,
+                          ),
+                          secondary: dailyRateSeries(
+                            rates,
+                            provider: RateProvider.binance,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                   child: Text('Historial', style: Theme.of(context).textTheme.titleMedium),
@@ -338,5 +379,194 @@ class _RatesScreenState extends ConsumerState<RatesScreen> {
         },
       ),
     );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(label, style: Theme.of(context).textTheme.labelMedium),
+      ],
+    );
+  }
+}
+
+class _RateChart extends StatelessWidget {
+  const _RateChart({required this.primary, required this.secondary});
+
+  final List<({DateTime date, double rate})> primary;
+  final List<({DateTime date, double rate})> secondary;
+
+  @override
+  Widget build(BuildContext context) {
+    if (primary.isEmpty && secondary.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Text('Aún no hay suficientes datos para graficar.'),
+      );
+    }
+    return SizedBox(
+      height: 180,
+      child: CustomPaint(
+        painter: _RateChartPainter(
+          primary: primary,
+          secondary: secondary,
+          primaryColor: const Color(0xFF42A5F5),
+          secondaryColor: const Color(0xFFFFA726),
+          gridColor: Theme.of(context).colorScheme.outlineVariant,
+          labelStyle: Theme.of(context).textTheme.labelSmall ?? const TextStyle(),
+          labelColor: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+        size: Size.infinite,
+      ),
+    );
+  }
+}
+
+class _RateChartPainter extends CustomPainter {
+  _RateChartPainter({
+    required this.primary,
+    required this.secondary,
+    required this.primaryColor,
+    required this.secondaryColor,
+    required this.gridColor,
+    required this.labelStyle,
+    required this.labelColor,
+  });
+
+  final List<({DateTime date, double rate})> primary;
+  final List<({DateTime date, double rate})> secondary;
+  final Color primaryColor;
+  final Color secondaryColor;
+  final Color gridColor;
+  final TextStyle labelStyle;
+  final Color labelColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final all = [...primary, ...secondary];
+    if (all.isEmpty) return;
+
+    final dates = all.map((p) => p.date).toList()..sort();
+    final start = dates.first;
+    final end = dates.last;
+    final span = end.difference(start).inDays;
+    var minRate = all.first.rate;
+    var maxRate = all.first.rate;
+    for (final point in all) {
+      if (point.rate < minRate) minRate = point.rate;
+      if (point.rate > maxRate) maxRate = point.rate;
+    }
+    if (maxRate == minRate) {
+      maxRate += maxRate == 0 ? 1 : maxRate * 0.05;
+      minRate -= minRate == 0 ? 0 : minRate * 0.05;
+    } else {
+      final pad = (maxRate - minRate) * 0.1;
+      maxRate += pad;
+      minRate -= pad;
+    }
+
+    const leftPad = 52.0;
+    const bottomPad = 22.0;
+    const topPad = 6.0;
+    final chartWidth = size.width - leftPad;
+    final chartHeight = size.height - bottomPad - topPad;
+
+    final gridPaint = Paint()
+      ..color = gridColor.withValues(alpha: 0.6)
+      ..strokeWidth = 1;
+    for (var i = 0; i <= 4; i++) {
+      final y = topPad + chartHeight * i / 4;
+      canvas.drawLine(Offset(leftPad, y), Offset(size.width, y), gridPaint);
+      final value = maxRate - (maxRate - minRate) * i / 4;
+      _drawText(
+        canvas,
+        formatVeNumber(value),
+        Offset(0, y - 7),
+        labelStyle.copyWith(color: labelColor),
+        maxWidth: leftPad - 6,
+        alignRight: true,
+      );
+    }
+
+    void paintSeries(List<({DateTime date, double rate})> points, Color color) {
+      if (points.isEmpty) return;
+      final paint = Paint()
+        ..color = color
+        ..strokeWidth = 2
+        ..style = PaintingStyle.stroke
+        ..strokeJoin = StrokeJoin.round;
+      final path = Path();
+      for (var i = 0; i < points.length; i++) {
+        final x = span == 0
+            ? leftPad + chartWidth / 2
+            : leftPad +
+                chartWidth *
+                    (points[i].date.difference(start).inDays / span);
+        final y = topPad +
+            chartHeight * (maxRate - points[i].rate) / (maxRate - minRate);
+        if (i == 0) {
+          path.moveTo(x, y);
+        } else {
+          path.lineTo(x, y);
+        }
+        canvas.drawCircle(Offset(x, y), 2.5, Paint()..color = color);
+      }
+      canvas.drawPath(path, paint);
+    }
+
+    paintSeries(primary, primaryColor);
+    paintSeries(secondary, secondaryColor);
+
+    _drawText(
+      canvas,
+      DateFormat('dd/MM').format(start),
+      Offset(leftPad, size.height - bottomPad + 6),
+      labelStyle.copyWith(color: labelColor),
+    );
+    _drawText(
+      canvas,
+      DateFormat('dd/MM').format(end),
+      Offset(size.width - 34, size.height - bottomPad + 6),
+      labelStyle.copyWith(color: labelColor),
+    );
+  }
+
+  void _drawText(
+    Canvas canvas,
+    String text,
+    Offset offset,
+    TextStyle style, {
+    double? maxWidth,
+    bool alignRight = false,
+  }) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: ui.TextDirection.ltr,
+    )..layout(maxWidth: maxWidth ?? double.infinity);
+    final dx = alignRight ? offset.dx + (maxWidth ?? 0) - painter.width : offset.dx;
+    painter.paint(canvas, Offset(dx, offset.dy));
+  }
+
+  @override
+  bool shouldRepaint(covariant _RateChartPainter oldDelegate) {
+    return oldDelegate.primary != primary || oldDelegate.secondary != secondary;
   }
 }

@@ -165,6 +165,37 @@ CurrencyRate? latestEurRate(List<CurrencyRate> rates) {
   return null;
 }
 
+/// Serie diaria (último valor de cada día) de una tasa, los últimos [days] días,
+/// ordenada de más antigua a más reciente. Solo incluye días con datos.
+List<({DateTime date, double rate})> dailyRateSeries(
+  List<CurrencyRate> rates, {
+  required RateProvider provider,
+  String rateCode = 'USD/VES',
+  int days = 30,
+  DateTime? now,
+}) {
+  final reference = now ?? DateTime.now();
+  final start = DateTime(reference.year, reference.month, reference.day)
+      .subtract(Duration(days: days - 1));
+  final byDay = <DateTime, CurrencyRate>{};
+  for (final rate in rates) {
+    if (rate.rateCode != rateCode || rate.provider != provider.name) continue;
+    if (rate.date.isBefore(start)) continue;
+    final day = DateTime(rate.date.year, rate.date.month, rate.date.day);
+    final existing = byDay[day];
+    if (existing == null || rate.date.isAfter(existing.date)) {
+      byDay[day] = rate;
+    }
+  }
+  final points = <({DateTime date, double rate})>[];
+  for (var offset = 0; offset < days; offset++) {
+    final day = start.add(Duration(days: offset));
+    final entry = byDay[day];
+    if (entry != null) points.add((date: day, rate: entry.rate));
+  }
+  return points;
+}
+
 double feeFor(
   FeeRule rule,
   double amount, {

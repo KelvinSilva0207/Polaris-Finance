@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:polaris_finance/data/services/reminder_service_io.dart';
+import 'package:polaris_finance/shared/utils/schedule.dart';
 
 void main() {
   group('dateInMonth', () {

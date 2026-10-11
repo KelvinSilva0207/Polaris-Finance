@@ -5,11 +5,11 @@ import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../database/app_database.dart';
+import '../../shared/utils/schedule.dart';
 
 const _channelId = 'payment_reminders';
 const _channelName = 'Recordatorios de pagos';
 const _channelDescription = 'Avisos de servicios y préstamos por vencer';
-const _reminderHour = 9;
 
 /// Envuelve `flutter_local_notifications` para programar recordatorios de pagos.
 class ReminderService {
@@ -156,7 +156,7 @@ Future<void> syncPaymentReminders({
       dueDate.year,
       dueDate.month,
       dueDate.day,
-      _reminderHour,
+      reminderHour,
     );
     if (due.isBefore(today)) continue;
     if (due.difference(today).inDays > 180) continue;
@@ -167,28 +167,6 @@ Future<void> syncPaymentReminders({
       body: 'Vence el ${_formatDate(due)} · saldo pendiente',
     );
   }
-}
-
-/// Fecha (mismo mes o el siguiente) del día [day] de un mes, a las 9:00.
-DateTime dateInMonth(int year, int month, int day) {
-  final lastDay = DateTime(year, month + 1, 0).day;
-  final safeDay = day > lastDay ? lastDay : day;
-  return DateTime(year, month, safeDay, _reminderHour);
-}
-
-/// Próximo vencimiento de un servicio recurrente a partir de hoy.
-DateTime nextServiceDue(int day, DateTime today, DateTime? lastPaid) {
-  var due = dateInMonth(today.year, today.month, day);
-  if (lastPaid != null) {
-    final paid = DateTime(lastPaid.year, lastPaid.month, lastPaid.day);
-    if (!due.isBefore(paid)) {
-      due = dateInMonth(today.year, today.month + 1, day);
-    }
-  }
-  if (due.isBefore(today)) {
-    due = dateInMonth(today.year, today.month + 1, day);
-  }
-  return due;
 }
 
 String _dayKey(DateTime date) =>
