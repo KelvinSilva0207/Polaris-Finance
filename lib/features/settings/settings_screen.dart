@@ -12,6 +12,7 @@ import '../categories/categories_screen.dart';
 import '../fees/fee_rules_screen.dart';
 import '../lock/pin_setup_screen.dart';
 import 'backup_screen.dart';
+import 'theme_editor_screen.dart';
 
 const _accentOptions = <Color>[
   Color(0xFF9C6BFF),
@@ -158,6 +159,19 @@ class SettingsScreen extends ConsumerWidget {
                         controller.setThemeMode(selection.first),
                   ),
                 ],
+              ),
+            ),
+          ),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.palette_outlined),
+              title: const Text('Personalizar tema'),
+              subtitle: const Text('Vista previa, color de acento y modo'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const ThemeEditorScreen(),
+                ),
               ),
             ),
           ),
