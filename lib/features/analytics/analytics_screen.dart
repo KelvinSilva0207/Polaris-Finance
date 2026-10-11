@@ -9,6 +9,7 @@ import '../../shared/utils/forecast.dart';
 import '../../shared/utils/transaction_math.dart';
 import '../budgets/budgets_screen.dart';
 import '../export/export_screen.dart';
+import 'inflation_screen.dart';
 
 const _monthNames = [
   'enero',
@@ -229,6 +230,17 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (context) => const ExportScreen(),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            tooltip: 'Inflación y valor real',
+            icon: const Icon(Icons.trending_down_outlined),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (context) => const InflationScreen(),
                 ),
               );
             },
