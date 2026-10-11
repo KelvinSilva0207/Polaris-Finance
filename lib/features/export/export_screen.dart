@@ -11,8 +11,10 @@ import '../../core/providers.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
 import '../../data/models/enums.dart';
+import '../../shared/utils/transaction_math.dart';
 import 'csv_import.dart';
 import 'file_saver.dart';
+import 'monthly_report.dart';
 
 String _timestamp() {
   final now = DateTime.now();
@@ -416,6 +418,41 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
     return saveBackupFile('polaris_movimientos_${_timestamp()}.pdf', bytes);
   }
 
+  Future<String> _saveMonthlyReport(DateTime month) async {
+    final transactions = ref.read(transactionsProvider).value ?? const [];
+    final accounts = ref.read(accountsProvider).value ?? const [];
+    final categories = ref.read(categoriesProvider).value ?? const [];
+    final rates = ref.read(ratesProvider).value ?? const [];
+    final report = computeMonthlyReport(
+      month: month,
+      transactions: transactions,
+      categories: categories,
+      vesPerUsd: latestReferenceRate(rates, RateProvider.bcv)?.rate,
+      eurPerUsd: latestEurRate(rates)?.rate,
+    );
+    final balances = balancesOf(transactions, accounts: accounts);
+    final bytes = await buildMonthlyReportPdf(
+      report: report,
+      transactions: transactions,
+      accounts: accounts,
+      categories: categories,
+      balances: balances,
+    );
+    final stamp =
+        '${month.year}${month.month.toString().padLeft(2, '0')}';
+    return saveBackupFile('polaris_reporte_$stamp.pdf', bytes);
+  }
+
+  Future<void> _pickMonthlyReport() async {
+    if (_busy) return;
+    final month = await showDialog<DateTime>(
+      context: context,
+      builder: (context) => const MonthlyReportDialog(),
+    );
+    if (month == null || !mounted) return;
+    await _run(() => _saveMonthlyReport(month));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -496,6 +533,29 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
                     onPressed: _busy ? null : () => _run(_exportPdf),
                     icon: const Icon(Icons.picture_as_pdf_outlined),
                     label: const Text('Guardar'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Reporte mensual (PDF)',
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Resumen del mes: ingresos, egresos, por categoría, saldos '
+                    'y todos los movimientos.',
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: _busy ? null : _pickMonthlyReport,
+                    icon: const Icon(Icons.summarize_outlined),
+                    label: const Text('Elegir mes'),
                   ),
                 ],
               ),
