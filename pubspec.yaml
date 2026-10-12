@@ -50,6 +50,7 @@ dependencies:
   web: ^1.1.1
   flutter_local_notifications: ^22.3.1
   timezone: ^0.11.1
+  fl_chart: ^0.71.0
   flutter_timezone: ^5.1.1
 
 dev_dependencies:
@@ -112,3 +113,4 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
