@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
 import '../../data/models/enums.dart';
+import '../../shared/utils/transaction_filter.dart';
 import '../../shared/utils/transaction_math.dart';
 import '../../shared/widgets/amount_text.dart';
 import 'transaction_form_screen.dart';
@@ -18,8 +19,23 @@ import 'transaction_form_screen.dart';
   };
 }
 
-class TransactionsScreen extends ConsumerWidget {
+class TransactionsScreen extends ConsumerStatefulWidget {
   const TransactionsScreen({super.key});
+
+  @override
+  ConsumerState<TransactionsScreen> createState() => _TransactionsScreenState();
+}
+
+class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
+  final _searchController = TextEditingController();
+  String _query = '';
+  final _selectedTags = <String>{};
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   void _openEditor(BuildContext context, {Transaction? initial}) {
     Navigator.of(context).push(
@@ -30,7 +46,7 @@ class TransactionsScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final transactionsAsync = ref.watch(transactionsProvider);
     final accountsAsync = ref.watch(accountsProvider);
     final categoriesAsync = ref.watch(categoriesProvider);
@@ -53,43 +69,132 @@ class TransactionsScreen extends ConsumerWidget {
           final categories = categoriesAsync.value ?? const [];
           final accountById = {for (final account in accounts) account.id: account};
           final categoryById = {for (final category in categories) category.id: category};
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: transactions.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              final transaction = transactions[index];
-              final type = TransactionType.fromStorage(transaction.type);
-              final (icon, color) = _typeVisual(type);
-              final account = accountById[transaction.accountId];
-              final category = categoryById[transaction.categoryId];
-              final destination = transaction.transferToId == null
-                  ? null
-                  : accountById[transaction.transferToId];
-              return Card(
-                child: ListTile(
-                  onTap: () => _openEditor(context, initial: transaction),
-                  leading: CircleAvatar(
-                    backgroundColor: color.withValues(alpha: 0.16),
-                    child: Icon(icon, color: color),
-                  ),
-                  title: Text(
-                    type == TransactionType.transfer ||
-                            type == TransactionType.pagoMovil
-                        ? '${account?.name ?? 'Cuenta'} → ${destination?.name ?? '…'}'
-                        : category?.name ?? account?.name ?? 'Sin categoría',
-                  ),
-                  subtitle: Text(
-                    '${account?.name ?? 'Cuenta'} · ${DateFormat('dd/MM/yyyy HH:mm').format(transaction.date)}',
-                  ),
-                  trailing: AmountText(
-                    signedAmount(transaction),
-                    currency: transaction.currency,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(color: color),
-                  ),
+          final filtered = filterTransactions(
+            transactions,
+            query: _query,
+            tags: _selectedTags,
+          );
+          final availableTags = allTags(transactions);
+          if (transactions.isEmpty) {
+            return const _EmptyTransactionsView();
+          }
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: _searchController,
+                      onChanged: (value) => setState(() => _query = value),
+                      decoration: InputDecoration(
+                        hintText: 'Buscar por nota o etiqueta...',
+                        prefixIcon: const Icon(Icons.search_outlined),
+                        suffixIcon: _query.isEmpty
+                            ? null
+                            : IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _query = '');
+                                },
+                              ),
+                      ),
+                    ),
+                    if (availableTags.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 40,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: availableTags.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            final tag = availableTags[index];
+                            final selected = _selectedTags.contains(tag);
+                            return FilterChip(
+                              label: Text(tag),
+                              selected: selected,
+                              onSelected: (value) {
+                                setState(() {
+                                  if (value) {
+                                    _selectedTags.add(tag);
+                                  } else {
+                                    _selectedTags.remove(tag);
+                                  }
+                                });
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-              );
-            },
+              ),
+              Expanded(
+                child: filtered.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                            'No se encontraron movimientos',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: filtered.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) {
+                          final transaction = filtered[index];
+                          final type = TransactionType.fromStorage(transaction.type);
+                          final (icon, color) = _typeVisual(type);
+                          final account = accountById[transaction.accountId];
+                          final category = categoryById[transaction.categoryId];
+                          final destination = transaction.transferToId == null
+                              ? null
+                              : accountById[transaction.transferToId];
+                          final tags = parseTags(transaction.tags);
+                          return Card(
+                            child: ListTile(
+                              onTap: () => _openEditor(context, initial: transaction),
+                              leading: CircleAvatar(
+                                backgroundColor: color.withValues(alpha: 0.16),
+                                child: Icon(icon, color: color),
+                              ),
+                              title: Text(
+                                type == TransactionType.transfer ||
+                                        type == TransactionType.pagoMovil
+                                    ? '${account?.name ?? 'Cuenta'} → ${destination?.name ?? '…'}'
+                                    : category?.name ?? account?.name ?? 'Sin categoría',
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${account?.name ?? 'Cuenta'} · ${DateFormat('dd/MM/yyyy HH:mm').format(transaction.date)}',
+                                  ),
+                                  if (tags.isNotEmpty)
+                                    Text(
+                                      tags.map((t) => '#$t').join(' '),
+                                      style: Theme.of(context).textTheme.labelSmall,
+                                    ),
+                                ],
+                              ),
+                              trailing: AmountText(
+                                signedAmount(transaction),
+                                currency: transaction.currency,
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(color: color),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
           );
         },
       ),
