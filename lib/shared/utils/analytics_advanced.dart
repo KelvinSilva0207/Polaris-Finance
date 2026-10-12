@@ -53,7 +53,9 @@ List<DayOfWeekData> spendByDayOfWeek({
     sums[w] = (sums[w] ?? 0) + value;
   }
   final result = <DayOfWeekData>[];
-  for (var w = 1; w <= 7; w++) result.add(DayOfWeekData(day: w, amount: sums[w] ?? 0));
+  for (var w = 1; w <= 7; w++) {
+    result.add(DayOfWeekData(day: w, amount: sums[w] ?? 0));
+  }
   return result;
 }
 
@@ -75,7 +77,9 @@ List<HourData> spendByHour({
     sums[tx.date.hour] = (sums[tx.date.hour] ?? 0) + value;
   }
   final result = <HourData>[];
-  for (var h = 0; h <= 23; h++) result.add(HourData(hour: h, amount: sums[h] ?? 0));
+  for (var h = 0; h <= 23; h++) {
+    result.add(HourData(hour: h, amount: sums[h] ?? 0));
+  }
   return result;
 }
 
