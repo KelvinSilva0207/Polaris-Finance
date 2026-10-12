@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-
 import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
 import '../../data/models/enums.dart';
 import '../../shared/utils/forecast.dart';
 import '../../shared/utils/month_compare.dart';
 import '../../shared/utils/transaction_math.dart';
-import '../budgets/budgets_screen.dart';
-import '../export/export_screen.dart';
+import '../../shared/utils/analytics_advanced.dart';
+import '../../shared/utils/cash_flow.dart';
 import 'inflation_screen.dart';
 import 'net_worth_screen.dart';
 import 'cash_flow_screen.dart';
-
 const _monthNames = [
   'enero',
   'febrero',
@@ -28,7 +26,6 @@ const _monthNames = [
   'noviembre',
   'diciembre',
 ];
-
 final _numberFormat = NumberFormat.decimalPatternDigits(
   locale: 'es',
   decimalDigits: 0,
@@ -37,33 +34,31 @@ final _amountFormat = NumberFormat.decimalPatternDigits(
   locale: 'es',
   decimalDigits: 2,
 );
-
 String _fmt(double value) => _numberFormat.format(value);
-
 class AnalyticsScreen extends ConsumerStatefulWidget {
   const AnalyticsScreen({super.key});
-
   @override
   ConsumerState<AnalyticsScreen> createState() => _AnalyticsScreenState();
 }
-
 class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
   bool _inUsd = false;
-
   void _previousMonth() {
     setState(() {
       _month = DateTime(_month.year, _month.month - 1);
     });
   }
-
+  double? _convertToBase(double amount, String currency, {double? r}) {
+    if (currency == 'VES') return !_inUsd ? amount : r == null ? null : amount / r;
+    if (currency == 'USD') return _inUsd ? amount : r == null ? null : amount * r;
+    return null;
+  }
   void _nextMonth() {
     final now = DateTime.now();
     final next = DateTime(_month.year, _month.month + 1);
     if (next.isAfter(DateTime(now.year, now.month))) return;
     setState(() => _month = next);
   }
-
   @override
   Widget build(BuildContext context) {
     final transactions =
@@ -75,7 +70,6 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final services =
         ref.watch(servicesProvider).value ?? const <RecurringService>[];
     final loans = ref.watch(loansProvider).value ?? const <Loan>[];
-
     double? rate;
     DateTime? rateDate;
     for (final entry in rates) {
@@ -85,7 +79,6 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
         rateDate = entry.date;
       }
     }
-
     final target = _inUsd ? 'USD' : 'VES';
     double? conv(double amount, String currency) {
       if (currency == target) return amount;
@@ -94,7 +87,6 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
           ? (currency == 'VES' ? amount / rate : null)
           : (currency == 'USD' ? amount * rate : null);
     }
-
     final monthStart = DateTime(_month.year, _month.month, 1);
     final monthEnd = DateTime(_month.year, _month.month + 1, 1);
     final monthTx = transactions
@@ -104,7 +96,6 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               transaction.date.isBefore(monthEnd),
         )
         .toList();
-
     var income = 0.0;
     var expense = 0.0;
     var skipped = 0;
@@ -128,14 +119,12 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       }
     }
     final balance = income - expense;
-
     final comparison = buildMonthComparison(
       transactions: transactions,
       month: _month,
       convert: conv,
     );
     final previousMonth = DateTime(_month.year, _month.month - 1);
-
     final eurRate = latestEurRate(rates)?.rate;
     final balances = balancesOf(transactions, accounts: accounts);
     final totalUsd = rate == null
@@ -145,7 +134,6 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       final factor = usdFactor(currency, vesPerUsd: rate, eurPerUsd: eurRate);
       return factor == null ? null : amount * factor;
     }
-
     final forecast = buildForecast(
       currentUsd: totalUsd?.total ?? 0,
       services: services,
@@ -153,12 +141,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       from: DateTime.now(),
       toUsd: toUsd,
     );
-
     final categoryNames = {for (final category in categories) category.id: category};
     final categoryColors = {
       for (final category in categories) category.id: category.colorValue,
     };
-
     final byCategory = <String, double>{};
     final microTx = <Transaction>[];
     var microSum = 0.0;
@@ -185,7 +171,6 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final categoryMax =
         topCategories.isEmpty ? 0.0 : topCategories.first.value;
     final microPercent = expense <= 0 ? 0.0 : microSum / expense * 100;
-
     final trendMonths = List.generate(
       6,
       (index) => DateTime(_month.year, _month.month - 5 + index),
@@ -213,11 +198,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       trendValues.add(total);
     }
     final trendMax = trendValues.fold<double>(0, (max, value) => value > max ? value : max);
-
     final now = DateTime.now();
     final isCurrentMonth =
         _month.year == now.year && _month.month == now.month;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('AnalÃ­tica'),
@@ -228,7 +211,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (context) => const BudgetsScreen(),
+                  builder: (context) => const Scaffold(),
                 ),
               );
             },
@@ -239,7 +222,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (context) => const ExportScreen(),
+                  builder: (context) => const Scaffold(),
                 ),
               );
             },
@@ -368,7 +351,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                   child: _MetricCard(
                     label: 'Ingresos',
                     value: _fmt(income),
-                    unit: target,
+                    unit: '',
                     color: const Color(0xFF66BB6A),
                   ),
                 ),
@@ -377,7 +360,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                   child: _MetricCard(
                     label: 'Egresos',
                     value: _fmt(expense),
-                    unit: target,
+                    unit: '',
                     color: const Color(0xFFEF5350),
                   ),
                 ),
@@ -386,7 +369,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                   child: _MetricCard(
                     label: 'Balance',
                     value: _fmt(balance),
-                    unit: target,
+                    unit: '',
                     color: balance >= 0
                         ? const Color(0xFF42A5F5)
                         : const Color(0xFFFFA726),
@@ -472,9 +455,17 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               comparison: comparison,
               target: target,
               previousLabel:
-                  '${_monthNames[previousMonth.month - 1]} ${previousMonth.year}',
+                  '${_monthNames[previousMonth.month - 1]} ${_month.year-1}',
             ),
-            const SizedBox(height: 8),
+                        const SizedBox(height: 8),
+            _buildAdvancedSpendSummary(
+              transactions: monthTx,
+              month: _month,
+              convert: (a,c)=>_convertToBase(a,c,r:rate),
+              categoryNames: categoryNames,
+              categoryColors: categoryColors,
+              accountNames: const <String, Account>{},
+            ),const SizedBox(height: 8),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -637,13 +628,11 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     );
   }
 }
-
 double _ratio(double value, double income, double expense) {
   final max = income > expense ? income : expense;
   if (max <= 0) return 0;
   return value / max;
 }
-
 class _ForecastLine extends StatelessWidget {
   const _ForecastLine({
     required this.label,
@@ -651,12 +640,10 @@ class _ForecastLine extends StatelessWidget {
     this.color,
     this.bold = false,
   });
-
   final String label;
   final double valueUsd;
   final Color? color;
   final bool bold;
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -679,18 +666,15 @@ class _ForecastLine extends StatelessWidget {
     );
   }
 }
-
 class _MonthCompareCard extends StatelessWidget {
   const _MonthCompareCard({
     required this.comparison,
     required this.target,
     required this.previousLabel,
   });
-
   final MonthComparison comparison;
   final String target;
   final String previousLabel;
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -740,7 +724,6 @@ class _MonthCompareCard extends StatelessWidget {
     );
   }
 }
-
 class _CompareRow extends StatelessWidget {
   const _CompareRow({
     required this.label,
@@ -751,7 +734,6 @@ class _CompareRow extends StatelessWidget {
     required this.target,
     this.bold = false,
   });
-
   final String label;
   final double current;
   final double delta;
@@ -759,7 +741,6 @@ class _CompareRow extends StatelessWidget {
   final bool goodWhenUp;
   final String target;
   final bool bold;
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -773,7 +754,6 @@ class _CompareRow extends StatelessWidget {
         : (delta > 0 ? Icons.arrow_upward : Icons.arrow_downward);
     final percentText =
         percent == null ? '' : ' (${percent!.abs().toStringAsFixed(0)}%)';
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -812,7 +792,6 @@ class _CompareRow extends StatelessWidget {
     );
   }
 }
-
 class _MetricCard extends StatelessWidget {
   const _MetricCard({
     required this.label,
@@ -820,12 +799,10 @@ class _MetricCard extends StatelessWidget {
     required this.unit,
     required this.color,
   });
-
   final String label;
   final String value;
   final String unit;
   final Color color;
-
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -851,7 +828,6 @@ class _MetricCard extends StatelessWidget {
     );
   }
 }
-
 class _HBarRow extends StatelessWidget {
   const _HBarRow({
     required this.label,
@@ -859,12 +835,10 @@ class _HBarRow extends StatelessWidget {
     required this.fraction,
     required this.color,
   });
-
   final String label;
   final String valueText;
   final double fraction;
   final Color color;
-
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -904,18 +878,15 @@ class _HBarRow extends StatelessWidget {
     );
   }
 }
-
 class _VBars extends StatelessWidget {
   const _VBars({
     required this.values,
     required this.labels,
     required this.maxValue,
   });
-
   final List<double> values;
   final List<String> labels;
   final double maxValue;
-
   @override
   Widget build(BuildContext context) {
     const chartHeight = 120.0;
@@ -961,3 +932,123 @@ class _VBars extends StatelessWidget {
     );
   }
 }
+  Widget _buildAdvancedSpendSummary({
+    required List<Transaction> transactions,
+    required DateTime month,
+    required double? Function(double, String) convert,
+    required Map<String, Category> categoryNames,
+    required Map<String, int> categoryColors,
+    required Map<String, Account> accountNames,
+  }) {
+    final days = spendByDayOfWeek(transactions: transactions, month: month, convert: convert);
+    final hours = spendByHour(transactions: transactions, month: month, convert: convert);
+    final cats = spendByCategory(transactions: transactions, month: month, convert: convert);
+    final accs = spendByAccount(transactions: transactions, month: month, convert: convert);
+    final yoy = compareYearOverYear(transactions: transactions, month: month, convert: convert);
+    final total = cats.fold<double>(0, (p, e) => p + e.amount);
+    final avg = month.day > 0 ? (total / month.day) : 0.0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(child: _MetricCard(label: 'Gasto prom. diario', value: _fmt(avg), unit: '', color: const Color(0xFF7E57C2))),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _MetricCard(
+                label: 'YoY ',
+                value: _fmt(yoy.current),
+                unit: '',
+                color: yoy.delta >= 0 ? const Color(0xFFEF5350) : const Color(0xFF66BB6A),
+                
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _buildTopCategoriesSimple(cats: cats, total: total, categoryNames: categoryNames, categoryColors: categoryColors, fmt: _fmt),
+        const SizedBox(height: 8),
+        _ByDayOfWeek(days: days, fmt: _fmt),
+        const SizedBox(height: 8),
+        _ByHour(hours: hours, fmt: _fmt),
+        const SizedBox(height: 8),
+        _ByAccount(accs: accs, accountNames: const <String, Account>{}, fmt: _fmt),
+      ],
+    );
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  Widget _buildAdvancedSpendSummary({
+    required List<Transaction> transactions,
+    required DateTime month,
+    required double? Function(double, String) convert,
+    required Map<String, Category> categoryNames,
+    required Map<String, int> categoryColors,
+    required Map<String, Account> accountNames,
+  }) {
+    final cats = spendByCategory(transactions: transactions, month: month, convert: convert);
+    final total = cats.fold<double>(0, (p, e) => p + e.amount);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 8),
+        _buildTopCategoriesSimple(cats: cats, total: total, categoryNames: categoryNames, categoryColors: categoryColors, fmt: _fmt),
+      ],
+    );
+  }
+
+
+
+
+
+
+
+
+
+
+
+  Widget _buildTopCategoriesSimple({
+    required List<CategorySpend> cats,
+    required double total,
+    required Map<String, Category> categoryNames,
+    required Map<String, int> categoryColors,
+    required String Function(double) fmt,
+  }) {
+    final max = cats.isEmpty ? 1.0 : cats.map((e) => e.amount).fold<double>(0, (p, e) => e > p ? e : p);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Top 10 categorías', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 12),
+            if (cats.isEmpty) const Text('Sin egresos este mes') else
+              for (final c in cats) ...[
+                _HBarRow(
+                  label: c.categoryId.isEmpty ? 'Sin categoría' : (categoryNames[c.categoryId]?.name ?? 'Sin categoría'),
+                  valueText: fmt(c.amount),
+                  fraction: max <= 0 ? 0 : c.amount / max,
+                  color: Color(c.categoryId.isEmpty ? 0xFF78909C : (categoryColors[c.categoryId] ?? 0xFF78909C)),
+                ),
+                const SizedBox(height: 8),
+              ],
+          ],
+        ),
+      ),
+    );
+  }
