@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+ï»¿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../data/database/app_database.dart';
@@ -228,7 +228,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             },
           ),
           PopupMenuButton<String>(
-            tooltip: 'Más herramientas',
+            tooltip: 'Mï¿½s herramientas',
             onSelected: (value) {
               switch (value) {
                 case 'inflation':
@@ -473,7 +473,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Egresos últimos 6 meses',
+                      'Egresos Ãºltimos 6 meses',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 16),
@@ -1035,12 +1035,12 @@ class _VBars extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Top 10 categorías', style: Theme.of(context).textTheme.titleMedium),
+            Text('Top 10 categorÃ­as', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             if (cats.isEmpty) const Text('Sin egresos este mes') else
               for (final c in cats) ...[
                 _HBarRow(
-                  label: c.categoryId.isEmpty ? 'Sin categoría' : (categoryNames[c.categoryId]?.name ?? 'Sin categoría'),
+                  label: c.categoryId.isEmpty ? 'Sin categorï¿½a' : (categoryNames[c.categoryId]?.name ?? 'Sin categorï¿½a'),
                   valueText: fmt(c.amount),
                   fraction: max <= 0 ? 0 : c.amount / max,
                   color: Color(c.categoryId.isEmpty ? 0xFF78909C : (categoryColors[c.categoryId] ?? 0xFF78909C)),
