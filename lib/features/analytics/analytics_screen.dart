@@ -473,7 +473,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Egresos �ltimos 6 meses',
+                      'Egresos últimos 6 meses',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 16),
@@ -1035,7 +1035,7 @@ class _VBars extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Top 10 categor�as', style: Theme.of(context).textTheme.titleMedium),
+            Text('Top 10 categorías', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             if (cats.isEmpty) const Text('Sin egresos este mes') else
               for (final c in cats) ...[
