@@ -532,8 +532,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                 ),
               ),
             ),
-          ],
-          Card(
+        ],\r\n        Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
