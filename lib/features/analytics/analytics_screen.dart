@@ -985,15 +985,6 @@ class _VBars extends StatelessWidget {
 
 
     final cats = spendByCategory(transactions: transactions, month: month, convert: convert);
-    final total = cats.fold<double>(0, (p, e) => p + e.amount);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 8),
-        _buildTopCategoriesSimple(cats: cats, total: total, categoryNames: categoryNames, categoryColors: categoryColors, fmt: _fmt),
-      ],
-    );
-  }
 
 
 
