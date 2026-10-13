@@ -431,9 +431,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                       for (final entry in topCategories) ...[
                         _HBarRow(
                           label: entry.key.isEmpty
-                              ? 'Sin categor�a'
+                              ? 'Sin categoría'
                               : (categoryNames[entry.key]?.name ??
-                                  'Sin categor�a'),
+                                  'Sin categoría'),
                           valueText: _fmt(entry.value),
                           fraction: categoryMax <= 0
                               ? 0
@@ -531,7 +531,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                         ),
                       if (microTx.length > 5)
                         Text(
-                          '+ ${microTx.length - 5} m�s',
+                          '+ ${microTx.length - 5} Más',
                           style: Theme.of(context).textTheme.labelSmall,
                         ),
                     ],
@@ -607,7 +607,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                         ),
                       if (forecast.commitments.length > 6)
                         Text(
-                          '+ ${forecast.commitments.length - 6} m�s',
+                          '+ ${forecast.commitments.length - 6} Más',
                           style: Theme.of(context).textTheme.labelSmall,
                         ),
                     ],
