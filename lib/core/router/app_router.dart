@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/accounts/accounts_screen.dart';
-import '../../features/analytics/analytics_screen.dart';
+
 import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/goals/goals_screen.dart';
 import '../../features/loans/loans_screen.dart';
@@ -26,7 +26,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       'loans' => const LoansScreen(),
       'goals' => const GoalsScreen(),
       'services' => const ServicesScreen(),
-      'analytics' => const AnalyticsScreen(),
+      'analytics' => const Scaffold(),
       'settings' => const SettingsScreen(),
       _ => const DashboardScreen(),
     };
@@ -54,6 +54,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+
+
 
 
 
