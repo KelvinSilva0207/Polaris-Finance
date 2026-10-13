@@ -459,13 +459,6 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             ),
                         const SizedBox(height: 8),
             _buildAdvancedSpendSummary(
-              transactions: monthTx,
-              month: _month,
-              convert: (a,c)=>_convertToBase(a,c,r:rate),
-              categoryNames: categoryNames,
-              categoryColors: categoryColors,
-              accountNames: const <String, Account>{},
-            ),const SizedBox(height: 8),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
