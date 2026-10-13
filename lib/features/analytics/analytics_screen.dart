@@ -932,14 +932,6 @@ class _VBars extends StatelessWidget {
     );
   }
 }
-  Widget _buildAdvancedSpendSummary({
-    required List<Transaction> transactions,
-    required DateTime month,
-    required double? Function(double, String) convert,
-    required Map<String, Category> categoryNames,
-    required Map<String, int> categoryColors,
-    required Map<String, Account> accountNames,
-  }) {
     final days = spendByDayOfWeek(transactions: transactions, month: month, convert: convert);
     final hours = spendByHour(transactions: transactions, month: month, convert: convert);
     final cats = spendByCategory(transactions: transactions, month: month, convert: convert);
@@ -992,14 +984,6 @@ class _VBars extends StatelessWidget {
 
 
 
-  Widget _buildAdvancedSpendSummary({
-    required List<Transaction> transactions,
-    required DateTime month,
-    required double? Function(double, String) convert,
-    required Map<String, Category> categoryNames,
-    required Map<String, int> categoryColors,
-    required Map<String, Account> accountNames,
-  }) {
     final cats = spendByCategory(transactions: transactions, month: month, convert: convert);
     final total = cats.fold<double>(0, (p, e) => p + e.amount);
     return Column(
