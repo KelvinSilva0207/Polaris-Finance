@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+ï»¿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../data/database/app_database.dart';
@@ -203,7 +203,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
         _month.year == now.year && _month.month == now.month;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Analítica'),
+        title: const Text('AnalÃ­tica'),
         actions: [
           IconButton(
             tooltip: 'Presupuestos',
@@ -228,7 +228,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             },
           ),
           PopupMenuButton<String>(
-            tooltip: 'Más herramientas',
+            tooltip: 'MÃ¡s herramientas',
             onSelected: (value) {
               switch (value) {
                 case 'inflation':
@@ -256,7 +256,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                 value: 'inflation',
                 child: ListTile(
                   leading: Icon(Icons.trending_down_outlined),
-                  title: Text('Inflación y valor real'),
+                  title: Text('Inflaciï¿½n y valor real'),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
@@ -421,7 +421,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Egresos por categoría',
+                      'Egresos por categorÃ­a',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 12),
@@ -431,9 +431,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                       for (final entry in topCategories) ...[
                         _HBarRow(
                           label: entry.key.isEmpty
-                              ? 'Sin categoría'
+                              ? 'Sin categorï¿½a'
                               : (categoryNames[entry.key]?.name ??
-                                  'Sin categoría'),
+                                  'Sin categorï¿½a'),
                           valueText: _fmt(entry.value),
                           fraction: categoryMax <= 0
                               ? 0
@@ -473,7 +473,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Egresos últimos 6 meses',
+                      'Egresos ï¿½ltimos 6 meses',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 16),
@@ -504,7 +504,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                     Text(
                       microLimit == null
                           ? 'Se necesitan tasas de referencia para detectar gastos hormiga.'
-                          : '${microTx.length} gasto(s) = 5 USD (${_fmt(microPercent)}% de los egresos) · ${_fmt(microSum)} $target',
+                          : '${microTx.length} gasto(s) = 5 USD (${_fmt(microPercent)}% de los egresos) ï¿½ ${_fmt(microSum)} $target',
                     ),
                     if (microTx.isNotEmpty) ...[
                       const SizedBox(height: 8),
@@ -531,7 +531,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                         ),
                       if (microTx.length > 5)
                         Text(
-                          '+ ${microTx.length - 5} más',
+                          '+ ${microTx.length - 5} mï¿½s',
                           style: Theme.of(context).textTheme.labelSmall,
                         ),
                     ],
@@ -547,7 +547,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Proyección de saldo (30 días)',
+                    'Proyecciï¿½n de saldo (30 dï¿½as)',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
@@ -561,7 +561,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                       valueUsd: forecast.currentUsd,
                     ),
                     _ForecastLine(
-                      label: 'Compromisos próximos',
+                      label: 'Compromisos prï¿½ximos',
                       valueUsd: -forecast.committedUsd,
                       color: const Color(0xFFEF5350),
                     ),
@@ -598,7 +598,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                                 ),
                               ),
                               Text(
-                                '${DateFormat('dd/MM').format(commitment.date)} · '
+                                '${DateFormat('dd/MM').format(commitment.date)} ï¿½ '
                                 '${_amountFormat.format(commitment.amountUsd)} USD',
                                 style: Theme.of(context).textTheme.labelMedium,
                               ),
@@ -607,7 +607,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                         ),
                       if (forecast.commitments.length > 6)
                         Text(
-                          '+ ${forecast.commitments.length - 6} más',
+                          '+ ${forecast.commitments.length - 6} mï¿½s',
                           style: Theme.of(context).textTheme.labelSmall,
                         ),
                     ],
@@ -684,7 +684,7 @@ class _MonthCompareCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Comparación mensual', style: theme.textTheme.titleMedium),
+            Text('Comparaciï¿½n mensual', style: theme.textTheme.titleMedium),
             const SizedBox(height: 4),
             Text(
               'vs $previousLabel',
@@ -1035,7 +1035,7 @@ class _VBars extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Top 10 categorías', style: Theme.of(context).textTheme.titleMedium),
+            Text('Top 10 categorï¿½as', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             if (cats.isEmpty) const Text('Sin egresos este mes') else
               for (final c in cats) ...[
