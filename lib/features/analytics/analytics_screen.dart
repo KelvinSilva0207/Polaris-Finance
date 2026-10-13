@@ -532,16 +532,6 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               ),
             ),
         ]);
-        Card(
-    required this.comparison,
-    required this.target,
-    required this.previousLabel,
-  });
-  final MonthComparison comparison;
-  final String target;
-  final String previousLabel;
-  @override
-  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Card(
       child: Padding(
