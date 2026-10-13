@@ -458,7 +458,6 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                   '${_monthNames[previousMonth.month - 1]} ${_month.year-1}',
             ),
                         const SizedBox(height: 8),
-            _buildAdvancedSpendSummary(
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
