@@ -228,7 +228,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             },
           ),
           PopupMenuButton<String>(
-            tooltip: 'MÃ¡s herramientas',
+            tooltip: 'Más herramientas',
             onSelected: (value) {
               switch (value) {
                 case 'inflation':
@@ -473,7 +473,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Egresos Ãºltimos 6 meses',
+                      'Egresos últimos 6 meses',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 16),
@@ -1035,7 +1035,7 @@ class _VBars extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Top 10 categorías
+            Text('Top 10 categorías', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             if (cats.isEmpty) const Text('Sin egresos este mes') else
               for (final c in cats) ...[
