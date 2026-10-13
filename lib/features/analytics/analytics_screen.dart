@@ -985,17 +985,6 @@ class _VBars extends StatelessWidget {
 
 
     final cats = spendByCategory(transactions: transactions, month: month, convert: convert);
-
-
-
-
-
-
-
-
-
-
-
   Widget _buildTopCategoriesSimple({
     required List<CategorySpend> cats,
     required double total,
