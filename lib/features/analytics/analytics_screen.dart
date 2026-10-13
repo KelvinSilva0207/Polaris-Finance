@@ -969,11 +969,11 @@ class _VBars extends StatelessWidget {
         const SizedBox(height: 8),
         _buildTopCategoriesSimple(cats: cats, total: total, categoryNames: categoryNames, categoryColors: categoryColors, fmt: _fmt),
         const SizedBox(height: 8),
-        _ByDayOfWeek(days: days, fmt: _fmt),
+        
         const SizedBox(height: 8),
-        _ByHour(hours: hours, fmt: _fmt),
+        
         const SizedBox(height: 8),
-        _ByAccount(accs: accs, accountNames: const <String, Account>{}, fmt: _fmt),
+        
       ],
     );
   }
