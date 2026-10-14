@@ -58,7 +58,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final next = DateTime(_month.year, _month.month + 1);
     if (next.isAfter(DateTime(now.year, now.month))) return;
     setState(() => _month = next);
-  }
+
   @override
   Widget build(BuildContext context) {
     final transactions =
@@ -399,14 +399,14 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                     _HBarRow(
                       label: 'Ingresos',
                       valueText: '${_fmt(income)} $target',
-                      fraction: _ratio(income, income, expense),
+                      fraction: income <= 0 && expense <= 0 ? 0 : (income / (income + expense)).clamp(0.0, 1.0),
                       color: const Color(0xFF66BB6A),
                     ),
                     const SizedBox(height: 8),
                     _HBarRow(
                       label: 'Egresos',
                       valueText: '${_fmt(expense)} $target',
-                      fraction: _ratio(expense, income, expense),
+                      fraction: income <= 0 && expense <= 0 ? 0 : (expense / (income + expense)).clamp(0.0, 1.0),
                       color: const Color(0xFFEF5350),
                     ),
                   ],
@@ -531,8 +531,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                 ),
               ),
             ),
-        ]);
-    final theme = Theme.of(context);
+          ],
+        ),
+      ),
+    );
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -789,85 +791,3 @@ class _VBars extends StatelessWidget {
 }
     final days = spendByDayOfWeek(transactions: transactions, month: month, convert: convert);
     final hours = spendByHour(transactions: transactions, month: month, convert: convert);
-    final cats = spendByCategory(transactions: transactions, month: month, convert: convert);
-    final accs = spendByAccount(transactions: transactions, month: month, convert: convert);
-    final yoy = compareYearOverYear(transactions: transactions, month: month, convert: convert);
-    final total = cats.fold<double>(0, (p, e) => p + e.amount);
-    final avg = month.day > 0 ? (total / month.day) : 0.0;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(child: _MetricCard(label: 'Gasto prom. diario', value: _fmt(avg), unit: '', color: const Color(0xFF7E57C2))),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _MetricCard(
-                label: 'YoY ',
-                value: _fmt(yoy.current),
-                unit: '',
-                color: yoy.delta >= 0 ? const Color(0xFFEF5350) : const Color(0xFF66BB6A),
-                
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        _buildTopCategoriesSimple(cats: cats, total: total, categoryNames: categoryNames, categoryColors: categoryColors, fmt: _fmt),
-        const SizedBox(height: 8),
-        
-        const SizedBox(height: 8),
-        
-        const SizedBox(height: 8),
-        
-      ],
-    );
-  }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    final cats = spendByCategory(transactions: transactions, month: month, convert: convert);
-  Widget _buildTopCategoriesSimple({
-    required List<CategorySpend> cats,
-    required double total,
-    required Map<String, Category> categoryNames,
-    required Map<String, int> categoryColors,
-    required String Function(double) fmt,
-  }) {
-    final max = cats.isEmpty ? 1.0 : cats.map((e) => e.amount).fold<double>(0, (p, e) => e > p ? e : p);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Top 10 categoríasías', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
-            if (cats.isEmpty) const Text('Sin egresos este mes') else
-              for (final c in cats) ...[
-                _HBarRow(
-                  label: c.categoryId.isEmpty ? 'Sin categoría' : (categoryNames[c.categoryId]?.name ?? 'Sin categoría'),
-                  valueText: fmt(c.amount),
-                  fraction: max <= 0 ? 0 : c.amount / max,
-                  color: Color(c.categoryId.isEmpty ? 0xFF78909C : (categoryColors[c.categoryId] ?? 0xFF78909C)),
-                ),
-                const SizedBox(height: 8),
-              ],
-          ],
-        ),
-      ),
-    );
-  }
