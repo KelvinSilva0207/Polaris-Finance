@@ -421,7 +421,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Egresos por categoría',
+                      'Egresos por categoríategoríaía',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 12),
@@ -854,12 +854,12 @@ class _VBars extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Top 10 categorías', style: Theme.of(context).textTheme.titleMedium),
+            Text('Top 10 categoríasías', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             if (cats.isEmpty) const Text('Sin egresos este mes') else
               for (final c in cats) ...[
                 _HBarRow(
-                  label: c.categoryId.isEmpty ? 'Sin categor?a' : (categoryNames[c.categoryId]?.name ?? 'Sin categor?a'),
+                  label: c.categoryId.isEmpty ? 'Sin categoría' : (categoryNames[c.categoryId]?.name ?? 'Sin categoría'),
                   valueText: fmt(c.amount),
                   fraction: max <= 0 ? 0 : c.amount / max,
                   color: Color(c.categoryId.isEmpty ? 0xFF78909C : (categoryColors[c.categoryId] ?? 0xFF78909C)),
