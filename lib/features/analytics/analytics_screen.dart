@@ -6,6 +6,8 @@ import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
 import '../../data/models/enums.dart';
 import '../../shared/utils/month_compare.dart';
+import '../budgets/budgets_screen.dart';
+import '../export/export_screen.dart';
 import 'cash_flow_screen.dart';
 import 'inflation_screen.dart';
 import 'net_worth_screen.dart';
@@ -208,7 +210,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (context) => const Scaffold(),
+                  builder: (context) => const BudgetsScreen(),
                 ),
               );
             },
@@ -219,7 +221,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (context) => const Scaffold(),
+                  builder: (context) => const ExportScreen(),
                 ),
               );
             },
