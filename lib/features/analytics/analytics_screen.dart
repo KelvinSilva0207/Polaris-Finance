@@ -767,9 +767,7 @@ class _VBars extends StatelessWidget {
                       ),
                     const SizedBox(height: 4),
                     Container(
-                      height: maxValue <= 0
-                          ? 2.0
-                          : (values[index] / maxValue) * chartHeight,
+                      height: maxValue <= 0 ? 2.0 : (values[index] / maxValue) * chartHeight,
                       decoration: BoxDecoration(
                         color: scheme.primary,
                         borderRadius: BorderRadius.circular(4),
