@@ -421,7 +421,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Egresos por categoríategoríaía',
+                      'Egresos por categoría',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 12),
