@@ -788,6 +788,3 @@ class _VBars extends StatelessWidget {
       ),
     );
   }
-}
-    final days = spendByDayOfWeek(transactions: transactions, month: month, convert: convert);
-    final hours = spendByHour(transactions: transactions, month: month, convert: convert);
