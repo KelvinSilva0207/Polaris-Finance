@@ -12,6 +12,7 @@ import '../../shared/utils/transaction_math.dart';
 import '../../shared/widgets/account_card.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/brand_logo.dart';
+import '../../shared/widgets/fade_slide_in.dart';
 import '../accounts/account_form_screen.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -39,7 +40,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final accountsAsync = ref.watch(accountsProvider);
     final transactionsAsync = ref.watch(transactionsProvider);
     final rates = ref.watch(ratesProvider).value ?? const [];
-    final services = ref.watch(servicesProvider).value ?? const <RecurringService>[];
+    final services =
+        ref.watch(servicesProvider).value ?? const <RecurringService>[];
     final goals = ref.watch(goalsProvider).value ?? const <SavingsGoal>[];
     final loans = ref.watch(loansProvider).value ?? const <Loan>[];
     final hasAccounts = (accountsAsync.value ?? const []).isNotEmpty;
@@ -49,7 +51,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         title: const BrandLogo(height: 30),
         actions: [
           IconButton(
-            tooltip: settings.hideBalances ? 'Mostrar montos' : 'Ocultar montos',
+            tooltip: settings.hideBalances
+                ? 'Mostrar montos'
+                : 'Ocultar montos',
             icon: Icon(
               settings.hideBalances
                   ? Icons.visibility_off_outlined
@@ -83,8 +87,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             data: (transactions) {
               final balances = balancesOf(transactions, accounts: accounts);
               final bcvRate = latestReferenceRate(rates, RateProvider.bcv);
-              final binanceRate =
-                  latestReferenceRate(rates, RateProvider.binance);
+              final binanceRate = latestReferenceRate(
+                rates,
+                RateProvider.binance,
+              );
               final eurRate = latestEurRate(rates)?.rate;
               final accountCurrency = {
                 for (final account in accounts) account.id: account.currency,
@@ -109,7 +115,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
                 if (services.any((s) => s.isActive))
                   'services': _servicesSection(context, services),
-                if (goals.isNotEmpty) 'goals': _goalsSection(context, goals, accountCurrency),
+                if (goals.isNotEmpty)
+                  'goals': _goalsSection(context, goals, accountCurrency),
                 if (loans.any((l) => l.isActive))
                   'loans': _loansSection(context, loans, accountCurrency),
                 if (transactions.isNotEmpty)
@@ -151,7 +158,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               child: Icon(Icons.drag_indicator),
                             ),
                           ),
-                        Expanded(child: sections[id]!),
+                        Expanded(
+                          child: FadeSlideIn(
+                            key: ValueKey('section-in-$id'),
+                            delay: Duration(milliseconds: 60 * index),
+                            child: sections[id]!,
+                          ),
+                        ),
                       ],
                     ),
                   );
@@ -177,7 +190,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text('Cuentas', style: Theme.of(context).textTheme.titleMedium),
+          child: Text(
+            'Cuentas',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
         ),
         const SizedBox(height: 8),
         for (final account in accounts)
@@ -202,13 +218,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _servicesSection(BuildContext context, List<RecurringService> services) {
+  Widget _servicesSection(
+    BuildContext context,
+    List<RecurringService> services,
+  ) {
     final today = DateTime.now();
     final today0 = DateTime(today.year, today.month, today.day);
     final active = services.where((s) => s.isActive).toList()
       ..sort(
-        (a, b) => nextServiceDue(a.dayOfMonth, today0, a.lastPaidDate)
-            .compareTo(nextServiceDue(b.dayOfMonth, today0, b.lastPaidDate)),
+        (a, b) => nextServiceDue(
+          a.dayOfMonth,
+          today0,
+          a.lastPaidDate,
+        ).compareTo(nextServiceDue(b.dayOfMonth, today0, b.lastPaidDate)),
       );
     final shown = active.take(4).toList();
     final money = NumberFormat('#,##0.00', 'es');
@@ -228,9 +250,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
               trailing: Text(
                 '${money.format(service.amount)} ${service.currency}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
               ),
             ),
           if (active.length > shown.length)
@@ -253,8 +274,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   ) {
     final sorted = [...goals]
       ..sort((a, b) {
-        final pa = a.targetAmount <= 0 ? 0.0 : a.allocatedAmount / a.targetAmount;
-        final pb = b.targetAmount <= 0 ? 0.0 : b.allocatedAmount / b.targetAmount;
+        final pa = a.targetAmount <= 0
+            ? 0.0
+            : a.allocatedAmount / a.targetAmount;
+        final pb = b.targetAmount <= 0
+            ? 0.0
+            : b.allocatedAmount / b.targetAmount;
         return pb.compareTo(pa);
       });
     final money = NumberFormat('#,##0.00', 'es');
@@ -284,7 +309,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     child: LinearProgressIndicator(
                       value: goal.targetAmount <= 0
                           ? 0
-                          : (goal.allocatedAmount / goal.targetAmount).clamp(0.0, 1.0),
+                          : (goal.allocatedAmount / goal.targetAmount).clamp(
+                              0.0,
+                              1.0,
+                            ),
                       minHeight: 8,
                     ),
                   ),
@@ -329,9 +357,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               trailing: Text(
                 '${money.format(loan.principal - loan.paidAmount)} ${loan.currency}',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFFEF5350),
-                    ),
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFFEF5350),
+                ),
               ),
             ),
           if (active.length > 4)
@@ -348,8 +376,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _recentSection(BuildContext context, List<Transaction> transactions) {
-    final sorted = [...transactions]
-      ..sort((a, b) => b.date.compareTo(a.date));
+    final sorted = [...transactions]..sort((a, b) => b.date.compareTo(a.date));
     final shown = sorted.take(5).toList();
     return _SectionCard(
       title: 'Últimos movimientos',
@@ -370,18 +397,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     : TransactionType.fromStorage(transaction.type).label,
                 overflow: TextOverflow.ellipsis,
               ),
-              subtitle: Text(
-                DateFormat('d/M/yyyy').format(transaction.date),
-              ),
+              subtitle: Text(DateFormat('d/M/yyyy').format(transaction.date)),
               trailing: AmountText(
                 signedAmount(transaction),
                 currency: transaction.currency,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: signedAmount(transaction) >= 0
-                          ? const Color(0xFF66BB6A)
-                          : const Color(0xFFEF5350),
-                    ),
+                  fontWeight: FontWeight.w600,
+                  color: signedAmount(transaction) >= 0
+                      ? const Color(0xFF66BB6A)
+                      : const Color(0xFFEF5350),
+                ),
               ),
             ),
         ],
@@ -417,7 +442,11 @@ class _SectionCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Row(
             children: [
-              Icon(icon, size: 18, color: Theme.of(context).colorScheme.primary),
+              Icon(
+                icon,
+                size: 18,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(width: 8),
               Text(title, style: Theme.of(context).textTheme.titleMedium),
             ],

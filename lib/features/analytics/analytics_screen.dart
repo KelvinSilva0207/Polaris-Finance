@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -6,6 +6,7 @@ import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
 import '../../data/models/enums.dart';
 import '../../shared/utils/month_compare.dart';
+import '../../shared/widgets/fade_slide_in.dart';
 import '../budgets/budgets_screen.dart';
 import '../export/export_screen.dart';
 import 'cash_flow_screen.dart';
@@ -151,8 +152,11 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       );
       if (value == null) continue;
       final key = transaction.categoryId ?? '';
-      byCategory.update(key, (current) => current + value,
-          ifAbsent: () => value);
+      byCategory.update(
+        key,
+        (current) => current + value,
+        ifAbsent: () => value,
+      );
       if (microLimit != null && value <= microLimit) {
         microTx.add(transaction);
         microSum += value;
@@ -162,8 +166,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final categoryEntries = byCategory.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     final topCategories = categoryEntries.take(6).toList();
-    final categoryMax =
-        topCategories.isEmpty ? 0.0 : topCategories.first.value;
+    final categoryMax = topCategories.isEmpty ? 0.0 : topCategories.first.value;
     final microPercent = expense <= 0 ? 0.0 : microSum / expense * 100;
 
     final trendMonths = List.generate(
@@ -184,7 +187,8 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             TransactionType.expense) {
           continue;
         }
-        total += conv(
+        total +=
+            conv(
               transaction.amount + transaction.feeAmount,
               transaction.currency,
             ) ??
@@ -192,12 +196,13 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       }
       trendValues.add(total);
     }
-    final trendMax =
-        trendValues.fold<double>(0, (max, value) => value > max ? value : max);
+    final trendMax = trendValues.fold<double>(
+      0,
+      (max, value) => value > max ? value : max,
+    );
 
     final now = DateTime.now();
-    final isCurrentMonth =
-        _month.year == now.year && _month.month == now.month;
+    final isCurrentMonth = _month.year == now.year && _month.month == now.month;
     final previousMonth = DateTime(_month.year, _month.month - 1);
 
     return Scaffold(
@@ -282,99 +287,110 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Row(
-                children: [
-                  IconButton(
-                    tooltip: 'Mes anterior',
-                    icon: const Icon(Icons.chevron_left),
-                    onPressed: _previousMonth,
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        '${_monthNames[_month.month - 1]} ${_month.year}',
-                        style: Theme.of(context).textTheme.titleMedium,
+          FadeSlideIn(
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Row(
+                  children: [
+                    IconButton(
+                      tooltip: 'Mes anterior',
+                      icon: const Icon(Icons.chevron_left),
+                      onPressed: _previousMonth,
+                    ),
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          '${_monthNames[_month.month - 1]} ${_month.year}',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    tooltip: 'Mes siguiente',
-                    icon: const Icon(Icons.chevron_right),
-                    onPressed: isCurrentMonth ? null : _nextMonth,
-                  ),
-                ],
+                    IconButton(
+                      tooltip: 'Mes siguiente',
+                      icon: const Icon(Icons.chevron_right),
+                      onPressed: isCurrentMonth ? null : _nextMonth,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              ChoiceChip(
-                label: const Text('VES'),
-                selected: !_inUsd,
-                onSelected: (_) => setState(() => _inUsd = false),
-              ),
-              const SizedBox(width: 8),
-              ChoiceChip(
-                label: const Text('USD'),
-                selected: _inUsd,
-                onSelected: (_) => setState(() => _inUsd = true),
-              ),
-              const SizedBox(width: 8),
-              if (rate != null)
-                Text(
-                  'tasa ${_amountFormat.format(rate)}',
-                  style: Theme.of(context).textTheme.labelSmall,
+          FadeSlideIn(
+            delay: const Duration(milliseconds: 60),
+            child: Row(
+              children: [
+                ChoiceChip(
+                  label: const Text('VES'),
+                  selected: !_inUsd,
+                  onSelected: (_) => setState(() => _inUsd = false),
                 ),
-            ],
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: const Text('USD'),
+                  selected: _inUsd,
+                  onSelected: (_) => setState(() => _inUsd = true),
+                ),
+                const SizedBox(width: 8),
+                if (rate != null)
+                  Text(
+                    'tasa ${_amountFormat.format(rate)}',
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+              ],
+            ),
           ),
           const SizedBox(height: 8),
           if (monthTx.isEmpty)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Center(
-                  child: Text(
-                    'Sin movimientos en ${_monthNames[_month.month - 1]}',
+            FadeSlideIn(
+              delay: const Duration(milliseconds: 120),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Center(
+                    child: Text(
+                      'Sin movimientos en ${_monthNames[_month.month - 1]}',
+                    ),
                   ),
                 ),
               ),
             )
           else ...[
-            Row(
-              children: [
-                Expanded(
-                  child: _MetricCard(
-                    label: 'Ingresos',
-                    value: _fmt(income),
-                    unit: '',
-                    color: const Color(0xFF66BB6A),
+            FadeSlideIn(
+              delay: const Duration(milliseconds: 100),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _MetricCard(
+                      label: 'Ingresos',
+                      amount: income,
+                      unit: '',
+                      color: const Color(0xFF66BB6A),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _MetricCard(
-                    label: 'Egresos',
-                    value: _fmt(expense),
-                    unit: '',
-                    color: const Color(0xFFEF5350),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _MetricCard(
+                      label: 'Egresos',
+                      amount: expense,
+                      unit: '',
+                      color: const Color(0xFFEF5350),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _MetricCard(
-                    label: 'Balance',
-                    value: _fmt(balance),
-                    unit: '',
-                    color: balance >= 0
-                        ? const Color(0xFF42A5F5)
-                        : const Color(0xFFFFA726),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _MetricCard(
+                      label: 'Balance',
+                      amount: balance,
+                      unit: '',
+                      color: balance >= 0
+                          ? const Color(0xFF42A5F5)
+                          : const Color(0xFFFFA726),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             if (skipped > 0) ...[
               const SizedBox(height: 4),
@@ -384,155 +400,170 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               ),
             ],
             const SizedBox(height: 8),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Ingresos vs egresos',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    _HBarRow(
-                      label: 'Ingresos',
-                      valueText: '${_fmt(income)} $target',
-                      fraction: income <= 0 && expense <= 0
-                          ? 0
-                          : (income / (income + expense)).clamp(0.0, 1.0),
-                      color: const Color(0xFF66BB6A),
-                    ),
-                    const SizedBox(height: 8),
-                    _HBarRow(
-                      label: 'Egresos',
-                      valueText: '${_fmt(expense)} $target',
-                      fraction: income <= 0 && expense <= 0
-                          ? 0
-                          : (expense / (income + expense)).clamp(0.0, 1.0),
-                      color: const Color(0xFFEF5350),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Egresos por categoría',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    if (topCategories.isEmpty)
-                      const Text('Sin egresos este mes')
-                    else
-                      for (final entry in topCategories) ...[
-                        _HBarRow(
-                          label: entry.key.isEmpty
-                              ? 'Sin categoría'
-                              : (categoryNames[entry.key]?.name ??
-                                  'Sin categoría'),
-                          valueText: _fmt(entry.value),
-                          fraction: categoryMax <= 0
-                              ? 0
-                              : entry.value / categoryMax,
-                          color: Color(
-                            entry.key.isEmpty
-                                ? 0xFF78909C
-                                : (categoryColors[entry.key] ?? 0xFF78909C),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            _MonthCompareCard(
-              comparison: comparison,
-              target: target,
-              previousLabel:
-                  '${_monthNames[previousMonth.month - 1]} ${previousMonth.year}',
-            ),
-            const SizedBox(height: 8),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Egresos últimos 6 meses',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 16),
-                    _VBars(
-                      values: trendValues,
-                      labels: [
-                        for (final month in trendMonths)
-                          _monthNames[month.month - 1].substring(0, 3),
-                      ],
-                      maxValue: trendMax,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Gastos hormiga',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      microLimit == null
-                          ? 'Se necesitan tasas de referencia para detectar gastos hormiga.'
-                          : '${microTx.length} gasto(s) = 5 USD (${_fmt(microPercent)}% de los egresos) · ${_fmt(microSum)} $target',
-                    ),
-                    if (microTx.isNotEmpty) ...[
+            FadeSlideIn(
+              delay: const Duration(milliseconds: 160),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Ingresos vs egresos',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 12),
+                      _HBarRow(
+                        label: 'Ingresos',
+                        valueText: '${_fmt(income)} $target',
+                        fraction: income <= 0 && expense <= 0
+                            ? 0
+                            : (income / (income + expense)).clamp(0.0, 1.0),
+                        color: const Color(0xFF66BB6A),
+                      ),
                       const SizedBox(height: 8),
-                      for (final transaction in microTx.take(5))
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2),
-                          child: Row(
-                            children: [
-                              Text(
-                                DateFormat('dd/MM').format(transaction.date),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  transaction.note?.isNotEmpty ?? false
-                                      ? transaction.note!
-                                      : 'sin nota',
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              Text(
-                                '${_amountFormat.format(conv(transaction.amount + transaction.feeAmount, transaction.currency) ?? 0)} $target',
-                              ),
-                            ],
-                          ),
-                        ),
-                      if (microTx.length > 5)
-                        Text(
-                          '+ ${microTx.length - 5} Más',
-                          style: Theme.of(context).textTheme.labelSmall,
-                        ),
+                      _HBarRow(
+                        label: 'Egresos',
+                        valueText: '${_fmt(expense)} $target',
+                        fraction: income <= 0 && expense <= 0
+                            ? 0
+                            : (expense / (income + expense)).clamp(0.0, 1.0),
+                        color: const Color(0xFFEF5350),
+                      ),
                     ],
-                  ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            FadeSlideIn(
+              delay: const Duration(milliseconds: 220),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Egresos por categoría',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 12),
+                      if (topCategories.isEmpty)
+                        const Text('Sin egresos este mes')
+                      else
+                        for (final entry in topCategories) ...[
+                          _HBarRow(
+                            label: entry.key.isEmpty
+                                ? 'Sin categoría'
+                                : (categoryNames[entry.key]?.name ??
+                                      'Sin categoría'),
+                            valueText: _fmt(entry.value),
+                            fraction: categoryMax <= 0
+                                ? 0
+                                : entry.value / categoryMax,
+                            color: Color(
+                              entry.key.isEmpty
+                                  ? 0xFF78909C
+                                  : (categoryColors[entry.key] ?? 0xFF78909C),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            FadeSlideIn(
+              delay: const Duration(milliseconds: 280),
+              child: _MonthCompareCard(
+                comparison: comparison,
+                target: target,
+                previousLabel:
+                    '${_monthNames[previousMonth.month - 1]} ${previousMonth.year}',
+              ),
+            ),
+            const SizedBox(height: 8),
+            FadeSlideIn(
+              delay: const Duration(milliseconds: 340),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Egresos últimos 6 meses',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 16),
+                      _VBars(
+                        values: trendValues,
+                        labels: [
+                          for (final month in trendMonths)
+                            _monthNames[month.month - 1].substring(0, 3),
+                        ],
+                        maxValue: trendMax,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            FadeSlideIn(
+              delay: const Duration(milliseconds: 400),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Gastos hormiga',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        microLimit == null
+                            ? 'Se necesitan tasas de referencia para detectar gastos hormiga.'
+                            : '${microTx.length} gasto(s) = 5 USD (${_fmt(microPercent)}% de los egresos) · ${_fmt(microSum)} $target',
+                      ),
+                      if (microTx.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        for (final transaction in microTx.take(5))
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Row(
+                              children: [
+                                Text(
+                                  DateFormat('dd/MM').format(transaction.date),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    transaction.note?.isNotEmpty ?? false
+                                        ? transaction.note!
+                                        : 'sin nota',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Text(
+                                  '${_amountFormat.format(conv(transaction.amount + transaction.feeAmount, transaction.currency) ?? 0)} $target',
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (microTx.length > 5)
+                          Text(
+                            '+ ${microTx.length - 5} Más',
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -546,18 +577,20 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
 class _MetricCard extends StatelessWidget {
   const _MetricCard({
     required this.label,
-    required this.value,
+    required this.amount,
     required this.unit,
     required this.color,
   });
 
   final String label;
-  final String value;
+  final double amount;
   final String unit;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.titleMedium
+        ?.copyWith(color: color, fontWeight: FontWeight.bold);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -566,14 +599,18 @@ class _MetricCard extends StatelessWidget {
           children: [
             Text(label, style: Theme.of(context).textTheme.labelMedium),
             const SizedBox(height: 4),
-            Text(
-              '$value $unit',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                  ),
+            TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: amount),
+              duration: const Duration(milliseconds: 900),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, child) {
+                return Text(
+                  '${_fmt(value)} $unit',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: style,
+                );
+              },
             ),
           ],
         ),
@@ -611,12 +648,20 @@ class _HBarRow extends StatelessWidget {
         Expanded(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: fraction.clamp(0.0, 1.0),
-              minHeight: 14,
-              backgroundColor:
-                  Theme.of(context).colorScheme.surfaceContainerHighest,
-              color: color,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: fraction.clamp(0.0, 1.0)),
+              duration: const Duration(milliseconds: 750),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, child) {
+                return LinearProgressIndicator(
+                  value: value,
+                  minHeight: 14,
+                  backgroundColor: Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerHighest,
+                  color: color,
+                );
+              },
             ),
           ),
         ),
@@ -669,14 +714,28 @@ class _VBars extends StatelessWidget {
                         style: Theme.of(context).textTheme.labelSmall,
                       ),
                     const SizedBox(height: 4),
-                    Container(
-                      height: maxValue <= 0
-                          ? 2.0
-                          : (values[index] / maxValue) * chartHeight,
-                      decoration: BoxDecoration(
-                        color: scheme.primary,
-                        borderRadius: BorderRadius.circular(4),
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(
+                        begin: 0,
+                        end: maxValue <= 0
+                            ? 2.0
+                            : (values[index] / maxValue) * chartHeight,
                       ),
+                      duration: const Duration(milliseconds: 850),
+                      curve: Interval(
+                        (index * 0.09).clamp(0.0, 0.7),
+                        1,
+                        curve: Curves.easeOutCubic,
+                      ),
+                      builder: (context, height, child) {
+                        return Container(
+                          height: height,
+                          decoration: BoxDecoration(
+                            color: scheme.primary,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 6),
                     Text(
@@ -715,10 +774,7 @@ class _MonthCompareCard extends StatelessWidget {
           children: [
             Text('Comparación mensual', style: theme.textTheme.titleMedium),
             const SizedBox(height: 4),
-            Text(
-              'vs $previousLabel',
-              style: theme.textTheme.bodySmall,
-            ),
+            Text('vs $previousLabel', style: theme.textTheme.bodySmall),
             const SizedBox(height: 12),
             _CompareRow(
               label: 'Ingresos',
@@ -784,8 +840,9 @@ class _CompareRow extends StatelessWidget {
     final icon = unchanged
         ? Icons.remove
         : (delta > 0 ? Icons.arrow_upward : Icons.arrow_downward);
-    final percentText =
-        percent == null ? '' : ' (${percent!.abs().toStringAsFixed(0)}%)';
+    final percentText = percent == null
+        ? ''
+        : ' (${percent!.abs().toStringAsFixed(0)}%)';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
