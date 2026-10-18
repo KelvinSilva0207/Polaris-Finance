@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../data/models/enums.dart';
 import '../feature_module.dart';
+import '../theme/app_fonts.dart';
 
 const _moduleKeyPrefix = 'module_';
 const _accentKey = 'accent_color';
@@ -11,6 +12,11 @@ const _providerKey = 'rate_provider';
 const _hideBalancesKey = 'hide_balances';
 const _themeModeKey = 'theme_mode';
 const _remindersKey = 'reminders_enabled';
+const _reminderHourKey = 'reminder_hour';
+const _reminderDaysBeforeKey = 'reminder_days_before';
+const _notifyServicesKey = 'notify_services';
+const _notifyLoansKey = 'notify_loans';
+const _fontKey = 'font_family';
 const _dashboardOrderKey = 'dashboard_order';
 
 /// Secciones del dashboard que el usuario puede reordenar.
@@ -27,9 +33,10 @@ final initialSettingsProvider = Provider<AppSettingsState>((ref) {
   throw UnimplementedError('Debe sobrescribirse en ProviderScope');
 });
 
-final appSettingsProvider = NotifierProvider<AppSettingsController, AppSettingsState>(
-  AppSettingsController.new,
-);
+final appSettingsProvider =
+    NotifierProvider<AppSettingsController, AppSettingsState>(
+      AppSettingsController.new,
+    );
 
 class AppSettingsState {
   const AppSettingsState({
@@ -39,6 +46,11 @@ class AppSettingsState {
     this.hideBalances = false,
     this.themeMode = ThemeMode.system,
     this.remindersEnabled = false,
+    this.reminderHour = 9,
+    this.reminderDaysBefore = 1,
+    this.notifyServices = true,
+    this.notifyLoans = true,
+    this.fontId = AppFonts.defaultId,
     this.dashboardOrder = dashboardSectionIds,
   });
 
@@ -50,9 +62,17 @@ class AppSettingsState {
   final bool hideBalances;
   final ThemeMode themeMode;
   final bool remindersEnabled;
+  final int reminderHour;
+  final int reminderDaysBefore;
+  final bool notifyServices;
+  final bool notifyLoans;
+  final String fontId;
   final List<String> dashboardOrder;
 
   Color get accentColor => Color(accentColorValue);
+
+  /// Familia tipográfica de Google Fonts a aplicar (null = fuente del sistema).
+  String? get fontFamily => AppFonts.familyOf(fontId);
 
   bool isEnabled(String moduleId) => enabledModules.contains(moduleId);
 
@@ -62,20 +82,30 @@ class AppSettingsState {
   factory AppSettingsState.fromPrefs(SharedPreferences prefs) {
     final enabled = <String>[
       for (final module in FeatureModule.all)
-        if (module.core || (prefs.getBool('$_moduleKeyPrefix${module.id}') ?? true)) module.id,
+        if (module.core ||
+            (prefs.getBool('$_moduleKeyPrefix${module.id}') ?? true))
+          module.id,
     ];
     final themeName = prefs.getString(_themeModeKey);
     final storedOrder = prefs.getStringList(_dashboardOrderKey) ?? const [];
     return AppSettingsState(
       enabledModules: enabled,
       accentColorValue: prefs.getInt(_accentKey) ?? defaults.accentColorValue,
-      referenceProvider: RateProvider.fromStorage(prefs.getString(_providerKey)),
+      referenceProvider: RateProvider.fromStorage(
+        prefs.getString(_providerKey),
+      ),
       hideBalances: prefs.getBool(_hideBalancesKey) ?? false,
       themeMode: ThemeMode.values.firstWhere(
         (mode) => mode.name == themeName,
         orElse: () => ThemeMode.system,
       ),
       remindersEnabled: prefs.getBool(_remindersKey) ?? false,
+      reminderHour: prefs.getInt(_reminderHourKey) ?? defaults.reminderHour,
+      reminderDaysBefore:
+          prefs.getInt(_reminderDaysBeforeKey) ?? defaults.reminderDaysBefore,
+      notifyServices: prefs.getBool(_notifyServicesKey) ?? true,
+      notifyLoans: prefs.getBool(_notifyLoansKey) ?? true,
+      fontId: prefs.getString(_fontKey) ?? AppFonts.defaultId,
       dashboardOrder: [
         for (final id in storedOrder)
           if (dashboardSectionIds.contains(id)) id,
@@ -92,6 +122,11 @@ class AppSettingsState {
     bool? hideBalances,
     ThemeMode? themeMode,
     bool? remindersEnabled,
+    int? reminderHour,
+    int? reminderDaysBefore,
+    bool? notifyServices,
+    bool? notifyLoans,
+    String? fontId,
     List<String>? dashboardOrder,
   }) {
     return AppSettingsState(
@@ -101,6 +136,11 @@ class AppSettingsState {
       hideBalances: hideBalances ?? this.hideBalances,
       themeMode: themeMode ?? this.themeMode,
       remindersEnabled: remindersEnabled ?? this.remindersEnabled,
+      reminderHour: reminderHour ?? this.reminderHour,
+      reminderDaysBefore: reminderDaysBefore ?? this.reminderDaysBefore,
+      notifyServices: notifyServices ?? this.notifyServices,
+      notifyLoans: notifyLoans ?? this.notifyLoans,
+      fontId: fontId ?? this.fontId,
       dashboardOrder: dashboardOrder ?? this.dashboardOrder,
     );
   }
@@ -120,7 +160,10 @@ class AppSettingsController extends Notifier<AppSettingsState> {
         if (module.core || enabled.contains(module.id)) module.id,
     ];
     state = state.copyWith(enabledModules: ordered);
-    await prefs.setBool('$_moduleKeyPrefix$moduleId', enabled.contains(moduleId));
+    await prefs.setBool(
+      '$_moduleKeyPrefix$moduleId',
+      enabled.contains(moduleId),
+    );
   }
 
   Future<void> setAccentColor(Color color) async {
@@ -151,6 +194,36 @@ class AppSettingsController extends Notifier<AppSettingsState> {
     final prefs = await SharedPreferences.getInstance();
     state = state.copyWith(remindersEnabled: value);
     await prefs.setBool(_remindersKey, value);
+  }
+
+  Future<void> setReminderHour(int value) async {
+    final prefs = await SharedPreferences.getInstance();
+    state = state.copyWith(reminderHour: value);
+    await prefs.setInt(_reminderHourKey, value);
+  }
+
+  Future<void> setReminderDaysBefore(int value) async {
+    final prefs = await SharedPreferences.getInstance();
+    state = state.copyWith(reminderDaysBefore: value);
+    await prefs.setInt(_reminderDaysBeforeKey, value);
+  }
+
+  Future<void> setNotifyServices(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    state = state.copyWith(notifyServices: value);
+    await prefs.setBool(_notifyServicesKey, value);
+  }
+
+  Future<void> setNotifyLoans(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    state = state.copyWith(notifyLoans: value);
+    await prefs.setBool(_notifyLoansKey, value);
+  }
+
+  Future<void> setFontId(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    state = state.copyWith(fontId: value);
+    await prefs.setString(_fontKey, value);
   }
 
   Future<void> setDashboardOrder(List<String> order) async {

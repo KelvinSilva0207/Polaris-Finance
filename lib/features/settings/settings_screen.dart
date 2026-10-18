@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/feature_module.dart';
 import '../../core/security/app_lock.dart';
 import '../../core/security/biometric_service.dart';
 import '../../core/settings/app_settings.dart';
+import '../../core/theme/app_fonts.dart';
 import '../../data/models/enums.dart';
-import '../../data/services/reminder_service.dart';
 import '../../shared/widgets/brand_logo.dart';
 import '../categories/categories_screen.dart';
 import '../fees/fee_rules_screen.dart';
 import '../lock/pin_setup_screen.dart';
+import '../onboarding/tutorial_screen.dart';
+import 'about_screen.dart';
 import 'backup_screen.dart';
+import 'notifications_screen.dart';
 import 'theme_editor_screen.dart';
+import 'tips_screen.dart';
 
 const _accentOptions = <Color>[
   Color(0xFF9C6BFF),
@@ -43,29 +48,6 @@ IconData _providerIcon(RateProvider provider) {
     RateProvider.binance => Icons.currency_exchange,
     RateProvider.manual => Icons.edit_outlined,
   };
-}
-
-Future<void> _toggleReminders(
-  BuildContext context,
-  AppSettingsController controller,
-  bool value,
-) async {
-  if (value) {
-    final granted = await ReminderService.instance.requestPermission();
-    if (!granted) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Activa las notificaciones en los ajustes del sistema',
-            ),
-          ),
-        );
-      }
-      return;
-    }
-  }
-  await controller.setRemindersEnabled(value);
 }
 
 Future<void> _toggleLock(
@@ -163,6 +145,39 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.text_fields, size: 20),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Tipografía',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final font in AppFonts.catalog)
+                        _FontChip(
+                          font: font,
+                          selected: settings.fontId == font.id,
+                          onTap: () => controller.setFontId(font.id),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Card(
             child: ListTile(
               leading: const Icon(Icons.palette_outlined),
               title: const Text('Personalizar tema'),
@@ -217,7 +232,8 @@ class SettingsScreen extends ConsumerWidget {
                   title: const Text('Bloqueo con PIN'),
                   subtitle: const Text('Pide un PIN al abrir la app'),
                   value: lock.enabled,
-                  onChanged: (value) => _toggleLock(context, lockController, value),
+                  onChanged: (value) =>
+                      _toggleLock(context, lockController, value),
                 ),
                 if (lock.enabled) ...[
                   const Divider(height: 1),
@@ -241,15 +257,20 @@ class SettingsScreen extends ConsumerWidget {
           const Divider(),
           const _SectionHeader('Notificaciones'),
           Card(
-            child: SwitchListTile(
-              secondary: const Icon(Icons.notifications_active_outlined),
+            child: ListTile(
+              leading: const Icon(Icons.notifications_active_outlined),
               title: const Text('Recordatorios de pagos'),
-              subtitle: const Text(
-                'Avisa cuando vence un servicio o préstamo',
+              subtitle: Text(
+                settings.remindersEnabled
+                    ? 'Activados · ${settings.reminderDaysBefore == 0 ? 'el mismo día' : '${settings.reminderDaysBefore} día(s) antes'}'
+                    : 'Desactivados',
               ),
-              value: settings.remindersEnabled,
-              onChanged: (value) =>
-                  _toggleReminders(context, controller, value),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const NotificationsScreen(),
+                ),
+              ),
             ),
           ),
           const Divider(),
@@ -291,6 +312,49 @@ class SettingsScreen extends ConsumerWidget {
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (context) => const BackupScreen(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(),
+          const _SectionHeader('Ayuda y más'),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.lightbulb_outline),
+                  title: const Text('Consejos'),
+                  subtitle: const Text('Ahorro, inversión y organización'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(builder: (_) => const TipsScreen()),
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.school_outlined),
+                  title: const Text('Ver tutorial'),
+                  subtitle: const Text('Repasa cómo funciona la app'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => TutorialScreen(
+                        onDone: () => Navigator.of(context).pop(),
+                      ),
+                    ),
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.info_outline),
+                  title: const Text('Acerca de'),
+                  subtitle: const Text('Versión, funciones y créditos'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AboutScreen(),
                     ),
                   ),
                 ),
@@ -373,6 +437,71 @@ class _ColorDot extends StatelessWidget {
         child: selected
             ? const Icon(Icons.check, color: Colors.white, size: 20)
             : null,
+      ),
+    );
+  }
+}
+
+class _FontChip extends StatelessWidget {
+  const _FontChip({
+    required this.font,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final AppFont font;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 150,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected
+                ? theme.colorScheme.primary
+                : theme.colorScheme.outlineVariant,
+            width: selected ? 1.5 : 1,
+          ),
+          color: selected
+              ? theme.colorScheme.primary.withValues(alpha: 0.08)
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Aa',
+              style: font.family == null
+                  ? theme.textTheme.titleLarge
+                  : GoogleFonts.getFont(font.family!),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              font.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              font.description,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

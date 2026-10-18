@@ -5,10 +5,32 @@ import '../../core/icons.dart';
 import '../../core/providers.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
+import '../../data/database/seeds.dart';
 import 'category_editor.dart';
 
 class CategoriesScreen extends ConsumerWidget {
   const CategoriesScreen({super.key});
+
+  Future<void> _restoreSuggested(BuildContext context, WidgetRef ref) async {
+    try {
+      final count = await restoreBuiltInCategories(ref.read(appDatabaseProvider));
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            count == 0
+                ? 'No faltan categorías sugeridas'
+                : 'Se restauraron $count categorías sugeridas',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    }
+  }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref, Category category) async {
     final confirmed = await showDialog<bool>(
@@ -44,7 +66,16 @@ class CategoriesScreen extends ConsumerWidget {
     final categoriesAsync = ref.watch(categoriesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Categorías')),
+      appBar: AppBar(
+        title: const Text('Categorías'),
+        actions: [
+          IconButton(
+            tooltip: 'Restaurar categorías sugeridas',
+            icon: const Icon(Icons.restore),
+            onPressed: () => _restoreSuggested(context, ref),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => showCategoryEditor(context, defaultIsIncome: false),
         tooltip: 'Nueva categoría',

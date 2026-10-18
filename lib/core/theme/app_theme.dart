@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// Transición de página (para `MaterialPageRoute`): fundido + deslizamiento
 /// corto, en todas las plataformas y respetando ajustes de accesibilidad.
@@ -49,7 +50,17 @@ abstract final class AppTheme {
   static const surfaceHigh = Color(0xFF161B26);
   static const border = Color(0xFF232A3A);
 
-  static ThemeData dark(Color seed) {
+  /// Aplica la tipografía elegida sobre un tema base. [family] null mantiene la
+  /// fuente del sistema.
+  static ThemeData _withFont(ThemeData base, String? family) {
+    if (family == null) return base;
+    return base.copyWith(
+      textTheme: GoogleFonts.getTextTheme(family, base.textTheme),
+      primaryTextTheme: GoogleFonts.getTextTheme(family, base.primaryTextTheme),
+    );
+  }
+
+  static ThemeData dark(Color seed, {String? fontFamily}) {
     final scheme =
         ColorScheme.fromSeed(
           seedColor: seed,
@@ -63,7 +74,7 @@ abstract final class AppTheme {
           surfaceContainerHighest: surface,
           outlineVariant: border,
         );
-    return ThemeData(
+    final theme = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: background,
@@ -124,14 +135,15 @@ abstract final class AppTheme {
         ),
       ),
     );
+    return _withFont(theme, fontFamily);
   }
 
-  static ThemeData light(Color seed) {
+  static ThemeData light(Color seed, {String? fontFamily}) {
     final scheme = ColorScheme.fromSeed(
       seedColor: seed,
       brightness: Brightness.light,
     );
-    return ThemeData(
+    final theme = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: scheme.surface,
@@ -186,5 +198,6 @@ abstract final class AppTheme {
         ),
       ),
     );
+    return _withFont(theme, fontFamily);
   }
 }

@@ -12,6 +12,7 @@ import '../../data/models/enums.dart';
 import '../../data/services/rate_service.dart';
 import '../../shared/utils/amount_format.dart';
 import '../../shared/utils/transaction_math.dart';
+import '../../shared/widgets/currency_calculator.dart';
 
 class RatesScreen extends ConsumerStatefulWidget {
   const RatesScreen({super.key});
@@ -233,6 +234,8 @@ class _RatesScreenState extends ConsumerState<RatesScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 12),
+              const CurrencyCalculator(),
               const SizedBox(height: 12),
               Card(
                 child: Padding(

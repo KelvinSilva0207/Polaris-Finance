@@ -9,8 +9,11 @@ import 'core/settings/app_settings.dart';
 import 'core/theme/app_theme.dart';
 import 'features/lock/lock_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
+import 'features/onboarding/tutorial_screen.dart';
+import 'features/splash/splash_screen.dart';
 
 const onboardingDoneKey = 'onboarding_done';
+const tutorialDoneKey = 'tutorial_done';
 
 class PolarisFinanceApp extends ConsumerWidget {
   const PolarisFinanceApp({super.key});
@@ -22,8 +25,14 @@ class PolarisFinanceApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Polaris Finance',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(settings.accentColor),
-      darkTheme: AppTheme.dark(settings.accentColor),
+      theme: AppTheme.light(
+        settings.accentColor,
+        fontFamily: settings.fontFamily,
+      ),
+      darkTheme: AppTheme.dark(
+        settings.accentColor,
+        fontFamily: settings.fontFamily,
+      ),
       themeMode: settings.themeMode,
       routerConfig: router,
     );
@@ -34,12 +43,16 @@ class PolarisFinanceAppWrapper extends ConsumerStatefulWidget {
   const PolarisFinanceAppWrapper({super.key});
 
   @override
-  ConsumerState<PolarisFinanceAppWrapper> createState() => _PolarisFinanceAppWrapperState();
+  ConsumerState<PolarisFinanceAppWrapper> createState() =>
+      _PolarisFinanceAppWrapperState();
 }
 
-class _PolarisFinanceAppWrapperState extends ConsumerState<PolarisFinanceAppWrapper>
+class _PolarisFinanceAppWrapperState
+    extends ConsumerState<PolarisFinanceAppWrapper>
     with WidgetsBindingObserver {
   bool? _onboardingDone;
+  bool? _tutorialDone;
+  bool _splashDone = false;
 
   @override
   void initState() {
@@ -64,7 +77,10 @@ class _PolarisFinanceAppWrapperState extends ConsumerState<PolarisFinanceAppWrap
   Future<void> _loadFlag() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
-    setState(() => _onboardingDone = prefs.getBool(onboardingDoneKey) ?? false);
+    setState(() {
+      _onboardingDone = prefs.getBool(onboardingDoneKey) ?? false;
+      _tutorialDone = prefs.getBool(tutorialDoneKey) ?? false;
+    });
   }
 
   Future<void> _finishOnboarding() async {
@@ -74,46 +90,56 @@ class _PolarisFinanceAppWrapperState extends ConsumerState<PolarisFinanceAppWrap
     setState(() => _onboardingDone = true);
   }
 
+  Future<void> _finishTutorial() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(tutorialDoneKey, true);
+    if (!mounted) return;
+    setState(() => _tutorialDone = true);
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(appSettingsProvider);
     final router = ref.watch(appRouterProvider);
-    final theme = AppTheme.light(settings.accentColor);
-    final darkTheme = AppTheme.dark(settings.accentColor);
+    final theme = AppTheme.light(
+      settings.accentColor,
+      fontFamily: settings.fontFamily,
+    );
+    final darkTheme = AppTheme.dark(
+      settings.accentColor,
+      fontFamily: settings.fontFamily,
+    );
     final themeMode = settings.themeMode;
     ref.watch(reminderSyncProvider);
 
-    if (_onboardingDone == null) {
-      return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: theme,
-        darkTheme: darkTheme,
-        themeMode: themeMode,
-        home: const Scaffold(
-          body: Center(child: CircularProgressIndicator()),
-        ),
+    Widget shell(Widget home) => MaterialApp(
+      title: 'Polaris Finance',
+      debugShowCheckedModeBanner: false,
+      theme: theme,
+      darkTheme: darkTheme,
+      themeMode: themeMode,
+      home: home,
+    );
+
+    if (_onboardingDone == null || _tutorialDone == null) {
+      return shell(
+        const Scaffold(body: Center(child: CircularProgressIndicator())),
+      );
+    }
+    if (!_splashDone) {
+      return shell(
+        SplashScreen(onDone: () => setState(() => _splashDone = true)),
       );
     }
     if (_onboardingDone == false) {
-      return MaterialApp(
-        title: 'Polaris Finance',
-        debugShowCheckedModeBanner: false,
-        theme: theme,
-        darkTheme: darkTheme,
-        themeMode: themeMode,
-        home: OnboardingScreen(onDone: _finishOnboarding),
-      );
+      return shell(OnboardingScreen(onDone: _finishOnboarding));
+    }
+    if (_tutorialDone == false) {
+      return shell(TutorialScreen(onDone: _finishTutorial));
     }
     final lock = ref.watch(appLockProvider);
     if (lock.requiresUnlock) {
-      return MaterialApp(
-        title: 'Polaris Finance',
-        debugShowCheckedModeBanner: false,
-        theme: theme,
-        darkTheme: darkTheme,
-        themeMode: themeMode,
-        home: const LockScreen(),
-      );
+      return shell(const LockScreen());
     }
     return MaterialApp.router(
       title: 'Polaris Finance',

@@ -102,7 +102,7 @@ void main() {
   });
 
   testWidgets('El onboarding crea las cuentas sugeridas', (WidgetTester tester) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({tutorialDoneKey: true});
     final database = AppDatabase.memory();
     addTearDown(database.close);
 

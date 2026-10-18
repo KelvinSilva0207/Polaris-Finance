@@ -14,6 +14,7 @@ import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/brand_logo.dart';
 import '../../shared/widgets/fade_slide_in.dart';
 import '../accounts/account_form_screen.dart';
+import '../settings/tips_data.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -128,52 +129,174 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   if (sections.containsKey(id)) id,
               ];
 
-              return ReorderableListView.builder(
-                padding: const EdgeInsets.all(16),
-                buildDefaultDragHandles: false,
-                itemCount: order.length,
-                onReorderItem: (oldIndex, newIndex) {
-                  final visible = [...order];
-                  final moved = visible.removeAt(oldIndex);
-                  visible.insert(newIndex, moved);
-                  final hidden = [
-                    for (final id in settings.dashboardOrder)
-                      if (!order.contains(id)) id,
-                  ];
-                  controller.setDashboardOrder([...visible, ...hidden]);
-                },
-                itemBuilder: (context, index) {
-                  final id = order[index];
-                  return Padding(
-                    key: ValueKey(id),
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (_reordering)
-                          ReorderableDragStartListener(
-                            index: index,
-                            child: const Padding(
-                              padding: EdgeInsets.only(top: 8, right: 4),
-                              child: Icon(Icons.drag_indicator),
-                            ),
+              return Column(
+                children: [
+                  _dashboardHeader(context),
+                  Expanded(
+                    child: ReorderableListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      buildDefaultDragHandles: false,
+                      itemCount: order.length,
+                      onReorderItem: (oldIndex, newIndex) {
+                        final visible = [...order];
+                        final moved = visible.removeAt(oldIndex);
+                        visible.insert(newIndex, moved);
+                        final hidden = [
+                          for (final id in settings.dashboardOrder)
+                            if (!order.contains(id)) id,
+                        ];
+                        controller.setDashboardOrder([...visible, ...hidden]);
+                      },
+                      itemBuilder: (context, index) {
+                        final id = order[index];
+                        return Padding(
+                          key: ValueKey(id),
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (_reordering)
+                                ReorderableDragStartListener(
+                                  index: index,
+                                  child: const Padding(
+                                    padding: EdgeInsets.only(top: 8, right: 4),
+                                    child: Icon(Icons.drag_indicator),
+                                  ),
+                                ),
+                              Expanded(
+                                child: FadeSlideIn(
+                                  key: ValueKey('section-in-$id'),
+                                  delay: Duration(milliseconds: 60 * index),
+                                  child: sections[id]!,
+                                ),
+                              ),
+                            ],
                           ),
-                        Expanded(
-                          child: FadeSlideIn(
-                            key: ValueKey('section-in-$id'),
-                            delay: Duration(milliseconds: 60 * index),
-                            child: sections[id]!,
-                          ),
-                        ),
-                      ],
+                        );
+                      },
                     ),
-                  );
-                },
+                  ),
+                ],
               );
             },
           );
         },
       ),
+    );
+  }
+
+  static const _weekdays = [
+    'lunes',
+    'martes',
+    'miércoles',
+    'jueves',
+    'viernes',
+    'sábado',
+    'domingo',
+  ];
+  static const _months = [
+    'enero',
+    'febrero',
+    'marzo',
+    'abril',
+    'mayo',
+    'junio',
+    'julio',
+    'agosto',
+    'septiembre',
+    'octubre',
+    'noviembre',
+    'diciembre',
+  ];
+
+  Widget _dashboardHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    final now = DateTime.now();
+    final greeting = now.hour < 12
+        ? 'Buenos días'
+        : now.hour < 19
+        ? 'Buenas tardes'
+        : 'Buenas noches';
+    final date =
+        '${_weekdays[now.weekday - 1]}, ${now.day} de '
+        '${_months[now.month - 1]}';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 6, 8, 2),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  greeting,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  date,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Consejo del día',
+            icon: Icon(
+              Icons.tips_and_updates_outlined,
+              color: theme.colorScheme.primary,
+            ),
+            onPressed: () => _showTipOfTheDay(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTipOfTheDay(BuildContext context) {
+    final tip = tipOfTheDay(DateTime.now());
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.lightbulb_outline,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Consejo del día',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                tip.title,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(tip.body, style: theme.textTheme.bodyMedium),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -284,45 +407,66 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       });
     final money = NumberFormat('#,##0.00', 'es');
     return _SectionCard(
-      title: 'Metas de ahorro',
+      title: 'Metas y ahorros',
       icon: Icons.savings_outlined,
       child: Column(
         children: [
           for (final goal in sorted.take(3))
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(child: Text(goal.name)),
-                      Text(
-                        '${(goal.targetAmount <= 0 ? 0 : (goal.allocatedAmount / goal.targetAmount * 100)).clamp(0, 100).toStringAsFixed(0)}%',
-                        style: Theme.of(context).textTheme.labelMedium,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: goal.targetAmount <= 0
-                          ? 0
-                          : (goal.allocatedAmount / goal.targetAmount).clamp(
-                              0.0,
-                              1.0,
+              child: goal.targetAmount <= 0
+                  ? Row(
+                      children: [
+                        Expanded(child: Text(goal.name)),
+                        Icon(
+                          Icons.savings_outlined,
+                          size: 15,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Ahorro libre',
+                          style: Theme.of(context).textTheme.labelMedium,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          '${money.format(goal.allocatedAmount)} '
+                          '${accountCurrency[goal.accountId] ?? ''}',
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(child: Text(goal.name)),
+                            Text(
+                              '${(goal.allocatedAmount / goal.targetAmount * 100).clamp(0, 100).toStringAsFixed(0)}%',
+                              style: Theme.of(context).textTheme.labelMedium,
                             ),
-                      minHeight: 8,
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: (goal.allocatedAmount / goal.targetAmount)
+                                .clamp(0.0, 1.0),
+                            minHeight: 8,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${money.format(goal.allocatedAmount)} / '
+                          '${money.format(goal.targetAmount)} '
+                          '${accountCurrency[goal.accountId] ?? ''}',
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${money.format(goal.allocatedAmount)} / ${money.format(goal.targetAmount)} ${accountCurrency[goal.accountId] ?? ''}',
-                    style: Theme.of(context).textTheme.labelSmall,
-                  ),
-                ],
-              ),
             ),
         ],
       ),
@@ -485,15 +629,19 @@ class _SummaryCard extends StatefulWidget {
   State<_SummaryCard> createState() => _SummaryCardState();
 }
 
+enum _SummaryRate { bcv, binance, euro }
+
 class _SummaryCardState extends State<_SummaryCard> {
-  RateProvider _provider = RateProvider.bcv;
+  _SummaryRate _provider = _SummaryRate.bcv;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final rate = _provider == RateProvider.binance
-        ? widget.binanceRate
-        : widget.bcvRate;
+    final rate = switch (_provider) {
+      _SummaryRate.bcv => widget.bcvRate,
+      _SummaryRate.binance => widget.binanceRate,
+      _SummaryRate.euro => widget.bcvRate ?? widget.binanceRate,
+    };
     final converted = rate == null
         ? null
         : totalUsdOf(
@@ -502,6 +650,7 @@ class _SummaryCardState extends State<_SummaryCard> {
             rate.rate,
             eurPerUsd: widget.eurPerUsd,
           );
+    final eur = widget.eurPerUsd;
 
     return Card(
       child: Padding(
@@ -517,12 +666,16 @@ class _SummaryCardState extends State<_SummaryCard> {
                     style: theme.textTheme.bodySmall,
                   ),
                 ),
-                SegmentedButton<RateProvider>(
+                SegmentedButton<_SummaryRate>(
                   segments: const [
-                    ButtonSegment(value: RateProvider.bcv, label: Text('BCV')),
+                    ButtonSegment(value: _SummaryRate.bcv, label: Text('BCV')),
                     ButtonSegment(
-                      value: RateProvider.binance,
+                      value: _SummaryRate.binance,
                       label: Text('Binance'),
+                    ),
+                    ButtonSegment(
+                      value: _SummaryRate.euro,
+                      label: Text('Euro'),
                     ),
                   ],
                   selected: {_provider},
@@ -547,15 +700,38 @@ class _SummaryCardState extends State<_SummaryCard> {
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
-                widget.hidden
-                    ? '≈ ···· Bs'
-                    : '≈ ${formatVeNumber(converted.total * rate!.rate)} Bs',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.primary,
+              if (_provider == _SummaryRate.euro)
+                if (eur == null || eur <= 0)
+                  Text(
+                    'Sin tasa del Euro guardada.',
+                    style: theme.textTheme.bodySmall,
+                  )
+                else if (widget.hidden)
+                  Text(
+                    '≈ ···· €',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.primary,
+                    ),
+                  )
+                else
+                  Text(
+                    '≈ ${formatVeNumber(converted.total * eur)} €',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.primary,
+                    ),
+                  )
+              else
+                Text(
+                  widget.hidden
+                      ? '≈ ···· Bs'
+                      : '≈ ${formatVeNumber(converted.total * rate!.rate)} Bs',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
-              ),
             ] else ...[
               Text(
                 '—',

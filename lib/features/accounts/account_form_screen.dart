@@ -184,8 +184,9 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
                 signed: true,
               ),
               inputFormatters: [veAmountFormatter(allowNegative: true)],
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Saldo actual',
+                prefixText: '${currencySymbol(_currency)} ',
                 helperText:
                     'Se formatean los miles automáticamente; puede ser negativo. No se registra como ingreso',
               ),

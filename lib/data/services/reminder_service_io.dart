@@ -121,6 +121,31 @@ class ReminderService {
       // ignore
     }
   }
+
+  /// Muestra una notificación inmediata de prueba.
+  Future<void> showTestNotification() async {
+    await _ensureInitialized();
+    try {
+      await _plugin.show(
+        id: 1,
+        title: 'Así se verán tus recordatorios',
+        body: 'Te avisaremos cuando un servicio o una deuda estén por vencer.',
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _channelId,
+            _channelName,
+            channelDescription: _channelDescription,
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+          iOS: DarwinNotificationDetails(),
+          macOS: DarwinNotificationDetails(),
+        ),
+      );
+    } catch (_) {
+      // ignore
+    }
+  }
 }
 
 /// Recalcula y reprograma los recordatorios de servicios y préstamos.
@@ -128,6 +153,10 @@ Future<void> syncPaymentReminders({
   required List<RecurringService> services,
   required List<Loan> loans,
   required bool enabled,
+  int daysBefore = 1,
+  int hour = reminderHour,
+  bool notifyServices = true,
+  bool notifyLoans = true,
 }) async {
   final service = ReminderService.instance;
   await service._ensureInitialized();
@@ -136,36 +165,46 @@ Future<void> syncPaymentReminders({
 
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
+  final lead = Duration(days: daysBefore);
 
-  for (final s in services) {
-    if (!s.isActive) continue;
-    final due = nextServiceDue(s.dayOfMonth, today, s.lastPaidDate);
-    await service._schedule(
-      id: _stableId('service:${s.id}:${_dayKey(due)}'),
-      when: due,
-      title: 'Pago próximo: ${s.name}',
-      body:
-          'Vence el ${_formatDate(due)} · ${_formatAmount(s.amount)} ${s.currency}',
-    );
+  DateTime remindAt(DateTime due) {
+    final when = due.subtract(lead);
+    return when.isBefore(now) ? now.add(const Duration(minutes: 1)) : when;
   }
 
-  for (final loan in loans) {
-    final dueDate = loan.dueDate;
-    if (!loan.isActive || dueDate == null) continue;
-    final due = DateTime(
-      dueDate.year,
-      dueDate.month,
-      dueDate.day,
-      reminderHour,
-    );
-    if (due.isBefore(today)) continue;
-    if (due.difference(today).inDays > 180) continue;
-    await service._schedule(
-      id: _stableId('loan:${loan.id}:${_dayKey(due)}'),
-      when: due,
-      title: 'Préstamo por vencer: ${loan.name}',
-      body: 'Vence el ${_formatDate(due)} · saldo pendiente',
-    );
+  if (notifyServices) {
+    for (final s in services) {
+      if (!s.isActive) continue;
+      final due = nextServiceDue(
+        s.dayOfMonth,
+        today,
+        s.lastPaidDate,
+        hour: hour,
+      );
+      await service._schedule(
+        id: _stableId('service:${s.id}:${_dayKey(due)}'),
+        when: remindAt(due),
+        title: 'Pago próximo: ${s.name}',
+        body:
+            'Vence el ${_formatDate(due)} · ${_formatAmount(s.amount)} ${s.currency}',
+      );
+    }
+  }
+
+  if (notifyLoans) {
+    for (final loan in loans) {
+      final dueDate = loan.dueDate;
+      if (!loan.isActive || dueDate == null) continue;
+      final due = DateTime(dueDate.year, dueDate.month, dueDate.day, hour);
+      if (due.isBefore(today)) continue;
+      if (due.difference(today).inDays > 180) continue;
+      await service._schedule(
+        id: _stableId('loan:${loan.id}:${_dayKey(due)}'),
+        when: remindAt(due),
+        title: 'Préstamo por vencer: ${loan.name}',
+        body: 'Vence el ${_formatDate(due)} · saldo pendiente',
+      );
+    }
   }
 }
 
