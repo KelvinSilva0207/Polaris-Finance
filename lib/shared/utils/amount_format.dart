@@ -41,53 +41,38 @@ class VeAmountFormatter extends TextInputFormatter {
 
   final bool allowNegative;
 
-  static bool _isNumericChar(String ch) =>
-      ch == ',' || ch == '.' || (ch.codeUnitAt(0) >= 48 && ch.codeUnitAt(0) <= 57);
-
   @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     final text = newValue.text;
-    final selection = newValue.selection;
-
-    var numericBefore = 0;
-    for (var i = 0; i < selection.extentOffset && i < text.length; i++) {
-      if (_isNumericChar(text[i])) numericBefore++;
-    }
-
     final formatted = _formatEntry(text);
     if (formatted == text) return newValue;
 
-    final newOffset = _offsetForNumericIndex(formatted, numericBefore);
+    final offset = _caretOffset(
+      text,
+      newValue.selection.extentOffset,
+      formatted,
+    );
     return TextEditingValue(
       text: formatted,
-      selection: TextSelection.collapsed(offset: newOffset),
+      selection: TextSelection.collapsed(offset: offset),
     );
   }
 
   String _formatEntry(String raw) {
     final negative = allowNegative && raw.startsWith('-');
     final working = raw.replaceAll('-', '');
+    final separatorIndex = _findSeparatorIndex(working);
+    final hasSeparator = separatorIndex >= 0;
 
-    int? separatorIndex;
-    if (working.contains(',')) {
-      separatorIndex = working.indexOf(',');
-    } else if (working.contains('.')) {
-      final lastDot = working.lastIndexOf('.');
-      final after = working.substring(lastDot + 1);
-      // Un `.` es decimal solo si va al final o va seguido de 0-2 dígitos
-      // (ignorando basura que se descartará, p.ej. `12.5x`); si no, es miles.
-      final digitsAfter = after.replaceAll(RegExp(r'[^0-9]'), '');
-      if (after.isEmpty ||
-          (digitsAfter.isNotEmpty && digitsAfter.length <= 2)) {
-        separatorIndex = lastDot;
-      }
-    }
-
-    final hasSeparator = separatorIndex != null;
     final String integer;
     var decimals = '';
     if (hasSeparator) {
-      integer = working.substring(0, separatorIndex).replaceAll(RegExp(r'[^0-9]'), '');
+      integer = working
+          .substring(0, separatorIndex)
+          .replaceAll(RegExp(r'[^0-9]'), '');
       decimals = working
           .substring(separatorIndex + 1)
           .replaceAll(RegExp(r'[^0-9]'), '');
@@ -111,6 +96,24 @@ class VeAmountFormatter extends TextInputFormatter {
     return buffer.toString();
   }
 
+  /// Índice del separador decimal dentro de [body] (ya sin el signo), o -1 si
+  /// no hay parte decimal. La coma siempre es decimal; el punto solo lo es si
+  /// va al final o seguido de uno o dos dígitos; en otro caso es separador de
+  /// miles.
+  int _findSeparatorIndex(String body) {
+    if (body.contains(',')) return body.indexOf(',');
+    if (body.contains('.')) {
+      final lastDot = body.lastIndexOf('.');
+      final after = body.substring(lastDot + 1);
+      final digitsAfter = after.replaceAll(RegExp(r'[^0-9]'), '');
+      if (after.isEmpty ||
+          (digitsAfter.isNotEmpty && digitsAfter.length <= 2)) {
+        return lastDot;
+      }
+    }
+    return -1;
+  }
+
   String _groupThousands(String digits) {
     final result = StringBuffer();
     for (var i = 0; i < digits.length; i++) {
@@ -120,13 +123,81 @@ class VeAmountFormatter extends TextInputFormatter {
     return result.toString();
   }
 
-  int _offsetForNumericIndex(String formatted, int targetNumeric) {
-    var count = 0;
-    for (var i = 0; i < formatted.length; i++) {
-      if (_isNumericChar(formatted[i])) count++;
-      if (count >= targetNumeric) return i + 1;
+  /// Calcula la posición del cursor tras reformatear, tomando como referencia
+  /// los dígitos (y la posición respecto al separador decimal) que había antes
+  /// del cursor. Los puntos de miles que inserta el formateador no cuentan, así
+  /// que el cursor no se desplaza al escribirlos (p.ej. `1000`+`,`).
+  int _caretOffset(String raw, int cursor, String formatted) {
+    final negative = allowNegative && raw.startsWith('-');
+    final bodyStart = negative ? 1 : 0;
+    final body = raw.substring(bodyStart);
+    final separatorIndex = _findSeparatorIndex(body);
+    final separatorOffset = separatorIndex < 0
+        ? -1
+        : separatorIndex + bodyStart;
+
+    var intDigits = 0;
+    var decDigits = 0;
+    for (var i = 0; i < cursor && i < raw.length; i++) {
+      final code = raw.codeUnitAt(i);
+      if (code < 48 || code > 57) continue;
+      if (separatorOffset >= 0 && i > separatorOffset) {
+        decDigits++;
+      } else {
+        intDigits++;
+      }
     }
-    return formatted.length;
+    final afterSeparator = separatorOffset >= 0 && cursor > separatorOffset;
+
+    return _offsetFor(
+      formatted,
+      intDigits: intDigits,
+      decDigits: decDigits,
+      afterSeparator: afterSeparator,
+    );
+  }
+
+  int _offsetFor(
+    String formatted, {
+    required int intDigits,
+    required int decDigits,
+    required bool afterSeparator,
+  }) {
+    var index = 0;
+    if (index < formatted.length && formatted[index] == '-') index++;
+
+    // El formateador antepone un `0` a la coma cuando no hay dígitos enteros;
+    // ese cero no debe consumir una posición de dígito del cursor.
+    if (intDigits == 0 &&
+        index + 1 < formatted.length &&
+        formatted[index] == '0' &&
+        formatted[index + 1] == ',') {
+      return _consumeDecimals(formatted, index + 2, decDigits);
+    }
+
+    var counted = 0;
+    while (index < formatted.length && counted < intDigits) {
+      final ch = formatted[index];
+      if (ch == ',') break;
+      index++;
+      if (ch != '.') counted++;
+    }
+
+    if (afterSeparator || decDigits > 0) {
+      if (index < formatted.length && formatted[index] == ',') {
+        return _consumeDecimals(formatted, index + 1, decDigits);
+      }
+    }
+    return index;
+  }
+
+  int _consumeDecimals(String formatted, int index, int decDigits) {
+    var counted = 0;
+    while (index < formatted.length && counted < decDigits) {
+      if (formatted[index] != '.') counted++;
+      index++;
+    }
+    return index;
   }
 }
 

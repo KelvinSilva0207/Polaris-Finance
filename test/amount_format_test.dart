@@ -86,9 +86,9 @@ void main() {
     test('permite escribir cifras grandes (miles, millones, billones)', () {
       final formatter = veAmountFormatter();
       TextEditingValue value(String text) => TextEditingValue(
-            text: text,
-            selection: TextSelection.collapsed(offset: text.length),
-          );
+        text: text,
+        selection: TextSelection.collapsed(offset: text.length),
+      );
       var previous = value('');
       const digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
       const expected = [
@@ -114,9 +114,9 @@ void main() {
     test('el punto seguido de 0-2 dígitos es decimal, si no, es miles', () {
       final formatter = veAmountFormatter();
       TextEditingValue value(String text) => TextEditingValue(
-            text: text,
-            selection: TextSelection.collapsed(offset: text.length),
-          );
+        text: text,
+        selection: TextSelection.collapsed(offset: text.length),
+      );
       expect(
         formatter.formatEditUpdate(value('1234'), value('1.234')).text,
         '1.234',
@@ -137,6 +137,67 @@ void main() {
         formatter.formatEditUpdate(value('12,5'), value('12,50')).text,
         '12,50',
       );
+    });
+
+    group('cursor al escribir dígito a dígito', () {
+      /// Simula teclear [keys] al final del campo y devuelve el valor final,
+      /// comprobando en cada pulsación que el cursor queda al final.
+      TextEditingValue type(TextInputFormatter formatter, String keys) {
+        var value = const TextEditingValue(
+          text: '',
+          selection: TextSelection.collapsed(offset: 0),
+        );
+        for (var i = 0; i < keys.length; i++) {
+          final newText = value.text + keys[i];
+          final next = formatter.formatEditUpdate(
+            value,
+            TextEditingValue(
+              text: newText,
+              selection: TextSelection.collapsed(offset: newText.length),
+            ),
+          );
+          expect(
+            next.selection.baseOffset,
+            next.text.length,
+            reason: 'cursor tras escribir "$keys" (dígito ${i + 1})',
+          );
+          value = next;
+        }
+        return value;
+      }
+
+      test('el punto de miles no desplaza el cursor', () {
+        final formatter = veAmountFormatter();
+        expect(type(formatter, '1000').text, '1.000');
+        expect(type(formatter, '10000').text, '10.000');
+        expect(type(formatter, '1000000').text, '1.000.000');
+      });
+
+      test('los ceros tras la coma decimal no rompen el valor', () {
+        final formatter = veAmountFormatter();
+        expect(type(formatter, '1250,00').text, '1.250,00');
+        expect(type(formatter, '1000,00').text, '1.000,00');
+        expect(type(formatter, '0,00').text, '0,00');
+        expect(type(formatter, '12,05').text, '12,05');
+        expect(type(formatter, '100000,50').text, '100.000,50');
+      });
+
+      test('el valor final es el esperado', () {
+        final formatter = veAmountFormatter();
+        expect(parseAmountInput(type(formatter, '1250,00').text), 1250);
+        expect(parseAmountInput(type(formatter, '1000,00').text), 1000);
+        expect(parseAmountInput(type(formatter, '10,00').text), 10);
+      });
+
+      test('la coma como primer carácter produce 0,', () {
+        final formatter = veAmountFormatter();
+        expect(type(formatter, ',05').text, '0,05');
+      });
+
+      test('el punto decimal acepta ceros', () {
+        final formatter = veAmountFormatter();
+        expect(type(formatter, '1000.00').text, '1.000,00');
+      });
     });
   });
 }
