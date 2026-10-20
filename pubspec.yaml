@@ -54,6 +54,9 @@ dependencies:
   flutter_timezone: ^5.1.1
   google_fonts: ^6.3.3
   sentry_flutter: ^10.1.0
+  flutter_secure_storage: ^11.2.0
+  cryptography: ^2.9.0
+  sqlite3: ^3.7.1
 
 dev_dependencies:
   flutter_test:
@@ -70,6 +73,14 @@ dev_dependencies:
   analyzer: 13.3.0
   flutter_launcher_icons: ^0.14.3
   path_provider_platform_interface: ^2.1.2
+
+# Cifrado en reposo: compila SQLite como SQLCipher (PRAGMA key) en lugar de
+# SQLite plano. Los binarios oficiales de package:sqlite3 se descargan con
+# hash verificado desde sus releases; ver sqlite3/doc/hook.md.
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlcipher
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

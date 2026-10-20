@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/providers.dart';
+import '../../data/services/backup_exceptions.dart';
 import '../../data/services/backup_service.dart';
+import 'backup_passphrase_dialog.dart';
 
 /// Pantalla de copia de seguridad: crea copias de la base (archivo .sqlite
 /// único) y restaura una copia existente. La restauración se aplica en el
@@ -56,15 +58,23 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   }
 
   Future<void> _createBackup() async {
+    final decision = await askNewBackupPassphrase(context);
+    if (decision == null || !mounted) return;
     final service = _service;
     if (service == null) return;
     setState(() => _busy = true);
     try {
       final db = ref.read(appDatabaseProvider);
-      final path = await service.createBackup(db);
+      final path = await service.createBackup(
+        db,
+        passphrase: decision.protected ? decision.passphrase : null,
+      );
       if (!mounted) return;
+      final message = decision.protected
+          ? 'Copia protegida con frase en $path'
+          : 'Copia creada en $path';
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Copia creada en $path')));
+          .showSnackBar(SnackBar(content: Text(message)));
       await _reload();
     } catch (error) {
       if (!mounted) return;
@@ -73,6 +83,23 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
       );
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Programa la restauración. Si la copia exige frase (o la frase falla), la
+  /// pide al usuario y reintenta.
+  Future<void> _scheduleRestore(String path) async {
+    var passphrase = '';
+    while (true) {
+      try {
+        await _service!.scheduleRestore(path, passphrase: passphrase);
+        return;
+      } on BackupPassphraseRequired {
+        if (!mounted) return;
+        final asked = await askRestorePassphrase(context);
+        if (!mounted || asked == null) return;
+        passphrase = asked;
+      }
     }
   }
 
@@ -101,7 +128,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
 
     setState(() => _busy = true);
     try {
-      await _service!.scheduleRestore(path);
+      await _scheduleRestore(path);
       if (!mounted) return;
       final restarted = await _service!.restartNow();
       if (!mounted) return;
@@ -177,8 +204,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
         children: [
           Text(
             'Crea copias de todos tus datos (cuentas, movimientos, metas, '
-            'préstamos, tasas). Guarda la copia en un lugar seguro: si pierdes '
-            'el teléfono podrás restaurarla.',
+            'préstamos, tasas). Las copias se guardan cifradas: protege este '
+            'equipo y, si defines una frase al crearla, también podrás '
+            'restaurarla en otro dispositivo.',
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 16),

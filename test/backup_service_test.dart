@@ -4,7 +4,9 @@ import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:polaris_finance/core/security/database_key.dart';
 import 'package:polaris_finance/data/database/app_database.dart';
+import 'package:polaris_finance/data/database/ensure_database_encrypted.dart';
 import 'package:polaris_finance/data/models/enums.dart';
 import 'package:polaris_finance/data/services/backup_service_io.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -61,6 +63,8 @@ void main() {
     final backupPath = await service.createBackup(db);
     expect(File(backupPath).existsSync(), isTrue);
     expect(File(backupPath).lengthSync(), greaterThan(16));
+    // La copia sale cifrada con la clave del equipo.
+    expect(await isPlainSqliteFile(File(backupPath)), isFalse);
 
     // Una "sesión posterior": se restaura y se aplica antes de abrir la BD.
     await service.scheduleRestore(backupPath);
@@ -70,7 +74,13 @@ void main() {
 
     final restoredPath = await databaseFilePath();
     expect(File(restoredPath).existsSync(), isTrue);
-    final restored = AppDatabase(NativeDatabase(File(restoredPath)));
+    final deviceKey = await DatabaseKeyStore().loadOrCreate();
+    final restored = AppDatabase(
+      NativeDatabase(
+        File(restoredPath),
+        setup: (raw) => raw.execute("PRAGMA key = '$deviceKey'"),
+      ),
+    );
     addTearDown(restored.close);
     final accounts = await restored.select(restored.accounts).get();
     expect(accounts, hasLength(1));

@@ -12,13 +12,13 @@ Future<void> applyPendingRestore(SharedPreferences prefs) async {}
 class BackupService {
   BackupService(SharedPreferences prefs);
 
-  Future<String> createBackup(AppDatabase db) =>
+  Future<String> createBackup(AppDatabase db, {String? passphrase}) =>
       throw UnsupportedError('Backups no disponibles en esta plataforma');
 
   Future<List<String>> listBackups() =>
       throw UnsupportedError('Backups no disponibles en esta plataforma');
 
-  Future<void> scheduleRestore(String backupPath) =>
+  Future<void> scheduleRestore(String backupPath, {String? passphrase}) =>
       throw UnsupportedError('Backups no disponibles en esta plataforma');
 
   Future<void> deleteBackup(String backupPath) =>
