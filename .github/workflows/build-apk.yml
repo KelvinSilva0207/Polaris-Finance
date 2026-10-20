@@ -51,15 +51,32 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed lib test
+
       - name: Analyze
-        run: flutter analyze
+        run: flutter analyze --fatal-infos
 
       - name: Test
-        run: flutter test
+        run: flutter test --coverage
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage/lcov.info
+          if-no-files-found: ignore
 
       - name: Build release APK
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
-          flutter build apk --release --build-number=${{ github.run_number }}
+          if [ -n "$SENTRY_DSN" ]; then
+            flutter build apk --release --build-number=${{ github.run_number }} --dart-define=SENTRY_DSN="$SENTRY_DSN"
+          else
+            flutter build apk --release --build-number=${{ github.run_number }}
+          fi
           cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/polaris-finance.apk
 
       - name: Verify APK signing
