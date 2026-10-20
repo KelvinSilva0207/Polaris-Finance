@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -38,7 +38,9 @@ class BudgetsScreen extends ConsumerWidget {
       existing: ref.read(budgetsProvider).value ?? const [],
     );
     if (draft == null) return;
-    await ref.read(appDatabaseProvider).addBudget(
+    await ref
+        .read(appDatabaseProvider)
+        .addBudget(
           categoryId: draft.categoryId,
           amount: draft.amount,
           currency: draft.currency,
@@ -53,7 +55,9 @@ class BudgetsScreen extends ConsumerWidget {
       existing: ref.read(budgetsProvider).value ?? const [],
     );
     if (draft == null) return;
-    await ref.read(appDatabaseProvider).updateBudget(
+    await ref
+        .read(appDatabaseProvider)
+        .updateBudget(
           budget.copyWith(
             categoryId: draft.categoryId,
             amount: draft.amount,
@@ -62,7 +66,11 @@ class BudgetsScreen extends ConsumerWidget {
         );
   }
 
-  Future<void> _delete(BuildContext context, WidgetRef ref, Budget budget) async {
+  Future<void> _delete(
+    BuildContext context,
+    WidgetRef ref,
+    Budget budget,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -91,7 +99,9 @@ class BudgetsScreen extends ConsumerWidget {
     final categories = ref.watch(categoriesProvider).value ?? const [];
     final transactions = ref.watch(transactionsProvider).value ?? const [];
 
-    final categoryById = {for (final category in categories) category.id: category};
+    final categoryById = {
+      for (final category in categories) category.id: category,
+    };
     final now = DateTime.now();
     final monthStart = DateTime(now.year, now.month, 1);
     final monthEnd = DateTime(now.year, now.month + 1, 1);
@@ -144,103 +154,104 @@ class BudgetsScreen extends ConsumerWidget {
           return Column(
             children: [
               if (alerts.hasAlerts)
-                _BudgetAlertBanner(
-                  summary: alerts,
-                  categoryById: categoryById,
-                ),
+                _BudgetAlertBanner(summary: alerts, categoryById: categoryById),
               Expanded(
                 child: ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: budgets.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              final budget = budgets[index];
-              final category = categoryById[budget.categoryId];
-              var spent = 0.0;
-              for (final transaction in transactions) {
-                if (transaction.categoryId != budget.categoryId) continue;
-                if (transaction.currency != budget.currency) continue;
-                if (transaction.date.isBefore(monthStart) ||
-                    !transaction.date.isBefore(monthEnd)) {
-                  continue;
-                }
-                if (transaction.type != 'expense') continue;
-                spent += transaction.amount + transaction.feeAmount;
-              }
-              final ratio = budget.amount <= 0 ? 0.0 : spent / budget.amount;
-              final color = ratio >= 1
-                  ? const Color(0xFFEF5350)
-                  : ratio >= 0.8
-                      ? const Color(0xFFFFA726)
-                      : const Color(0xFF66BB6A);
-              final remaining = budget.amount - spent;
-              final colorValue = Color(category?.colorValue ?? 0xFF78909C);
-              return Card(
-                child: ListTile(
-                  onTap: () => _edit(context, ref, budget),
-                  onLongPress: () => _delete(context, ref, budget),
-                  leading: CircleAvatar(
-                    backgroundColor: colorValue.withValues(alpha: 0.16),
-                    child: Icon(
-                      category == null
-                          ? Icons.donut_large_outlined
-                          : iconFromName(category.icon),
-                      color: colorValue,
-                    ),
-                  ),
-                  title: Text(category?.name ?? 'Categoría borrada'),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 4),
-                      Text(
-                        '${_fmt(spent)} de ${_fmt(budget.amount)} ${budget.currency}'
-                        ' · ${remaining >= 0 ? 'quedan ${_fmt(remaining)}' : 'excedido ${_fmt(-remaining)}'}',
-                      ),
-                      const SizedBox(height: 6),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: ratio.clamp(0.0, 1.0),
-                          minHeight: 8,
-                          color: color,
-                          backgroundColor: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest,
-                        ),
-                      ),
-                    ],
-                  ),
-                  trailing: PopupMenuButton<String>(
-                    onSelected: (value) async {
-                      if (value == 'edit') {
-                        await _edit(context, ref, budget);
-                      } else {
-                        await _delete(context, ref, budget);
+                  padding: const EdgeInsets.all(16),
+                  itemCount: budgets.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final budget = budgets[index];
+                    final category = categoryById[budget.categoryId];
+                    var spent = 0.0;
+                    for (final transaction in transactions) {
+                      if (transaction.categoryId != budget.categoryId) continue;
+                      if (transaction.currency != budget.currency) continue;
+                      if (transaction.date.isBefore(monthStart) ||
+                          !transaction.date.isBefore(monthEnd)) {
+                        continue;
                       }
-                    },
-                    itemBuilder: (context) => const [
-                      PopupMenuItem(
-                        value: 'edit',
-                        child: ListTile(
-                          leading: Icon(Icons.edit_outlined),
-                          title: Text('Editar'),
-                          contentPadding: EdgeInsets.zero,
+                      if (transaction.type != 'expense') continue;
+                      spent += transaction.amount + transaction.feeAmount;
+                    }
+                    final ratio = budget.amount <= 0
+                        ? 0.0
+                        : spent / budget.amount;
+                    final color = ratio >= 1
+                        ? const Color(0xFFEF5350)
+                        : ratio >= 0.8
+                        ? const Color(0xFFFFA726)
+                        : const Color(0xFF66BB6A);
+                    final remaining = budget.amount - spent;
+                    final colorValue = Color(
+                      category?.colorValue ?? 0xFF78909C,
+                    );
+                    return Card(
+                      child: ListTile(
+                        onTap: () => _edit(context, ref, budget),
+                        onLongPress: () => _delete(context, ref, budget),
+                        leading: CircleAvatar(
+                          backgroundColor: colorValue.withValues(alpha: 0.16),
+                          child: Icon(
+                            category == null
+                                ? Icons.donut_large_outlined
+                                : iconFromName(category.icon),
+                            color: colorValue,
+                          ),
+                        ),
+                        title: Text(category?.name ?? 'Categoría borrada'),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            Text(
+                              '${_fmt(spent)} de ${_fmt(budget.amount)} ${budget.currency}'
+                              ' · ${remaining >= 0 ? 'quedan ${_fmt(remaining)}' : 'excedido ${_fmt(-remaining)}'}',
+                            ),
+                            const SizedBox(height: 6),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: ratio.clamp(0.0, 1.0),
+                                minHeight: 8,
+                                color: color,
+                                backgroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest,
+                              ),
+                            ),
+                          ],
+                        ),
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (value) async {
+                            if (value == 'edit') {
+                              await _edit(context, ref, budget);
+                            } else {
+                              await _delete(context, ref, budget);
+                            }
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(
+                              value: 'edit',
+                              child: ListTile(
+                                leading: Icon(Icons.edit_outlined),
+                                title: Text('Editar'),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: ListTile(
+                                leading: Icon(Icons.delete_outline),
+                                title: Text('Eliminar'),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      PopupMenuItem(
-                        value: 'delete',
-                        child: ListTile(
-                          leading: Icon(Icons.delete_outline),
-                          title: Text('Eliminar'),
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+                    );
+                  },
                 ),
               ),
             ],
@@ -269,7 +280,8 @@ Future<_BudgetDraft?> _showBudgetDialog(
   };
   final available = [
     for (final category in categories)
-      if (!category.isIncome && (!taken.contains(category.id) || category.id == initial?.categoryId))
+      if (!category.isIncome &&
+          (!taken.contains(category.id) || category.id == initial?.categoryId))
         category,
   ];
 
@@ -280,7 +292,9 @@ Future<_BudgetDraft?> _showBudgetDialog(
         final amount = _parseAmount(amountController.text);
         final canSave = categoryId != null && amount != null && amount > 0;
         return AlertDialog(
-          title: Text(initial == null ? 'Nuevo presupuesto' : 'Editar presupuesto'),
+          title: Text(
+            initial == null ? 'Nuevo presupuesto' : 'Editar presupuesto',
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -326,7 +340,9 @@ Future<_BudgetDraft?> _showBudgetDialog(
                           key: ValueKey('budget-currency-$currency'),
                           initialValue: currency,
                           isExpanded: true,
-                          decoration: const InputDecoration(labelText: 'Moneda'),
+                          decoration: const InputDecoration(
+                            labelText: 'Moneda',
+                          ),
                           items: [
                             for (final code in commonCurrencies)
                               DropdownMenuItem(value: code, child: Text(code)),
@@ -349,9 +365,9 @@ Future<_BudgetDraft?> _showBudgetDialog(
             ),
             FilledButton(
               onPressed: canSave
-                  ? () => Navigator.of(context).pop(
-                        _BudgetDraft(categoryId!, amount, currency),
-                      )
+                  ? () =>
+                        Navigator.of(context)
+                            .pop(_BudgetDraft(categoryId!, amount, currency))
                   : null,
               child: Text(initial == null ? 'Crear' : 'Guardar'),
             ),
@@ -363,17 +379,16 @@ Future<_BudgetDraft?> _showBudgetDialog(
 }
 
 class _BudgetAlertBanner extends StatelessWidget {
-  const _BudgetAlertBanner({
-    required this.summary,
-    required this.categoryById,
-  });
+  const _BudgetAlertBanner({required this.summary, required this.categoryById});
 
   final BudgetAlertSummary summary;
   final Map<String, Category> categoryById;
 
   String _names(List<BudgetStatus> statuses) => statuses
-      .map((status) =>
-          categoryById[status.budget.categoryId]?.name ?? 'Sin categoría')
+      .map(
+        (status) =>
+            categoryById[status.budget.categoryId]?.name ?? 'Sin categoría',
+      )
       .join(', ');
 
   @override
@@ -411,22 +426,25 @@ class _BudgetAlertBanner extends StatelessWidget {
                   children: [
                     Text(
                       'Alertas de presupuesto',
-                      style: theme.textTheme.titleSmall
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     if (exceeded.isNotEmpty)
                       Text(
                         '${exceeded.length} excedido(s): ${_names(exceeded)}',
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(color: const Color(0xFFEF5350)),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: const Color(0xFFEF5350),
+                        ),
                       ),
                     if (warning.isNotEmpty) ...[
                       if (exceeded.isNotEmpty) const SizedBox(height: 2),
                       Text(
                         '${warning.length} cerca del límite: ${_names(warning)}',
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(color: const Color(0xFFFFA726)),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: const Color(0xFFFFA726),
+                        ),
                       ),
                     ],
                   ],

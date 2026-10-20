@@ -108,9 +108,7 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
         if (targetBalance != null) {
           final transactions = await db.select(db.transactions).get();
           final delta = balancesOf(transactions)[widget.initial!.id] ?? 0;
-          updated = updated.copyWith(
-            openingBalance: targetBalance - delta,
-          );
+          updated = updated.copyWith(openingBalance: targetBalance - delta);
         }
         await db.updateAccount(updated);
       } else {
@@ -128,9 +126,8 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 
@@ -138,7 +135,9 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: Text(_isEditing ? 'Editar cuenta' : 'Nueva cuenta')),
+      appBar: AppBar(
+        title: Text(_isEditing ? 'Editar cuenta' : 'Nueva cuenta'),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -187,8 +186,7 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
               decoration: InputDecoration(
                 labelText: 'Saldo actual',
                 prefixText: '${currencySymbol(_currency)} ',
-                helperText:
-                    'Se formatean los miles automáticamente; puede ser negativo. No se registra como ingreso',
+                helperText: 'Se formatean los miles automáticamente; puede ser negativo. No se registra como ingreso',
               ),
             ),
             const SizedBox(height: 20),
@@ -228,7 +226,10 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: _saving ? null : _save,
-              icon: Icon(_saving ? Icons.hourglass_top : Icons.check, color: scheme.onPrimary),
+              icon: Icon(
+                _saving ? Icons.hourglass_top : Icons.check,
+                color: scheme.onPrimary,
+              ),
               label: Text(_isEditing ? 'Guardar cambios' : 'Crear cuenta'),
             ),
           ],

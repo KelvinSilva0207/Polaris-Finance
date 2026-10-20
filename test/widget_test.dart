@@ -10,7 +10,9 @@ import 'package:polaris_finance/core/settings/app_settings.dart';
 import 'package:polaris_finance/data/database/app_database.dart';
 
 void main() {
-  testWidgets('La app arranca y muestra el dashboard', (WidgetTester tester) async {
+  testWidgets('La app arranca y muestra el dashboard', (
+    WidgetTester tester,
+  ) async {
     final database = AppDatabase.memory();
     addTearDown(database.close);
 
@@ -32,7 +34,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
   });
 
-  testWidgets('Se crea una cuenta y se registra un egreso', (WidgetTester tester) async {
+  testWidgets('Se crea una cuenta y se registra un egreso', (
+    WidgetTester tester,
+  ) async {
     final database = AppDatabase.memory();
     addTearDown(database.close);
 
@@ -101,7 +105,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
   });
 
-  testWidgets('El onboarding crea las cuentas sugeridas', (WidgetTester tester) async {
+  testWidgets('El onboarding crea las cuentas sugeridas', (
+    WidgetTester tester,
+  ) async {
     SharedPreferences.setMockInitialValues({tutorialDoneKey: true});
     final database = AppDatabase.memory();
     addTearDown(database.close);

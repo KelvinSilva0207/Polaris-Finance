@@ -26,7 +26,12 @@ class AccountSpend {
 }
 
 class YearOverYear {
-  const YearOverYear({required this.current, required this.previous, required this.delta, required this.percent});
+  const YearOverYear({
+    required this.current,
+    required this.previous,
+    required this.delta,
+    required this.percent,
+  });
   final double current;
   final double previous;
   final double delta;
@@ -102,7 +107,9 @@ List<CategorySpend> spendByCategory({
     final key = tx.categoryId ?? '';
     sums[key] = (sums[key] ?? 0) + value;
   }
-  final list = sums.entries.map((e) => CategorySpend(categoryId: e.key, amount: e.value)).toList();
+  final list = sums.entries
+      .map((e) => CategorySpend(categoryId: e.key, amount: e.value))
+      .toList();
   list.sort((a, b) => b.amount.compareTo(a.amount));
   return list.take(limit).toList();
 }
@@ -124,12 +131,18 @@ List<AccountSpend> spendByAccount({
     if (value == null) continue;
     sums[tx.accountId] = (sums[tx.accountId] ?? 0) + value;
   }
-  final list = sums.entries.map((e) => AccountSpend(accountId: e.key, amount: e.value)).toList();
+  final list = sums.entries
+      .map((e) => AccountSpend(accountId: e.key, amount: e.value))
+      .toList();
   list.sort((a, b) => b.amount.compareTo(a.amount));
   return list;
 }
 
-double _sumExpense(Iterable<Transaction> transactions, DateTime month, double? Function(double, String) convert) {
+double _sumExpense(
+  Iterable<Transaction> transactions,
+  DateTime month,
+  double? Function(double, String) convert,
+) {
   final start = DateTime(month.year, month.month, 1);
   final end = DateTime(month.year, month.month + 1, 1);
   var total = 0.0;
@@ -150,9 +163,18 @@ YearOverYear compareYearOverYear({
   required double? Function(double amount, String currency) convert,
 }) {
   final current = _sumExpense(transactions, month, convert);
-  final prev = _sumExpense(transactions, DateTime(month.year - 1, month.month), convert);
+  final prev = _sumExpense(
+    transactions,
+    DateTime(month.year - 1, month.month),
+    convert,
+  );
   final delta = current - prev;
   double? pct;
   if (prev.abs() >= 0.01) pct = delta / prev.abs() * 100;
-  return YearOverYear(current: current, previous: prev, delta: delta, percent: pct);
+  return YearOverYear(
+    current: current,
+    previous: prev,
+    delta: delta,
+    percent: pct,
+  );
 }

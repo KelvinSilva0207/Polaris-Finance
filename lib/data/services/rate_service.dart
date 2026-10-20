@@ -128,7 +128,8 @@ double parseBinanceP2pRate(String body) {
   if (data == null || data.isEmpty) {
     throw const RateFetchException('Binance P2P: sin ofertas disponibles');
   }
-  final adv = (data.first as Map<String, dynamic>)['adv'] as Map<String, dynamic>;
+  final adv =
+      (data.first as Map<String, dynamic>)['adv'] as Map<String, dynamic>;
   final rate = double.tryParse(adv['price'].toString());
   if (rate == null || rate <= 0) {
     throw const RateFetchException('Binance P2P: precio inválido');
@@ -141,8 +142,9 @@ class BinanceRateSource implements RateProviderSource {
 
   final http.Client _client;
 
-  static final _url =
-      Uri.parse('https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search');
+  static final _url = Uri.parse(
+    'https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search',
+  );
 
   @override
   RateProvider get provider => RateProvider.binance;
@@ -206,18 +208,22 @@ class RateService {
     this._db, {
     Map<RateProvider, RateProviderSource>? sources,
     EuroRateSource? euroSource,
-  })  : _sources = sources ??
-            {
-              RateProvider.bcv: BcvRateSource(),
-              RateProvider.binance: BinanceRateSource(),
-            },
-        _euroSource = euroSource ?? EuroRateSource();
+  }) : _sources =
+           sources ??
+           {
+             RateProvider.bcv: BcvRateSource(),
+             RateProvider.binance: BinanceRateSource(),
+           },
+       _euroSource = euroSource ?? EuroRateSource();
 
   final AppDatabase _db;
   final Map<RateProvider, RateProviderSource> _sources;
   final EuroRateSource _euroSource;
 
-  Future<RateResult> refresh(RateProvider provider, {double? manualRate}) async {
+  Future<RateResult> refresh(
+    RateProvider provider, {
+    double? manualRate,
+  }) async {
     if (provider == RateProvider.manual) {
       final value = manualRate ?? 0;
       final last = await _db.latestRateFor('USD/VES', provider.name);
@@ -259,7 +265,12 @@ class RateService {
         unchanged: unchanged,
       );
     } on RateFetchException catch (error) {
-      return RateResult(rate: 0, source: provider.label, date: DateTime.now(), error: error.message);
+      return RateResult(
+        rate: 0,
+        source: provider.label,
+        date: DateTime.now(),
+        error: error.message,
+      );
     } catch (error) {
       return RateResult(
         rate: 0,
@@ -293,7 +304,12 @@ class RateService {
         unchanged: unchanged,
       );
     } on RateFetchException catch (error) {
-      return RateResult(rate: 0, source: source, date: DateTime.now(), error: error.message);
+      return RateResult(
+        rate: 0,
+        source: source,
+        date: DateTime.now(),
+        error: error.message,
+      );
     } catch (error) {
       return RateResult(
         rate: 0,

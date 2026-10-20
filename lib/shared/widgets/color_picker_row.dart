@@ -43,7 +43,9 @@ class ColorPickerRow extends StatelessWidget {
                 color: color,
                 border: Border.all(
                   width: selected == color.toARGB32() ? 3 : 1,
-                  color: selected == color.toARGB32() ? Colors.white : Colors.white24,
+                  color: selected == color.toARGB32()
+                      ? Colors.white
+                      : Colors.white24,
                 ),
               ),
               child: selected == color.toARGB32()

@@ -71,8 +71,10 @@ class CashFlowScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Saldo proyectado a 8 semanas',
-                      style: theme.textTheme.bodySmall),
+                  Text(
+                    'Saldo proyectado a 8 semanas',
+                    style: theme.textTheme.bodySmall,
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     '\$ ${_usdFormat.format(projection.endBalanceUsd)}',
@@ -257,8 +259,7 @@ class _CashFlowChartPainter extends CustomPainter {
     if (max == min) max = min + 1;
     final range = max - min;
 
-    double yFor(double value) =>
-        size.height * (1 - (value - min) / range);
+    double yFor(double value) => size.height * (1 - (value - min) / range);
 
     final zeroY = yFor(0);
     canvas.drawLine(

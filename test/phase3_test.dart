@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -20,7 +20,9 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('Servicio recurrente se crea y se paga', (WidgetTester tester) async {
+  testWidgets('Servicio recurrente se crea y se paga', (
+    WidgetTester tester,
+  ) async {
     final database = AppDatabase.memory();
     addTearDown(database.close);
     await database.addAccount(
@@ -92,8 +94,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
   });
 
-  testWidgets('Analítica muestra métricas y abre exportación',
-      (WidgetTester tester) async {
+  testWidgets('Analítica muestra métricas y abre exportación', (
+    WidgetTester tester,
+  ) async {
     final database = AppDatabase.memory();
     addTearDown(database.close);
     final account = await database.addAccount(

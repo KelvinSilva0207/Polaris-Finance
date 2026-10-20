@@ -26,7 +26,9 @@ class LoansScreen extends ConsumerWidget {
   Future<void> _create(BuildContext context, WidgetRef ref) async {
     final draft = await _showLoanEditor(context);
     if (draft == null) return;
-    await ref.read(appDatabaseProvider).addLoan(
+    await ref
+        .read(appDatabaseProvider)
+        .addLoan(
           name: draft.name,
           type: draft.type,
           currency: draft.currency,
@@ -47,7 +49,9 @@ class LoansScreen extends ConsumerWidget {
           : 'Registrar cobro',
     );
     if (draft == null) return;
-    await ref.read(appDatabaseProvider).addLoanPayment(
+    await ref
+        .read(appDatabaseProvider)
+        .addLoanPayment(
           loan: loan,
           amount: draft.amount,
           date: draft.date,
@@ -55,10 +59,14 @@ class LoansScreen extends ConsumerWidget {
         );
   }
 
-  Future<void> _toggleActive(BuildContext context, WidgetRef ref, Loan loan) async {
-    await ref.read(appDatabaseProvider).updateLoan(
-          loan.copyWith(isActive: !loan.isActive),
-        );
+  Future<void> _toggleActive(
+    BuildContext context,
+    WidgetRef ref,
+    Loan loan,
+  ) async {
+    await ref
+        .read(appDatabaseProvider)
+        .updateLoan(loan.copyWith(isActive: !loan.isActive));
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref, Loan loan) async {
@@ -116,7 +124,10 @@ class LoansScreen extends ConsumerWidget {
                   children: [
                     const Icon(Icons.request_quote_outlined, size: 72),
                     const SizedBox(height: 16),
-                    Text('Aún no hay préstamos', style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      'Aún no hay préstamos',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                     const SizedBox(height: 8),
                     const Text(
                       'Deudas a pagar (Debo) y dinero que prestas (Me deben).',
@@ -164,7 +175,10 @@ class LoansScreen extends ConsumerWidget {
                       title: Row(
                         children: [
                           Flexible(
-                            child: Text(loan.name, overflow: TextOverflow.ellipsis),
+                            child: Text(
+                              loan.name,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                           const SizedBox(width: 8),
                           Text(
@@ -224,14 +238,21 @@ class LoansScreen extends ConsumerWidget {
                               PopupMenuItem(
                                 value: 'pay',
                                 child: Text(
-                                  type == LoanType.debt ? 'Registrar pago' : 'Registrar cobro',
+                                  type == LoanType.debt
+                                      ? 'Registrar pago'
+                                      : 'Registrar cobro',
                                 ),
                               ),
                               PopupMenuItem(
                                 value: 'toggle',
-                                child: Text(active ? 'Marcar como cerrada' : 'Reabrir'),
+                                child: Text(
+                                  active ? 'Marcar como cerrada' : 'Reabrir',
+                                ),
                               ),
-                              const PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: Text('Eliminar'),
+                              ),
                             ],
                           ),
                         ],
@@ -316,13 +337,23 @@ class _LoanEditorDialogState extends State<_LoanEditorDialog> {
     final interest = _parseAmount(_interestController.text) ?? 0;
     if (name.isEmpty || principal == null || principal <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Completa el nombre y un monto mayor a cero')),
+        const SnackBar(
+          content: Text('Completa el nombre y un monto mayor a cero'),
+        ),
       );
       return;
     }
     final note = _noteController.text.trim();
     Navigator.of(context).pop(
-      _LoanDraft(name, _type, _currency, principal, interest, _dueDate, note.isEmpty ? null : note),
+      _LoanDraft(
+        name,
+        _type,
+        _currency,
+        principal,
+        interest,
+        _dueDate,
+        note.isEmpty ? null : note,
+      ),
     );
   }
 
@@ -353,7 +384,8 @@ class _LoanEditorDialogState extends State<_LoanEditorDialog> {
                     ),
                 ],
                 selected: {_type},
-                onSelectionChanged: (selection) => setState(() => _type = selection.first),
+                onSelectionChanged: (selection) =>
+                    setState(() => _type = selection.first),
                 showSelectedIcon: false,
               ),
             ),
@@ -379,8 +411,12 @@ class _LoanEditorDialogState extends State<_LoanEditorDialog> {
             const SizedBox(height: 16),
             TextField(
               controller: _interestController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: 'Interés % (opcional)'),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: const InputDecoration(
+                labelText: 'Interés % (opcional)',
+              ),
             ),
             const SizedBox(height: 16),
             Row(
@@ -418,10 +454,7 @@ class _LoanEditorDialogState extends State<_LoanEditorDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancelar'),
         ),
-        FilledButton(
-          onPressed: _save,
-          child: const Text('Crear'),
-        ),
+        FilledButton(onPressed: _save, child: const Text('Crear')),
       ],
     );
   }

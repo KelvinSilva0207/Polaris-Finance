@@ -94,7 +94,10 @@ class _ThemeEditorScreenState extends ConsumerState<ThemeEditorScreen> {
             child: _PreviewCard(dark: dark),
           ),
           const SizedBox(height: 20),
-          Text('Color de acento', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            'Color de acento',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 12),
           Wrap(
             spacing: 14,
@@ -103,8 +106,7 @@ class _ThemeEditorScreenState extends ConsumerState<ThemeEditorScreen> {
               for (final preset in themeAccentPresets)
                 _PresetDot(
                   preset: preset,
-                  selected:
-                      _color.toARGB32() == preset.color.toARGB32(),
+                  selected: _color.toARGB32() == preset.color.toARGB32(),
                   onTap: () => _apply(preset.color),
                 ),
             ],
@@ -127,9 +129,15 @@ class _ThemeEditorScreenState extends ConsumerState<ThemeEditorScreen> {
                         ),
                       ),
                       const SizedBox(width: 10),
-                      Text('Personalizado', style: Theme.of(context).textTheme.titleSmall),
+                      Text(
+                        'Personalizado',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
                       const Spacer(),
-                      Text('#$hex', style: Theme.of(context).textTheme.labelMedium),
+                      Text(
+                        '#$hex',
+                        style: Theme.of(context).textTheme.labelMedium,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -305,8 +313,9 @@ class _PreviewCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     r'$ 1.250,00',
-                    style: theme.textTheme.headlineSmall
-                        ?.copyWith(fontWeight: FontWeight.bold),
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   ClipRRect(
@@ -314,7 +323,8 @@ class _PreviewCard extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: 0.62,
                       minHeight: 10,
-                      backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                      backgroundColor:
+                          theme.colorScheme.surfaceContainerHighest,
                     ),
                   ),
                 ],

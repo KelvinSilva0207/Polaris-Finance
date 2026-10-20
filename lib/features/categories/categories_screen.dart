@@ -13,7 +13,9 @@ class CategoriesScreen extends ConsumerWidget {
 
   Future<void> _restoreSuggested(BuildContext context, WidgetRef ref) async {
     try {
-      final count = await restoreBuiltInCategories(ref.read(appDatabaseProvider));
+      final count = await restoreBuiltInCategories(
+        ref.read(appDatabaseProvider),
+      );
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -26,18 +28,23 @@ class CategoriesScreen extends ConsumerWidget {
       );
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 
-  Future<void> _confirmDelete(BuildContext context, WidgetRef ref, Category category) async {
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    Category category,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Eliminar categoría'),
-        content: Text('¿Eliminar "${category.name}"? No se borrarán movimientos, pero dejarán de mostrar esta categoría.'),
+        content: Text(
+          '¿Eliminar "${category.name}"? No se borrarán movimientos, pero dejarán de mostrar esta categoría.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -55,9 +62,8 @@ class CategoriesScreen extends ConsumerWidget {
       await ref.read(appDatabaseProvider).deleteCategory(category.id);
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 
@@ -123,14 +129,17 @@ class CategoriesScreen extends ConsumerWidget {
             Card(
               child: ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: Color(category.colorValue).withValues(alpha: 0.18),
+                  backgroundColor: Color(category.colorValue)
+                      .withValues(alpha: 0.18),
                   child: Icon(
                     iconFromName(category.icon),
                     color: Color(category.colorValue),
                   ),
                 ),
                 title: Text(category.name),
-                subtitle: Text(category.isBuiltIn ? 'Predefinida' : 'Personalizada'),
+                subtitle: Text(
+                  category.isBuiltIn ? 'Predefinida' : 'Personalizada',
+                ),
                 trailing: category.isBuiltIn
                     ? const Icon(Icons.lock_outline, size: 18)
                     : IconButton(

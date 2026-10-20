@@ -75,7 +75,11 @@ class IconPicker extends StatelessWidget {
                       : Theme.of(context).dividerColor,
                 ),
               ),
-              child: Icon(iconFromName(name), size: 20, color: selected == name ? selectedTint : null),
+              child: Icon(
+                iconFromName(name),
+                size: 20,
+                color: selected == name ? selectedTint : null,
+              ),
             ),
           ),
       ],

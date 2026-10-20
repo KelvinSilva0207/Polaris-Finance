@@ -67,8 +67,12 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           }
           final accounts = accountsAsync.value ?? const [];
           final categories = categoriesAsync.value ?? const [];
-          final accountById = {for (final account in accounts) account.id: account};
-          final categoryById = {for (final category in categories) category.id: category};
+          final accountById = {
+            for (final account in accounts) account.id: account,
+          };
+          final categoryById = {
+            for (final category in categories) category.id: category,
+          };
           final filtered = filterTransactions(
             transactions,
             query: _query,
@@ -150,7 +154,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                         separatorBuilder: (_, _) => const SizedBox(height: 8),
                         itemBuilder: (context, index) {
                           final transaction = filtered[index];
-                          final type = TransactionType.fromStorage(transaction.type);
+                          final type = TransactionType.fromStorage(
+                            transaction.type,
+                          );
                           final (icon, color) = _typeVisual(type);
                           final account = accountById[transaction.accountId];
                           final category = categoryById[transaction.categoryId];
@@ -160,7 +166,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                           final tags = parseTags(transaction.tags);
                           return Card(
                             child: ListTile(
-                              onTap: () => _openEditor(context, initial: transaction),
+                              onTap: () =>
+                                  _openEditor(context, initial: transaction),
                               leading: CircleAvatar(
                                 backgroundColor: color.withValues(alpha: 0.16),
                                 child: Icon(icon, color: color),
@@ -169,7 +176,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                                 type == TransactionType.transfer ||
                                         type == TransactionType.pagoMovil
                                     ? '${account?.name ?? 'Cuenta'} → ${destination?.name ?? '…'}'
-                                    : category?.name ?? account?.name ?? 'Sin categoría',
+                                    : category?.name ??
+                                          account?.name ??
+                                          'Sin categoría',
                               ),
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,14 +189,17 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                                   if (tags.isNotEmpty)
                                     Text(
                                       tags.map((t) => '#$t').join(' '),
-                                      style: Theme.of(context).textTheme.labelSmall,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall,
                                     ),
                                 ],
                               ),
                               trailing: AmountText(
                                 signedAmount(transaction),
                                 currency: transaction.currency,
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(color: color),
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(color: color),
                               ),
                             ),
                           );
@@ -215,7 +227,10 @@ class _EmptyTransactionsView extends StatelessWidget {
           children: [
             const Icon(Icons.swap_horiz, size: 72),
             const SizedBox(height: 16),
-            Text('Aún no hay movimientos', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'Aún no hay movimientos',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 8),
             const Text(
               'Registra ingresos, egresos y transferencias entre cuentas.',

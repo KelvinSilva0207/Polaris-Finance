@@ -37,8 +37,7 @@ class _NetWorthScreenState extends ConsumerState<NetWorthScreen> {
       loans: loans,
       months: _months,
       eurPerUsd: eurRate,
-      vesPerUsdAt: (date) =>
-          rateOnOrBefore(rates, date, provider: provider),
+      vesPerUsdAt: (date) => rateOnOrBefore(rates, date, provider: provider),
     );
 
     final latest = series.latest;
@@ -55,8 +54,10 @@ class _NetWorthScreenState extends ConsumerState<NetWorthScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Patrimonio neto actual',
-                      style: theme.textTheme.bodySmall),
+                  Text(
+                    'Patrimonio neto actual',
+                    style: theme.textTheme.bodySmall,
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     '\$ ${_usdFormat.format(latest?.netUsd ?? 0)}',
@@ -115,8 +116,10 @@ class _NetWorthScreenState extends ConsumerState<NetWorthScreen> {
                 height: 180,
                 child: series.isEmpty
                     ? Center(
-                        child: Text('Sin datos',
-                            style: theme.textTheme.bodySmall),
+                        child: Text(
+                          'Sin datos',
+                          style: theme.textTheme.bodySmall,
+                        ),
                       )
                     : CustomPaint(
                         painter: _NetWorthChartPainter(series.points),
@@ -138,7 +141,8 @@ class _NetWorthScreenState extends ConsumerState<NetWorthScreen> {
                   const SizedBox(height: 8),
                   _BreakdownRow(
                     label: 'Pasivos (deudas)',
-                    value: '-\$ ${_usdFormat.format(latest?.liabilitiesUsd ?? 0)}',
+                    value:
+                        '-\$ ${_usdFormat.format(latest?.liabilitiesUsd ?? 0)}',
                     color: const Color(0xFFEF5350),
                   ),
                   const Divider(height: 24),
@@ -197,10 +201,7 @@ class _BreakdownRow extends StatelessWidget {
       children: [
         Flexible(child: Text(label, style: style)),
         const SizedBox(width: 8),
-        Text(
-          value,
-          style: style?.copyWith(fontWeight: FontWeight.bold),
-        ),
+        Text(value, style: style?.copyWith(fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -233,8 +234,7 @@ class _NetWorthChartPainter extends CustomPainter {
     }
 
     double xFor(int i) => size.width * i / (points.length - 1);
-    double yFor(double value) =>
-        size.height * (1 - (value - min) / range);
+    double yFor(double value) => size.height * (1 - (value - min) / range);
 
     final path = Path();
     for (var i = 0; i < points.length; i++) {

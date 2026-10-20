@@ -63,7 +63,14 @@ void main() {
 
   test('patrimonio neto suma activos y resta deudas', () {
     final series = buildNetWorthSeries(
-      transactions: [_tx(accountId: 'a', type: 'income', amount: 500, date: DateTime(2026, 5, 10))],
+      transactions: [
+        _tx(
+          accountId: 'a',
+          type: 'income',
+          amount: 500,
+          date: DateTime(2026, 5, 10),
+        ),
+      ],
       accounts: [_account(id: 'a', opening: 1000)],
       loans: [_loan(type: 'debt', principal: 300)],
       vesPerUsdAt: (_) => 40,

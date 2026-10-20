@@ -70,9 +70,7 @@ class PinKeypad extends StatelessWidget {
             SizedBox(
               width: 84,
               height: 84,
-              child: leading == null
-                  ? null
-                  : Center(child: leading),
+              child: leading == null ? null : Center(child: leading),
             ),
             _KeypadButton(label: '0', onTap: enabled ? () => onDigit(0) : null),
             _KeypadButton(
@@ -110,10 +108,7 @@ class _KeypadButton extends StatelessWidget {
             child: Center(
               child: icon != null
                   ? Icon(icon, size: 26)
-                  : Text(
-                      label ?? '',
-                      style: theme.textTheme.headlineSmall,
-                    ),
+                  : Text(label ?? '', style: theme.textTheme.headlineSmall),
             ),
           ),
         ),

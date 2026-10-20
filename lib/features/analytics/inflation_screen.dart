@@ -60,10 +60,7 @@ class _InflationScreenState extends ConsumerState<InflationScreen> {
           SegmentedButton<RateProvider>(
             showSelectedIcon: false,
             segments: const [
-              ButtonSegment(
-                value: RateProvider.bcv,
-                label: Text('BCV'),
-              ),
+              ButtonSegment(value: RateProvider.bcv, label: Text('BCV')),
               ButtonSegment(
                 value: RateProvider.binance,
                 label: Text('Binance'),
@@ -84,8 +81,10 @@ class _InflationScreenState extends ConsumerState<InflationScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Inflación implícita (90 días)',
-                      style: theme.textTheme.titleSmall),
+                  Text(
+                    'Inflación implícita (90 días)',
+                    style: theme.textTheme.titleSmall,
+                  ),
                   const SizedBox(height: 8),
                   if (derived == null)
                     Text(
@@ -107,8 +106,10 @@ class _InflationScreenState extends ConsumerState<InflationScreen> {
                         const SizedBox(width: 8),
                         Padding(
                           padding: const EdgeInsets.only(bottom: 6),
-                          child: Text('mensual estimado',
-                              style: theme.textTheme.bodySmall),
+                          child: Text(
+                            'mensual estimado',
+                            style: theme.textTheme.bodySmall,
+                          ),
                         ),
                       ],
                     ),
@@ -149,7 +150,8 @@ class _InflationScreenState extends ConsumerState<InflationScreen> {
           ),
           _SliderRow(
             label: 'Tasa mensual',
-            value: '${monthlyRate.toStringAsFixed(1)}%'
+            value:
+                '${monthlyRate.toStringAsFixed(1)}%'
                 '${usingEstimate ? ' (estimada)' : ''}',
             slider: Slider(
               value: monthlyRate.clamp(0, 100),
@@ -197,9 +199,8 @@ class _InflationScreenState extends ConsumerState<InflationScreen> {
                   const SizedBox(height: 6),
                   _Legend(
                     color: const Color(0xFF42A5F5),
-                    label: 'Valor real de ${
-                        formatVeNumber(sim.startValue)
-                    } Bs sin ajustar',
+                    label:
+                        'Valor real de ${formatVeNumber(sim.startValue)} Bs sin ajustar',
                   ),
                 ],
               ),
@@ -218,7 +219,8 @@ class _InflationScreenState extends ConsumerState<InflationScreen> {
                   ),
                   const SizedBox(height: 8),
                   _ResultRow(
-                    label: 'En $_months ${_months == 1 ? 'mes' : 'meses'} '
+                    label:
+                        'En $_months ${_months == 1 ? 'mes' : 'meses'} '
                         'necesitarías',
                     value: 'Bs ${formatVeNumber(sim.finalRequired)}',
                     color: const Color(0xFFEF5350),
@@ -270,8 +272,9 @@ class _SliderRow extends StatelessWidget {
             Text(label, style: theme.textTheme.bodyMedium),
             Text(
               value,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
@@ -333,10 +336,7 @@ class _ResultRow extends StatelessWidget {
       children: [
         Flexible(child: Text(label, style: style)),
         const SizedBox(width: 8),
-        Text(
-          value,
-          style: style?.copyWith(fontWeight: FontWeight.bold),
-        ),
+        Text(value, style: style?.copyWith(fontWeight: FontWeight.bold)),
       ],
     );
   }

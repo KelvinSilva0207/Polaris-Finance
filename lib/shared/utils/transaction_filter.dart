@@ -42,16 +42,18 @@ List<Transaction> filterTransactions(
     }
     final transactionTags = parseTags(transaction.tags);
     if (tags.isNotEmpty) {
-      final transactionLower =
-          transactionTags.map((tag) => tag.toLowerCase()).toSet();
+      final transactionLower = transactionTags
+          .map((tag) => tag.toLowerCase())
+          .toSet();
       final selectedLower = tags.map((tag) => tag.toLowerCase()).toSet();
       if (!transactionLower.any(selectedLower.contains)) continue;
     }
     if (needle.isNotEmpty) {
       final note = (transaction.note ?? '').toLowerCase();
       final matchesNote = note.contains(needle);
-      final matchesTag =
-          transactionTags.any((tag) => tag.toLowerCase().contains(needle));
+      final matchesTag = transactionTags.any(
+        (tag) => tag.toLowerCase().contains(needle),
+      );
       if (!matchesNote && !matchesTag) continue;
     }
     result.add(transaction);

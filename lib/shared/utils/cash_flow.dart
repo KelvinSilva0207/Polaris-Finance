@@ -38,10 +38,8 @@ class CashFlowProjection {
   double get endBalanceUsd =>
       weeks.isEmpty ? startBalanceUsd : weeks.last.endBalanceUsd;
 
-  double get totalCommitmentsUsd => weeks.fold(
-        0.0,
-        (sum, week) => sum + week.commitmentsUsd,
-      );
+  double get totalCommitmentsUsd =>
+      weeks.fold(0.0, (sum, week) => sum + week.commitmentsUsd);
 
   /// Saldo más bajo proyectado (para detectar semanas en rojo).
   double get lowestBalanceUsd {

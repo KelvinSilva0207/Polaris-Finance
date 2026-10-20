@@ -47,11 +47,7 @@ enum RateProvider {
       .firstWhere((e) => e.name == value, orElse: () => RateProvider.bcv);
 }
 
-enum FeeType {
-  fixed,
-  percent,
-  mixed;
-}
+enum FeeType { fixed, percent, mixed }
 
 enum LoanType {
   debt('Debo', Icons.trending_down),
@@ -62,6 +58,8 @@ enum LoanType {
   final String label;
   final IconData icon;
 
-  static LoanType fromStorage(String? value) =>
-      LoanType.values.firstWhere((e) => e.name == value, orElse: () => LoanType.debt);
+  static LoanType fromStorage(String? value) => LoanType.values.firstWhere(
+    (e) => e.name == value,
+    orElse: () => LoanType.debt,
+  );
 }

@@ -36,12 +36,17 @@ String buildTransactionsCsv(
   List<Account> accounts,
   List<Category> categories,
 ) {
-  final accountNames = {for (final account in accounts) account.id: account.name};
-  final categoryNames = {for (final category in categories) category.id: category.name};
-  final sorted = [...transactions]
-    ..sort((a, b) => b.date.compareTo(a.date));
+  final accountNames = {
+    for (final account in accounts) account.id: account.name,
+  };
+  final categoryNames = {
+    for (final category in categories) category.id: category.name,
+  };
+  final sorted = [...transactions]..sort((a, b) => b.date.compareTo(a.date));
   final buffer = StringBuffer()
-    ..writeln('fecha;tipo;monto;moneda;comision;cuenta;categoria;nota;etiquetas');
+    ..writeln(
+      'fecha;tipo;monto;moneda;comision;cuenta;categoria;nota;etiquetas',
+    );
   for (final transaction in sorted) {
     buffer.writeln(
       [
@@ -79,7 +84,9 @@ String buildExportJson({
     'app': 'Polaris Finance',
     'accounts': accounts.map((account) => account.toJson()).toList(),
     'categories': categories.map((category) => category.toJson()).toList(),
-    'transactions': transactions.map((transaction) => transaction.toJson()).toList(),
+    'transactions': transactions
+        .map((transaction) => transaction.toJson())
+        .toList(),
     'feeRules': feeRules.map((rule) => rule.toJson()).toList(),
     'goals': goals.map((goal) => goal.toJson()).toList(),
     'services': services.map((service) => service.toJson()).toList(),
@@ -96,10 +103,13 @@ Future<List<int>> buildExportPdf({
   required List<Category> categories,
 }) async {
   final document = pw.Document();
-  final accountNames = {for (final account in accounts) account.id: account.name};
-  final categoryNames = {for (final category in categories) category.id: category.name};
-  final sorted = [...transactions]
-    ..sort((a, b) => b.date.compareTo(a.date));
+  final accountNames = {
+    for (final account in accounts) account.id: account.name,
+  };
+  final categoryNames = {
+    for (final category in categories) category.id: category.name,
+  };
+  final sorted = [...transactions]..sort((a, b) => b.date.compareTo(a.date));
 
   document.addPage(
     pw.MultiPage(
@@ -120,7 +130,15 @@ Future<List<int>> buildExportPdf({
       build: (context) => [
         pw.SizedBox(height: 12),
         pw.TableHelper.fromTextArray(
-          headers: ['Fecha', 'Tipo', 'Monto', 'Moneda', 'Cuenta', 'Categoría', 'Nota'],
+          headers: [
+            'Fecha',
+            'Tipo',
+            'Monto',
+            'Moneda',
+            'Cuenta',
+            'Categoría',
+            'Nota',
+          ],
           data: [
             for (final transaction in sorted)
               [
@@ -140,9 +158,7 @@ Future<List<int>> buildExportPdf({
             fontSize: 9,
           ),
           cellStyle: const pw.TextStyle(fontSize: 8),
-          headerDecoration: pw.BoxDecoration(
-            color: PdfColors.grey300,
-          ),
+          headerDecoration: pw.BoxDecoration(color: PdfColors.grey300),
           cellAlignments: {
             0: pw.Alignment.centerLeft,
             2: pw.Alignment.centerRight,
@@ -164,7 +180,10 @@ class ExportScreen extends ConsumerStatefulWidget {
 class _ExportScreenState extends ConsumerState<ExportScreen> {
   bool _busy = false;
 
-  Future<void> _run(Future<String> Function() action, {String? copyText}) async {
+  Future<void> _run(
+    Future<String> Function() action, {
+    String? copyText,
+  }) async {
     if (_busy) return;
     setState(() => _busy = true);
     try {
@@ -185,9 +204,8 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al exportar: $error')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error al exportar: $error')));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -252,9 +270,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
     final text = await showDialog<String>(
       context: context,
       builder: (context) {
-        final controller = TextEditingController(
-          text: '',
-        );
+        final controller = TextEditingController(text: '');
         return AlertDialog(
           title: const Text('Restaurar respaldo'),
           content: Column(
@@ -267,8 +283,9 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
               TextField(
                 controller: controller,
                 maxLines: 8,
-                decoration:
-                    const InputDecoration(hintText: '{"app": "Polaris Finance", ...}'),
+                decoration: const InputDecoration(
+                  hintText: '{"app": "Polaris Finance", ...}',
+                ),
               ),
             ],
           ),
@@ -438,8 +455,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
       categories: categories,
       balances: balances,
     );
-    final stamp =
-        '${month.year}${month.month.toString().padLeft(2, '0')}';
+    final stamp = '${month.year}${month.month.toString().padLeft(2, '0')}';
     return saveBackupFile('polaris_reporte_$stamp.pdf', bytes);
   }
 
@@ -471,9 +487,14 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Movimientos (CSV)', style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    'Movimientos (CSV)',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 4),
-                  const Text('Una fila por movimiento, separador ";" para Excel.'),
+                  const Text(
+                    'Una fila por movimiento, separador ";" para Excel.',
+                  ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -494,7 +515,10 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Respaldo completo (JSON)', style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    'Respaldo completo (JSON)',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 4),
                   const Text(
                     'Todas las cuentas, categorías, movimientos, metas, préstamos, servicios y tasas.',
@@ -525,9 +549,14 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Estado de cuentas (PDF)', style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    'Estado de cuentas (PDF)',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 4),
-                  const Text('Listado de todos los movimientos en formato imprimible.'),
+                  const Text(
+                    'Listado de todos los movimientos en formato imprimible.',
+                  ),
                   const SizedBox(height: 12),
                   FilledButton.icon(
                     onPressed: _busy ? null : () => _run(_exportPdf),
@@ -544,8 +573,10 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Reporte mensual (PDF)',
-                      style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    'Reporte mensual (PDF)',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 4),
                   const Text(
                     'Resumen del mes: ingresos, egresos, por categoría, saldos '
@@ -572,8 +603,10 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Importar movimientos (CSV)',
-                      style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    'Importar movimientos (CSV)',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 4),
                   const Text(
                     'Pega los movimientos exportados en formato CSV. Se añaden '
@@ -595,7 +628,10 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Restaurar respaldo', style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    'Restaurar respaldo',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 4),
                   const Text(
                     'Reemplaza todos los datos actuales con los de un respaldo JSON.',

@@ -21,7 +21,8 @@ const bcvHtmlSnippet = '''
 </div>
 ''';
 
-const binanceBody = '{"code":"000000","message":null,"data":[{"adv":{"price":"1015.000"}}]}';
+const binanceBody =
+    '{"code":"000000","message":null,"data":[{"adv":{"price":"1015.000"}}]}';
 
 class _FakeSource implements RateProviderSource {
   _FakeSource(this.provider, {this.rate, this.error});
@@ -136,7 +137,10 @@ void main() {
     expect(await database.select(database.currencyRates).get(), hasLength(1));
 
     final manual = RateService(database, sources: {});
-    final manualResult = await manual.refresh(RateProvider.manual, manualRate: 850);
+    final manualResult = await manual.refresh(
+      RateProvider.manual,
+      manualRate: 850,
+    );
     expect(manualResult.rate, 850);
     expect(manualResult.error, isNull);
     final all = await database.select(database.currencyRates).get();

@@ -19,7 +19,11 @@ class AccountsScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _confirmDelete(BuildContext context, WidgetRef ref, Account account) async {
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    Account account,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -42,9 +46,8 @@ class AccountsScreen extends ConsumerWidget {
       await ref.read(appDatabaseProvider).deleteAccount(account.id);
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 
@@ -104,7 +107,10 @@ class _EmptyAccountsView extends StatelessWidget {
           children: [
             const Icon(Icons.account_balance_wallet_outlined, size: 72),
             const SizedBox(height: 16),
-            Text('Aún no tienes cuentas', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'Aún no tienes cuentas',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 8),
             const Text(
               'Crea bancos, billeteras, cripto y efectivo.',

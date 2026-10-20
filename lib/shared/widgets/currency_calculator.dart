@@ -136,7 +136,9 @@ class _CurrencyCalculatorState extends ConsumerState<CurrencyCalculator> {
             TextField(
               controller: _controller,
               onChanged: (_) => setState(() {}),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               inputFormatters: [veAmountFormatter()],
               decoration: InputDecoration(
                 labelText: 'Monto',
@@ -186,7 +188,7 @@ class _CurrencyCalculatorState extends ConsumerState<CurrencyCalculator> {
                             vesPerUsd: vesPerUsd,
                             eurPerUsd: eurPerUsd,
                           ) ??
-                        'No se pudo convertir.'),
+                          'No se pudo convertir.'),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -204,7 +206,8 @@ class _CurrencyCalculatorState extends ConsumerState<CurrencyCalculator> {
                           code,
                           vesPerUsd: vesPerUsd,
                           eurPerUsd: eurPerUsd,
-                        ) case final double value)
+                        )
+                        case final double value)
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,

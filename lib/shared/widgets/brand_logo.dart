@@ -8,10 +8,6 @@ class BrandLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Image.asset(
-      'assets/logo.png',
-      height: height,
-      fit: BoxFit.contain,
-    );
+    return Image.asset('assets/logo.png', height: height, fit: BoxFit.contain);
   }
 }

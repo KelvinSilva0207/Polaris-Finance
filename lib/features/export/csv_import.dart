@@ -177,7 +177,8 @@ Future<CsvImportResult> importTransactionsCsv({
     for (final account in accounts) account.name.trim().toLowerCase(): account,
   };
   final categoryByName = {
-    for (final category in categories) category.name.trim().toLowerCase(): category,
+    for (final category in categories)
+      category.name.trim().toLowerCase(): category,
   };
   final rows = _parseRows(csv);
   var imported = 0;

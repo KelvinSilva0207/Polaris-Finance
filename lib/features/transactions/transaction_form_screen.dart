@@ -21,7 +21,8 @@ class TransactionFormScreen extends ConsumerStatefulWidget {
   final Transaction? initial;
 
   @override
-  ConsumerState<TransactionFormScreen> createState() => _TransactionFormScreenState();
+  ConsumerState<TransactionFormScreen> createState() =>
+      _TransactionFormScreenState();
 }
 
 class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
@@ -104,7 +105,13 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     );
     if (picked != null) {
       setState(() {
-        _date = DateTime(_date.year, _date.month, _date.day, picked.hour, picked.minute);
+        _date = DateTime(
+          _date.year,
+          _date.month,
+          _date.day,
+          picked.hour,
+          picked.minute,
+        );
       });
     }
   }
@@ -146,7 +153,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       Navigator.of(context).pop(true);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 
@@ -159,9 +167,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     final sourceId = _sourceAccountId;
     final destinationId = _isTransfer ? _destinationAccountId : null;
     if (sourceId == null) {
-      _showMessage(_isTransfer
-          ? 'Selecciona la cuenta de origen'
-          : 'Selecciona la cuenta');
+      _showMessage(
+        _isTransfer ? 'Selecciona la cuenta de origen' : 'Selecciona la cuenta',
+      );
       return;
     }
     if (_type == TransactionType.transfer && destinationId == null) {
@@ -211,7 +219,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     double? creditedAmount;
     String? creditedCurrency;
     if (_isTransfer && destinationId != null) {
-      final destinationAccount = accounts.firstWhere((a) => a.id == destinationId);
+      final destinationAccount = accounts.firstWhere(
+        (a) => a.id == destinationId,
+      );
       creditedCurrency = destinationAccount.currency;
       if (destinationAccount.currency == sourceAccount.currency) {
         creditedAmount = amount;
@@ -280,7 +290,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   List<Widget> _buildFeeSection(Account? source) {
@@ -331,9 +342,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
           padding: const EdgeInsets.only(top: 8, left: 4),
           child: Text(
             'Comisión estimada: ${formatVeNumber(estimatedFee)} ${currencySymbol(accountCurrency)}',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: Theme.of(context).colorScheme.primary),
           ),
         ),
     ];
@@ -355,15 +365,17 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       eurPerUsd: eurRate,
     );
     if (converted == null) return const SizedBox.shrink();
-    final rateLine = vesRate == null ? '' : ' (1 USD = ${formatVeNumber(vesRate)} Bs)';
-    final text = '≈ ${currencySymbol(target)} ${formatVeNumber(converted)}$rateLine';
+    final rateLine = vesRate == null
+        ? ''
+        : ' (1 USD = ${formatVeNumber(vesRate)} Bs)';
+    final text =
+        '≈ ${currencySymbol(target)} ${formatVeNumber(converted)}$rateLine';
     return Padding(
       padding: const EdgeInsets.only(top: 8, left: 4),
       child: Text(
         text,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-            ),
+        style: Theme.of(context).textTheme.bodySmall
+            ?.copyWith(color: Theme.of(context).colorScheme.primary),
       ),
     );
   }
@@ -408,8 +420,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         style: TextStyle(fontSize: 12),
       );
     }
-    final rateLine =
-        vesRate == null ? '' : ' (1 USD = ${formatVeNumber(vesRate)} Bs)';
+    final rateLine = vesRate == null
+        ? ''
+        : ' (1 USD = ${formatVeNumber(vesRate)} Bs)';
     return Text(
       'Se acreditará ${formatVeNumber(converted)} '
       '${currencySymbol(destAcc.currency)}$rateLine.',
@@ -446,7 +459,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
   Widget _buildForm(BuildContext context, List<Account> accounts) {
     final accountById = {for (final account in accounts) account.id: account};
-    final source = _sourceAccountId == null ? null : accountById[_sourceAccountId!];
+    final source = _sourceAccountId == null
+        ? null
+        : accountById[_sourceAccountId!];
 
     return SafeArea(
       child: ListView(
@@ -490,7 +505,10 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               decoration: const InputDecoration(labelText: 'Cuenta de origen'),
               items: [
                 for (final account in accounts)
-                  DropdownMenuItem(value: account.id, child: Text(account.name)),
+                  DropdownMenuItem(
+                    value: account.id,
+                    child: Text(account.name),
+                  ),
               ],
               onChanged: (value) => setState(() => _sourceAccountId = value),
             )
@@ -501,7 +519,10 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               decoration: const InputDecoration(labelText: 'Cuenta'),
               items: [
                 for (final account in accounts)
-                  DropdownMenuItem(value: account.id, child: Text(account.name)),
+                  DropdownMenuItem(
+                    value: account.id,
+                    child: Text(account.name),
+                  ),
               ],
               onChanged: (value) => setState(() => _sourceAccountId = value),
             ),
@@ -511,10 +532,13 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               key: ValueKey('dest-${_destinationAccountId ?? 'none'}'),
               initialValue: _destinationAccountId,
               decoration: InputDecoration(
-                labelText:
-                    _type == TransactionType.pagoMovil ? 'Destino' : 'Cuenta de destino',
+                labelText: _type == TransactionType.pagoMovil
+                    ? 'Destino'
+                    : 'Cuenta de destino',
               ),
-              hint: Text(_type == TransactionType.pagoMovil ? 'Cuenta externa' : ''),
+              hint: Text(
+                _type == TransactionType.pagoMovil ? 'Cuenta externa' : '',
+              ),
               items: [
                 if (_type == TransactionType.pagoMovil)
                   const DropdownMenuItem(
@@ -522,11 +546,15 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                     child: Text('Cuenta externa'),
                   ),
                 for (final account in accounts)
-                  DropdownMenuItem(value: account.id, child: Text(account.name)),
+                  DropdownMenuItem(
+                    value: account.id,
+                    child: Text(account.name),
+                  ),
               ],
               onChanged: (value) => setState(
-                () => _destinationAccountId =
-                    value == _noneCategory ? null : value,
+                () => _destinationAccountId = value == _noneCategory
+                    ? null
+                    : value,
               ),
             ),
           ],
@@ -538,11 +566,21 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               decoration: const InputDecoration(labelText: 'Categoría'),
               hint: const Text('Sin categoría'),
               items: [
-                const DropdownMenuItem(value: _noneCategory, child: Text('Sin categoría')),
-                for (final category in ref.read(categoriesProvider).value ?? const [])
+                const DropdownMenuItem(
+                  value: _noneCategory,
+                  child: Text('Sin categoría'),
+                ),
+                for (final category
+                    in ref.read(categoriesProvider).value ?? const [])
                   if (category.isIncome == (_type == TransactionType.income))
-                    DropdownMenuItem(value: category.id, child: Text(category.name)),
-                const DropdownMenuItem(value: _newCategory, child: Text('Nueva categoría…')),
+                    DropdownMenuItem(
+                      value: category.id,
+                      child: Text(category.name),
+                    ),
+                const DropdownMenuItem(
+                  value: _newCategory,
+                  child: Text('Nueva categoría…'),
+                ),
               ],
               onChanged: _onCategoryChanged,
             ),
@@ -559,7 +597,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             inputFormatters: [veAmountFormatter()],
             decoration: InputDecoration(
               labelText: 'Monto',
-              prefixText: source == null ? null : '${currencySymbol(source.currency)} ',
+              prefixText: source == null
+                  ? null
+                  : '${currencySymbol(source.currency)} ',
             ),
           ),
           _buildConversionHint(source),

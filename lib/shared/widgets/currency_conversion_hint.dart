@@ -52,11 +52,12 @@ class CurrencyConversionHint extends ConsumerWidget {
     );
     if (converted == null || converted == 0) return const SizedBox.shrink();
 
-    final text = '≈ ${currencySymbol(target)} ${formatVeNumber(converted.abs())}';
+    final text =
+        '≈ ${currencySymbol(target)} ${formatVeNumber(converted.abs())}';
 
     final color = Theme.of(context).colorScheme.onSurfaceVariant;
-    final effectiveStyle =
-        (style ?? Theme.of(context).textTheme.bodySmall)?.copyWith(color: color);
+    final effectiveStyle = (style ?? Theme.of(context).textTheme.bodySmall)
+        ?.copyWith(color: color);
 
     return Padding(
       padding: const EdgeInsets.only(top: 6, left: 4),

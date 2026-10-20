@@ -4,10 +4,7 @@ import '../../data/models/enums.dart';
 enum BudgetLevel { ok, warning, exceeded }
 
 class BudgetStatus {
-  const BudgetStatus({
-    required this.budget,
-    required this.spent,
-  });
+  const BudgetStatus({required this.budget, required this.spent});
 
   final Budget budget;
   final double spent;
@@ -57,8 +54,7 @@ double budgetSpent({
         TransactionType.expense) {
       continue;
     }
-    if (transaction.date.isBefore(start) ||
-        !transaction.date.isBefore(end)) {
+    if (transaction.date.isBefore(start) || !transaction.date.isBefore(end)) {
       continue;
     }
     spent += transaction.amount + transaction.feeAmount;
@@ -92,11 +88,7 @@ BudgetAlertSummary buildBudgetAlerts({
   final list = [
     for (final budget in budgets)
       if (budget.isActive && budget.amount > 0)
-        buildBudgetStatus(
-          budget: budget,
-          transactions: transactions,
-          now: now,
-        ),
+        buildBudgetStatus(budget: budget, transactions: transactions, now: now),
   ];
   return BudgetAlertSummary(list);
 }

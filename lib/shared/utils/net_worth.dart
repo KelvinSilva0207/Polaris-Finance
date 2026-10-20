@@ -35,8 +35,7 @@ class NetWorthSeries {
   NetWorthPoint? get first => points.isEmpty ? null : points.first;
 
   /// Cambio absoluto en USD entre el primer y el último punto.
-  double get changeUsd =>
-      (latest?.netUsd ?? 0) - (first?.netUsd ?? 0);
+  double get changeUsd => (latest?.netUsd ?? 0) - (first?.netUsd ?? 0);
 
   /// Cambio porcentual respecto al primer punto (null si no se puede calcular).
   double? get changePercent {
@@ -87,8 +86,11 @@ NetWorthSeries buildNetWorthSeries({
     if (offset == 0) {
       pointDate = reference;
     } else {
-      pointDate = DateTime(monthStart.year, monthStart.month + 1, 1)
-          .subtract(const Duration(days: 1));
+      pointDate = DateTime(
+        monthStart.year,
+        monthStart.month + 1,
+        1,
+      ).subtract(const Duration(days: 1));
     }
 
     final pastTx = transactions
@@ -142,7 +144,12 @@ NetWorthSeries buildNetWorthSeries({
   return NetWorthSeries(points);
 }
 
-double? _toUsd(double amount, String currency, double? vesPerUsd, double? eurPerUsd) {
+double? _toUsd(
+  double amount,
+  String currency,
+  double? vesPerUsd,
+  double? eurPerUsd,
+) {
   if (currency == 'USD' || currency == 'USDT') return amount;
   if (currency == 'VES') {
     if (vesPerUsd == null || vesPerUsd <= 0) return null;

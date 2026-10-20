@@ -60,11 +60,7 @@ void main() {
   });
 
   test('tasa cero mantiene el poder de compra', () {
-    final sim = simulateInflation(
-      value: 500,
-      monthlyRatePercent: 0,
-      months: 6,
-    );
+    final sim = simulateInflation(value: 500, monthlyRatePercent: 0, months: 6);
     expect(sim.finalRequired, 500);
     expect(sim.finalReal, 500);
     expect(sim.purchasingPowerLossPercent, 0);

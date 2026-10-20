@@ -33,7 +33,8 @@ Future<LoanPaymentDraft?> showLoanPaymentDialog(
 }) {
   return showDialog<LoanPaymentDraft>(
     context: context,
-    builder: (context) => _LoanPaymentDialog(title: title, currency: loan.currency),
+    builder: (context) =>
+        _LoanPaymentDialog(title: title, currency: loan.currency),
   );
 }
 
@@ -78,9 +79,7 @@ class _LoanPaymentDialogState extends State<_LoanPaymentDialog> {
       return;
     }
     final note = _noteController.text.trim();
-    Navigator.of(context).pop(
-      LoanPaymentDraft(amount, _date, note),
-    );
+    Navigator.of(context).pop(LoanPaymentDraft(amount, _date, note));
   }
 
   @override
@@ -127,10 +126,7 @@ class _LoanPaymentDialogState extends State<_LoanPaymentDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancelar'),
         ),
-        FilledButton(
-          onPressed: _save,
-          child: const Text('Guardar'),
-        ),
+        FilledButton(onPressed: _save, child: const Text('Guardar')),
       ],
     );
   }
@@ -148,11 +144,13 @@ class LoanDetailScreen extends ConsumerWidget {
     final current = loansAsync.value == null
         ? loan
         : loansAsync.value!.where((l) => l.id == loan.id).toList().isEmpty
-            ? loan
-            : loansAsync.value!.firstWhere((l) => l.id == loan.id);
+        ? loan
+        : loansAsync.value!.firstWhere((l) => l.id == loan.id);
 
     final type = LoanType.fromStorage(current.type);
-    final payments = (paymentsAsync.value ?? const []).where((p) => p.loanId == current.id).toList();
+    final payments = (paymentsAsync.value ?? const [])
+        .where((p) => p.loanId == current.id)
+        .toList();
     final remaining = current.principal - current.paidAmount;
 
     return Scaffold(
@@ -165,7 +163,9 @@ class LoanDetailScreen extends ConsumerWidget {
             title: type == LoanType.debt ? 'Registrar pago' : 'Registrar cobro',
           );
           if (draft == null) return;
-          await ref.read(appDatabaseProvider).addLoanPayment(
+          await ref
+              .read(appDatabaseProvider)
+              .addLoanPayment(
                 loan: current,
                 amount: draft.amount,
                 date: draft.date,
@@ -186,9 +186,15 @@ class LoanDetailScreen extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(type.icon, color: Theme.of(context).colorScheme.primary),
+                      Icon(
+                        type.icon,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                       const SizedBox(width: 8),
-                      Text(type.label, style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        type.label,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       const Spacer(),
                       Chip(
                         label: Text(current.isActive ? 'Abierta' : 'Cerrada'),
@@ -197,13 +203,29 @@ class LoanDetailScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _InfoRow('Original', '${_fmt(current.principal)} ${current.currency}'),
-                  _InfoRow('Pagado', '${_fmt(current.paidAmount)} ${current.currency}'),
-                  _InfoRow('Pendiente', '${_fmt(remaining < 0 ? 0 : remaining)} ${current.currency}'),
-                  if (current.interestRate > 0) _InfoRow('Interés', '${_fmt(current.interestRate)}%'),
-                  _InfoRow('Desde', DateFormat('dd/MM/yyyy').format(current.startDate)),
+                  _InfoRow(
+                    'Original',
+                    '${_fmt(current.principal)} ${current.currency}',
+                  ),
+                  _InfoRow(
+                    'Pagado',
+                    '${_fmt(current.paidAmount)} ${current.currency}',
+                  ),
+                  _InfoRow(
+                    'Pendiente',
+                    '${_fmt(remaining < 0 ? 0 : remaining)} ${current.currency}',
+                  ),
+                  if (current.interestRate > 0)
+                    _InfoRow('Interés', '${_fmt(current.interestRate)}%'),
+                  _InfoRow(
+                    'Desde',
+                    DateFormat('dd/MM/yyyy').format(current.startDate),
+                  ),
                   if (current.dueDate != null)
-                    _InfoRow('Vence', DateFormat('dd/MM/yyyy').format(current.dueDate!)),
+                    _InfoRow(
+                      'Vence',
+                      DateFormat('dd/MM/yyyy').format(current.dueDate!),
+                    ),
                   if (current.note != null && current.note!.isNotEmpty)
                     _InfoRow('Nota', current.note!),
                 ],
@@ -213,7 +235,10 @@ class LoanDetailScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-            child: Text('Pagos', style: Theme.of(context).textTheme.titleMedium),
+            child: Text(
+              'Pagos',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
           ),
           if (payments.isEmpty)
             const Padding(
@@ -229,7 +254,8 @@ class LoanDetailScreen extends ConsumerWidget {
                   subtitle: Text(
                     [
                       DateFormat('dd/MM/yyyy').format(payment.date),
-                      if (payment.note != null && payment.note!.isNotEmpty) payment.note!,
+                      if (payment.note != null && payment.note!.isNotEmpty)
+                        payment.note!,
                     ].join(' · '),
                   ),
                 ),
@@ -258,8 +284,8 @@ class _InfoRow extends StatelessWidget {
             child: Text(
               label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
           Expanded(child: Text(value)),

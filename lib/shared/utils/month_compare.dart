@@ -35,8 +35,7 @@ MonthTotals monthTotalsOf({
   var skipped = 0;
 
   for (final transaction in transactions) {
-    if (transaction.date.isBefore(start) ||
-        !transaction.date.isBefore(end)) {
+    if (transaction.date.isBefore(start) || !transaction.date.isBefore(end)) {
       continue;
     }
     final type = TransactionType.fromStorage(transaction.type);

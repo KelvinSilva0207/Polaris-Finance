@@ -175,8 +175,11 @@ List<({DateTime date, double rate})> dailyRateSeries(
   DateTime? now,
 }) {
   final reference = now ?? DateTime.now();
-  final start = DateTime(reference.year, reference.month, reference.day)
-      .subtract(Duration(days: days - 1));
+  final start = DateTime(
+    reference.year,
+    reference.month,
+    reference.day,
+  ).subtract(Duration(days: days - 1));
   final byDay = <DateTime, CurrencyRate>{};
   for (final rate in rates) {
     if (rate.rateCode != rateCode || rate.provider != provider.name) continue;

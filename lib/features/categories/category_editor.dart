@@ -16,10 +16,8 @@ Future<Category?> showCategoryEditor(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (context) => CategoryEditorSheet(
-      initial: initial,
-      defaultIsIncome: defaultIsIncome,
-    ),
+    builder: (context) =>
+        CategoryEditorSheet(initial: initial, defaultIsIncome: defaultIsIncome),
   );
 }
 
@@ -34,7 +32,8 @@ class CategoryEditorSheet extends ConsumerStatefulWidget {
   final bool defaultIsIncome;
 
   @override
-  ConsumerState<CategoryEditorSheet> createState() => _CategoryEditorSheetState();
+  ConsumerState<CategoryEditorSheet> createState() =>
+      _CategoryEditorSheetState();
 }
 
 class _CategoryEditorSheetState extends ConsumerState<CategoryEditorSheet> {
@@ -130,11 +129,17 @@ class _CategoryEditorSheetState extends ConsumerState<CategoryEditorSheet> {
             const SizedBox(height: 8),
             Text('Icono', style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),
-            IconPicker(selected: _icon, onChanged: (value) => setState(() => _icon = value)),
+            IconPicker(
+              selected: _icon,
+              onChanged: (value) => setState(() => _icon = value),
+            ),
             const SizedBox(height: 16),
             Text('Color', style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),
-            ColorPickerRow(selected: _color, onChanged: (value) => setState(() => _color = value)),
+            ColorPickerRow(
+              selected: _color,
+              onChanged: (value) => setState(() => _color = value),
+            ),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,

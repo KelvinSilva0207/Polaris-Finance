@@ -21,7 +21,10 @@ void main() {
   final now = DateTime(2026, 1, 1);
 
   test('sin fecha limite no calcula aportes requeridos', () {
-    final plan = buildSavingsPlan(_goal(target: 1000, allocated: 250), now: now);
+    final plan = buildSavingsPlan(
+      _goal(target: 1000, allocated: 250),
+      now: now,
+    );
     expect(plan.remaining, 750);
     expect(plan.progress, 0.25);
     expect(plan.hasDeadline, isFalse);

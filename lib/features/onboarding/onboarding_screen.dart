@@ -44,11 +44,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final db = ref.read(appDatabaseProvider);
     try {
       for (final name in _selected.toList()) {
-        final institution = venezuelaInstitutions.firstWhere((i) => i.name == name);
+        final institution = venezuelaInstitutions.firstWhere(
+          (i) => i.name == name,
+        );
         await db.addAccount(
           name: institution.name,
           type: institution.type,
-          currency: institution.currency == 'USDT' ? 'USDT' : institution.currency,
+          currency: institution.currency == 'USDT'
+              ? 'USDT'
+              : institution.currency,
           colorValue: institution.colorValue,
           icon: institution.icon,
         );
@@ -63,7 +67,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _message(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -109,14 +114,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 value: _selected.contains(institution.name),
                 onChanged: (value) => _toggle(institution, value ?? false),
                 secondary: CircleAvatar(
-                  backgroundColor: Color(institution.colorValue).withValues(alpha: 0.18),
+                  backgroundColor: Color(institution.colorValue)
+                      .withValues(alpha: 0.18),
                   child: Icon(
                     iconFromName(institution.icon),
                     color: Color(institution.colorValue),
                   ),
                 ),
                 title: Text(institution.name),
-                subtitle: Text('${institution.type.label} · ${institution.currency}'),
+                subtitle: Text(
+                  '${institution.type.label} · ${institution.currency}',
+                ),
                 controlAffinity: ListTileControlAffinity.trailing,
               ),
             const SizedBox(height: 24),

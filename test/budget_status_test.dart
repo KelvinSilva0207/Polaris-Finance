@@ -58,12 +58,10 @@ void main() {
 
   test('nivel de presupuesto segun el ratio', () {
     BudgetStatus statusAt(double spent) => buildBudgetStatus(
-          budget: _budget(amount: 1000),
-          transactions: [
-            _tx(amount: spent, date: DateTime(2026, 6, 10)),
-          ],
-          now: now,
-        );
+      budget: _budget(amount: 1000),
+      transactions: [_tx(amount: spent, date: DateTime(2026, 6, 10))],
+      now: now,
+    );
 
     expect(statusAt(500).level, BudgetLevel.ok);
     expect(statusAt(800).level, BudgetLevel.warning);
@@ -95,9 +93,7 @@ void main() {
   test('sin presupuestos en riesgo no hay alertas', () {
     final summary = buildBudgetAlerts(
       budgets: [_budget(amount: 1000)],
-      transactions: [
-        _tx(amount: 100, date: DateTime(2026, 6, 10)),
-      ],
+      transactions: [_tx(amount: 100, date: DateTime(2026, 6, 10))],
       now: now,
     );
     expect(summary.hasAlerts, isFalse);

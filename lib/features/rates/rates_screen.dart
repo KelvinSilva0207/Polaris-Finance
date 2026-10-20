@@ -74,17 +74,16 @@ class _RatesScreenState extends ConsumerState<RatesScreen> {
           content: Text(
             isEuro
                 ? 'Euro: ${formatVeNumber(result.rate)} EUR/USD'
-                    '${result.unchanged ? ' (sin cambios)' : ''}'
+                      '${result.unchanged ? ' (sin cambios)' : ''}'
                 : 'Tasa ${result.source}: ${formatVeNumber(result.rate)} VES/USD'
-                    '${result.unchanged ? ' (sin cambios)' : ''}',
+                      '${result.unchanged ? ' (sin cambios)' : ''}',
           ),
         ),
       );
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(result.error!)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(result.error!)));
   }
 
   Future<void> _refreshManual() async {
@@ -116,10 +115,9 @@ class _RatesScreenState extends ConsumerState<RatesScreen> {
       ),
     );
     if (input != null && input > 0) {
-      await ref.read(rateServiceProvider).refresh(
-            RateProvider.manual,
-            manualRate: input,
-          );
+      await ref
+          .read(rateServiceProvider)
+          .refresh(RateProvider.manual, manualRate: input);
     }
   }
 
@@ -151,7 +149,7 @@ class _RatesScreenState extends ConsumerState<RatesScreen> {
               rate == null
                   ? '—'
                   : '${formatVeNumber(rate.rate)} $unit'
-                      '\n${DateFormat('HH:mm:ss').format(rate.date)}',
+                        '\n${DateFormat('HH:mm:ss').format(rate.date)}',
               textAlign: TextAlign.right,
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
@@ -265,7 +263,9 @@ class _RatesScreenState extends ConsumerState<RatesScreen> {
                                 ? const SizedBox(
                                     width: 16,
                                     height: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   )
                                 : const Icon(Icons.refresh, size: 18),
                             label: const Text('Actualizar BCV'),
@@ -278,7 +278,9 @@ class _RatesScreenState extends ConsumerState<RatesScreen> {
                                 ? const SizedBox(
                                     width: 16,
                                     height: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   )
                                 : const Icon(Icons.refresh, size: 18),
                             label: const Text('Actualizar Binance'),
@@ -298,7 +300,9 @@ class _RatesScreenState extends ConsumerState<RatesScreen> {
                                 ? const SizedBox(
                                     width: 16,
                                     height: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   )
                                 : const Icon(Icons.refresh, size: 18),
                             label: const Text('Actualizar EUR'),
@@ -360,8 +364,14 @@ class _RatesScreenState extends ConsumerState<RatesScreen> {
                 ),
                 const SizedBox(height: 8),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                  child: Text('Historial', style: Theme.of(context).textTheme.titleMedium),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 8,
+                  ),
+                  child: Text(
+                    'Historial',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ),
                 for (final rate in rates.take(20))
                   Card(
@@ -434,7 +444,8 @@ class _RateChart extends StatelessWidget {
           primaryColor: const Color(0xFF42A5F5),
           secondaryColor: const Color(0xFFFFA726),
           gridColor: Theme.of(context).colorScheme.outlineVariant,
-          labelStyle: Theme.of(context).textTheme.labelSmall ?? const TextStyle(),
+          labelStyle:
+              Theme.of(context).textTheme.labelSmall ?? const TextStyle(),
           labelColor: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
         size: Size.infinite,
@@ -521,9 +532,9 @@ class _RateChartPainter extends CustomPainter {
         final x = span == 0
             ? leftPad + chartWidth / 2
             : leftPad +
-                chartWidth *
-                    (points[i].date.difference(start).inDays / span);
-        final y = topPad +
+                  chartWidth * (points[i].date.difference(start).inDays / span);
+        final y =
+            topPad +
             chartHeight * (maxRate - points[i].rate) / (maxRate - minRate);
         if (i == 0) {
           path.moveTo(x, y);
@@ -564,7 +575,9 @@ class _RateChartPainter extends CustomPainter {
       text: TextSpan(text: text, style: style),
       textDirection: ui.TextDirection.ltr,
     )..layout(maxWidth: maxWidth ?? double.infinity);
-    final dx = alignRight ? offset.dx + (maxWidth ?? 0) - painter.width : offset.dx;
+    final dx = alignRight
+        ? offset.dx + (maxWidth ?? 0) - painter.width
+        : offset.dx;
     painter.paint(canvas, Offset(dx, offset.dy));
   }
 

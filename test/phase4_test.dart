@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,8 +22,9 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('Se crea un presupuesto desde Analítica',
-      (WidgetTester tester) async {
+  testWidgets('Se crea un presupuesto desde Analítica', (
+    WidgetTester tester,
+  ) async {
     final database = AppDatabase.memory();
     addTearDown(database.close);
 

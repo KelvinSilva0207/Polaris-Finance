@@ -49,7 +49,9 @@ class ServicesScreen extends ConsumerWidget {
   Future<void> _create(BuildContext context, WidgetRef ref) async {
     final draft = await _showServiceEditor(context, ref);
     if (draft == null) return;
-    await ref.read(appDatabaseProvider).addService(
+    await ref
+        .read(appDatabaseProvider)
+        .addService(
           name: draft.name,
           amount: draft.amount,
           currency: draft.currency,
@@ -68,7 +70,9 @@ class ServicesScreen extends ConsumerWidget {
   ) async {
     final draft = await _showServiceEditor(context, ref, initial: service);
     if (draft == null) return;
-    await ref.read(appDatabaseProvider).updateService(
+    await ref
+        .read(appDatabaseProvider)
+        .updateService(
           service.copyWith(
             name: draft.name,
             amount: draft.amount,
@@ -101,14 +105,10 @@ class ServicesScreen extends ConsumerWidget {
     if (draft == null || !context.mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await ref.read(appDatabaseProvider).payService(
-            service,
-            date: draft.date,
-            amountOverride: draft.amount,
-          );
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Pago registrado')),
-      );
+      await ref
+          .read(appDatabaseProvider)
+          .payService(service, date: draft.date, amountOverride: draft.amount);
+      messenger.showSnackBar(const SnackBar(content: Text('Pago registrado')));
     } catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(error.toString())));
     }
@@ -141,13 +141,10 @@ class ServicesScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _toggleActive(
-    WidgetRef ref,
-    RecurringService service,
-  ) async {
-    await ref.read(appDatabaseProvider).updateService(
-          service.copyWith(isActive: !service.isActive),
-        );
+  Future<void> _toggleActive(WidgetRef ref, RecurringService service) async {
+    await ref
+        .read(appDatabaseProvider)
+        .updateService(service.copyWith(isActive: !service.isActive));
   }
 
   @override
@@ -230,7 +227,10 @@ class ServicesScreen extends ConsumerWidget {
                   title: Row(
                     children: [
                       Flexible(
-                        child: Text(service.name, overflow: TextOverflow.ellipsis),
+                        child: Text(
+                          service.name,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       if (pending) ...[
                         const SizedBox(width: 8),
@@ -289,9 +289,7 @@ class ServicesScreen extends ConsumerWidget {
                                 ? Icons.pause_circle_outline
                                 : Icons.play_circle_outline,
                           ),
-                          title: Text(
-                            service.isActive ? 'Pausar' : 'Activar',
-                          ),
+                          title: Text(service.isActive ? 'Pausar' : 'Activar'),
                           contentPadding: EdgeInsets.zero,
                         ),
                       ),
@@ -405,10 +403,9 @@ Future<_ServiceDraft?> _showServiceEditor(
   var isActive = initial?.isActive ?? true;
 
   final accounts = ref.read(accountsProvider).value ?? const [];
-  final categories =
-      (ref.read(categoriesProvider).value ?? const []).where(
-        (category) => !category.isIncome,
-      );
+  final categories = (ref.read(categoriesProvider).value ?? const []).where(
+    (category) => !category.isIncome,
+  );
 
   final draft = await showDialog<_ServiceDraft>(
     context: context,

@@ -24,7 +24,11 @@ Transaction _tx({
 
 void main() {
   test('parseTags limpia espacios y vacíos', () {
-    expect(parseTags('viaje, comida , ,trabajo'), ['viaje', 'comida', 'trabajo']);
+    expect(parseTags('viaje, comida , ,trabajo'), [
+      'viaje',
+      'comida',
+      'trabajo',
+    ]);
     expect(parseTags(null), isEmpty);
     expect(parseTags(''), isEmpty);
   });
@@ -39,13 +43,10 @@ void main() {
   });
 
   test('filtra por texto de la nota', () {
-    final result = filterTransactions(
-      [
-        _tx(id: '1', note: 'Mercado semanal'),
-        _tx(id: '2', note: 'Gasolina'),
-      ],
-      query: 'mercado',
-    );
+    final result = filterTransactions([
+      _tx(id: '1', note: 'Mercado semanal'),
+      _tx(id: '2', note: 'Gasolina'),
+    ], query: 'mercado');
     expect(result.map((t) => t.id), ['1']);
   });
 
@@ -56,20 +57,25 @@ void main() {
       _tx(id: '3', type: 'expense', tags: 'comida'),
     ];
     expect(
-      filterTransactions(transactions, tags: {'viaje', 'comida'}).map((t) => t.id),
+      filterTransactions(
+        transactions,
+        tags: {'viaje', 'comida'},
+      ).map((t) => t.id),
       ['1', '3'],
     );
     expect(
-      filterTransactions(transactions, type: TransactionType.income).map((t) => t.id),
+      filterTransactions(
+        transactions,
+        type: TransactionType.income,
+      ).map((t) => t.id),
       ['2'],
     );
   });
 
   test('el texto coincide con etiquetas también', () {
-    final result = filterTransactions(
-      [_tx(id: '1', tags: 'vacaciones')],
-      query: 'vac',
-    );
+    final result = filterTransactions([
+      _tx(id: '1', tags: 'vacaciones'),
+    ], query: 'vac');
     expect(result.map((t) => t.id), ['1']);
   });
 

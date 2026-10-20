@@ -4,7 +4,13 @@ import '../models/enums.dart';
 import 'app_database.dart';
 
 class SeedCategory {
-  const SeedCategory(this.name, this.icon, this.colorValue, this.isIncome, this.sortOrder);
+  const SeedCategory(
+    this.name,
+    this.icon,
+    this.colorValue,
+    this.isIncome,
+    this.sortOrder,
+  );
 
   final String name;
   final String icon;
@@ -57,7 +63,13 @@ const builtInCategories = <SeedCategory>[
   SeedCategory('Suscripciones', 'receipt_long', 0xFF7B1FA2, false, 23),
   SeedCategory('Seguros', 'account_balance', 0xFF455A64, false, 24),
   SeedCategory('Impuestos', 'receipt_long', 0xFF546E7A, false, 25),
-  SeedCategory('Comisiones bancarias', 'account_balance', 0xFF263238, false, 26),
+  SeedCategory(
+    'Comisiones bancarias',
+    'account_balance',
+    0xFF263238,
+    false,
+    26,
+  ),
   SeedCategory('Viajes', 'flight', 0xFF00ACC1, false, 27),
   SeedCategory('Vacaciones', 'beach_access', 0xFF0097A7, false, 28),
   SeedCategory('Mascotas', 'pets', 0xFFA1887F, false, 29),
@@ -67,7 +79,13 @@ const builtInCategories = <SeedCategory>[
 ];
 
 class SeedInstitution {
-  const SeedInstitution(this.name, this.type, this.currency, this.colorValue, this.icon);
+  const SeedInstitution(
+    this.name,
+    this.type,
+    this.currency,
+    this.colorValue,
+    this.icon,
+  );
 
   final String name;
   final AccountType type;
@@ -77,17 +95,83 @@ class SeedInstitution {
 }
 
 const venezuelaInstitutions = <SeedInstitution>[
-  SeedInstitution('Banco de Venezuela', AccountType.bank, 'VES', 0xFF0D47A1, 'account_balance'),
-  SeedInstitution('Mercantil', AccountType.bank, 'VES', 0xFFB71C1C, 'account_balance'),
-  SeedInstitution('Banesco', AccountType.bank, 'VES', 0xFF1B5E20, 'account_balance'),
-  SeedInstitution('Provincial', AccountType.bank, 'VES', 0xFF4A148C, 'account_balance'),
-  SeedInstitution('BNC', AccountType.bank, 'VES', 0xFF00695C, 'account_balance'),
-  SeedInstitution('Banco Exterior', AccountType.bank, 'VES', 0xFFE65100, 'account_balance'),
-  SeedInstitution('Binance', AccountType.crypto, 'USDT', 0xFFF9A825, 'currency_bitcoin'),
-  SeedInstitution('PayPal', AccountType.wallet, 'USD', 0xFF003087, 'account_balance_wallet'),
-  SeedInstitution('Zinli', AccountType.wallet, 'USD', 0xFFAD1457, 'account_balance_wallet'),
-  SeedInstitution('Efectivo (VES)', AccountType.cash, 'VES', 0xFF33691E, 'cash'),
-  SeedInstitution('Efectivo (USD)', AccountType.cash, 'USD', 0xFF004D40, 'cash'),
+  SeedInstitution(
+    'Banco de Venezuela',
+    AccountType.bank,
+    'VES',
+    0xFF0D47A1,
+    'account_balance',
+  ),
+  SeedInstitution(
+    'Mercantil',
+    AccountType.bank,
+    'VES',
+    0xFFB71C1C,
+    'account_balance',
+  ),
+  SeedInstitution(
+    'Banesco',
+    AccountType.bank,
+    'VES',
+    0xFF1B5E20,
+    'account_balance',
+  ),
+  SeedInstitution(
+    'Provincial',
+    AccountType.bank,
+    'VES',
+    0xFF4A148C,
+    'account_balance',
+  ),
+  SeedInstitution(
+    'BNC',
+    AccountType.bank,
+    'VES',
+    0xFF00695C,
+    'account_balance',
+  ),
+  SeedInstitution(
+    'Banco Exterior',
+    AccountType.bank,
+    'VES',
+    0xFFE65100,
+    'account_balance',
+  ),
+  SeedInstitution(
+    'Binance',
+    AccountType.crypto,
+    'USDT',
+    0xFFF9A825,
+    'currency_bitcoin',
+  ),
+  SeedInstitution(
+    'PayPal',
+    AccountType.wallet,
+    'USD',
+    0xFF003087,
+    'account_balance_wallet',
+  ),
+  SeedInstitution(
+    'Zinli',
+    AccountType.wallet,
+    'USD',
+    0xFFAD1457,
+    'account_balance_wallet',
+  ),
+  SeedInstitution(
+    'Efectivo (VES)',
+    AccountType.cash,
+    'VES',
+    0xFF33691E,
+    'cash',
+  ),
+  SeedInstitution(
+    'Efectivo (USD)',
+    AccountType.cash,
+    'USD',
+    0xFF004D40,
+    'cash',
+  ),
 ];
 
 Future<void> seedDatabase(AppDatabase database) async {

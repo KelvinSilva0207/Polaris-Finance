@@ -43,11 +43,7 @@ double futureRequiredValue(
 
 /// Poder de compra actual (traído a hoy) de [nominal] dentro de [months] meses,
 /// a una [monthlyRatePercent] constante.
-double presentValue(
-  double nominal,
-  double monthlyRatePercent,
-  double months,
-) {
+double presentValue(double nominal, double monthlyRatePercent, double months) {
   final rate = monthlyRatePercent / 100;
   return nominal / math.pow(1 + rate, months);
 }

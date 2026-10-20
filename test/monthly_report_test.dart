@@ -97,28 +97,31 @@ void main() {
     expect(report.skipped, 0);
   });
 
-  test('cuenta movimientos sin tasa como omitidos y excluye transferencias', () {
-    final report = computeMonthlyReport(
-      month: month,
-      transactions: [
-        _tx(
-          type: 'expense',
-          amount: 10,
-          currency: 'USD',
-          date: DateTime(2026, 10, 2),
-        ),
-        _tx(
-          type: 'transfer',
-          amount: 50,
-          currency: 'VES',
-          date: DateTime(2026, 10, 3),
-        ),
-      ],
-      categories: const [],
-    );
+  test(
+    'cuenta movimientos sin tasa como omitidos y excluye transferencias',
+    () {
+      final report = computeMonthlyReport(
+        month: month,
+        transactions: [
+          _tx(
+            type: 'expense',
+            amount: 10,
+            currency: 'USD',
+            date: DateTime(2026, 10, 2),
+          ),
+          _tx(
+            type: 'transfer',
+            amount: 50,
+            currency: 'VES',
+            date: DateTime(2026, 10, 3),
+          ),
+        ],
+        categories: const [],
+      );
 
-    expect(report.expenseVes, 0);
-    expect(report.skipped, 1);
-    expect(report.transactionCount, 1);
-  });
+      expect(report.expenseVes, 0);
+      expect(report.skipped, 1);
+      expect(report.transactionCount, 1);
+    },
+  );
 }

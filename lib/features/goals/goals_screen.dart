@@ -47,7 +47,9 @@ class GoalsScreen extends ConsumerWidget {
       freeSavings: freeSavings,
     );
     if (draft == null) return;
-    await ref.read(appDatabaseProvider).addGoal(
+    await ref
+        .read(appDatabaseProvider)
+        .addGoal(
           name: draft.name,
           targetAmount: draft.targetAmount,
           accountId: draft.accountId,
@@ -56,10 +58,21 @@ class GoalsScreen extends ConsumerWidget {
         );
   }
 
-  Future<void> _edit(BuildContext context, WidgetRef ref, SavingsGoal goal, List<Account> accounts) async {
-    final draft = await _showGoalDialog(context, accounts: accounts, initial: goal);
+  Future<void> _edit(
+    BuildContext context,
+    WidgetRef ref,
+    SavingsGoal goal,
+    List<Account> accounts,
+  ) async {
+    final draft = await _showGoalDialog(
+      context,
+      accounts: accounts,
+      initial: goal,
+    );
     if (draft == null) return;
-    await ref.read(appDatabaseProvider).updateGoal(
+    await ref
+        .read(appDatabaseProvider)
+        .updateGoal(
           goal.copyWith(
             name: draft.name,
             targetAmount: draft.targetAmount,
@@ -70,7 +83,12 @@ class GoalsScreen extends ConsumerWidget {
         );
   }
 
-  Future<void> _allocate(BuildContext context, WidgetRef ref, SavingsGoal goal, List<Account> accounts) async {
+  Future<void> _allocate(
+    BuildContext context,
+    WidgetRef ref,
+    SavingsGoal goal,
+    List<Account> accounts,
+  ) async {
     final freeSavings = _isFreeSavings(goal);
     final draft = await _showAllocateDialog(
       context,
@@ -79,27 +97,37 @@ class GoalsScreen extends ConsumerWidget {
       title: freeSavings ? 'Aportar al ahorro' : 'Aportar a la meta',
     );
     if (draft == null) return;
-    await ref.read(appDatabaseProvider).allocateToGoal(
+    await ref
+        .read(appDatabaseProvider)
+        .allocateToGoal(
           goal: goal,
           amount: draft.amount,
           fundingAccountId: draft.accountId,
         );
   }
 
-  Future<void> _reduce(BuildContext context, WidgetRef ref, SavingsGoal goal) async {
+  Future<void> _reduce(
+    BuildContext context,
+    WidgetRef ref,
+    SavingsGoal goal,
+  ) async {
     final amount = await _showAmountDialog(context, 'Reducir aporte');
     if (amount == null || amount <= 0) return;
     final remaining = goal.allocatedAmount - amount;
     final nuevo = remaining < 0 ? 0.0 : remaining;
-    await ref.read(appDatabaseProvider).updateGoal(
-          goal.copyWith(allocatedAmount: nuevo),
-        );
+    await ref
+        .read(appDatabaseProvider)
+        .updateGoal(goal.copyWith(allocatedAmount: nuevo));
   }
 
-  Future<void> _showPlan(BuildContext context, SavingsGoal goal, String currency) async {
+  Future<void> _showPlan(
+    BuildContext context,
+    SavingsGoal goal,
+    String currency,
+  ) async {
     final plan = buildSavingsPlan(goal);
-    final suggested = plan.requiredMonthly ??
-        (goal.targetAmount - goal.allocatedAmount) / 12;
+    final suggested =
+        plan.requiredMonthly ?? (goal.targetAmount - goal.allocatedAmount) / 12;
     final controller = TextEditingController(
       text: formatVeNumber(suggested > 0 ? suggested : 0),
     );
@@ -143,7 +171,8 @@ class GoalsScreen extends ConsumerWidget {
   }
 
   void _message(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -169,9 +198,17 @@ class GoalsScreen extends ConsumerWidget {
                   _createGoal(context, ref, accounts, freeSavings: true),
             );
           }
-          final accountById = {for (final account in accounts) account.id: account};
-          final metas = [for (final goal in goals) if (!_isFreeSavings(goal)) goal];
-          final ahorros = [for (final goal in goals) if (_isFreeSavings(goal)) goal];
+          final accountById = {
+            for (final account in accounts) account.id: account,
+          };
+          final metas = [
+            for (final goal in goals)
+              if (!_isFreeSavings(goal)) goal,
+          ];
+          final ahorros = [
+            for (final goal in goals)
+              if (_isFreeSavings(goal)) goal,
+          ];
 
           Widget goalCard(SavingsGoal goal) {
             final account = accountById[goal.accountId];
@@ -191,7 +228,10 @@ class GoalsScreen extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(goal.name, style: Theme.of(context).textTheme.titleMedium),
+                              Text(
+                                goal.name,
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
                               const SizedBox(height: 2),
                               Text(
                                 [
@@ -220,11 +260,23 @@ class GoalsScreen extends ConsumerWidget {
                             }
                           },
                           itemBuilder: (context) => const [
-                            PopupMenuItem(value: 'allocate', child: Text('Aportar')),
-                            PopupMenuItem(value: 'reduce', child: Text('Reducir aporte')),
-                            PopupMenuItem(value: 'plan', child: Text('Plan de ahorro')),
+                            PopupMenuItem(
+                              value: 'allocate',
+                              child: Text('Aportar'),
+                            ),
+                            PopupMenuItem(
+                              value: 'reduce',
+                              child: Text('Reducir aporte'),
+                            ),
+                            PopupMenuItem(
+                              value: 'plan',
+                              child: Text('Plan de ahorro'),
+                            ),
                             PopupMenuItem(value: 'edit', child: Text('Editar')),
-                            PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Text('Eliminar'),
+                            ),
                           ],
                         ),
                       ],
@@ -246,13 +298,16 @@ class GoalsScreen extends ConsumerWidget {
                         ),
                         const Spacer(),
                         if (goal.allocatedAmount >= goal.targetAmount)
-                          const Icon(Icons.check_circle, size: 16, color: Color(0xFF66BB6A))
+                          const Icon(
+                            Icons.check_circle,
+                            size: 16,
+                            color: Color(0xFF66BB6A),
+                          )
                         else
                           Text(
                             '${(percent * 100).round()}%',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                       ],
                     ),
@@ -285,19 +340,23 @@ class GoalsScreen extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(goal.name, style: Theme.of(context).textTheme.titleMedium),
+                              Text(
+                                goal.name,
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
                               const SizedBox(height: 2),
                               Text(
-                                [if (account != null) account.name, 'Ahorro libre'].join(' · '),
+                                [
+                                  if (account != null) account.name,
+                                  'Ahorro libre',
+                                ].join(' · '),
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                               if (note != null && note.isNotEmpty) ...[
                                 const SizedBox(height: 2),
                                 Text(
                                   note,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
+                                  style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(fontStyle: FontStyle.italic),
                                 ),
                               ],
@@ -318,10 +377,19 @@ class GoalsScreen extends ConsumerWidget {
                             }
                           },
                           itemBuilder: (context) => const [
-                            PopupMenuItem(value: 'allocate', child: Text('Aportar')),
-                            PopupMenuItem(value: 'reduce', child: Text('Reducir aporte')),
+                            PopupMenuItem(
+                              value: 'allocate',
+                              child: Text('Aportar'),
+                            ),
+                            PopupMenuItem(
+                              value: 'reduce',
+                              child: Text('Reducir aporte'),
+                            ),
                             PopupMenuItem(value: 'edit', child: Text('Editar')),
-                            PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Text('Eliminar'),
+                            ),
                           ],
                         ),
                       ],
@@ -332,17 +400,22 @@ class GoalsScreen extends ConsumerWidget {
                         Expanded(
                           child: Text(
                             '${_fmt(goal.allocatedAmount)} $currency',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
+                            style: Theme.of(context).textTheme.titleLarge
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ),
-                        const Icon(Icons.savings_outlined, size: 20, color: Color(0xFF42A5F5)),
+                        const Icon(
+                          Icons.savings_outlined,
+                          size: 20,
+                          color: Color(0xFF42A5F5),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 2),
-                    Text('Total ahorrado', style: Theme.of(context).textTheme.bodySmall),
+                    Text(
+                      'Total ahorrado',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ],
                 ),
               ),
@@ -361,14 +434,16 @@ class GoalsScreen extends ConsumerWidget {
             if (ahorros.isNotEmpty) ...[
               _SectionHeader(
                 'Ahorros',
-                onAdd: () => _createGoal(context, ref, accounts, freeSavings: true),
+                onAdd: () =>
+                    _createGoal(context, ref, accounts, freeSavings: true),
                 addTooltip: 'Nuevo ahorro',
               ),
               for (final goal in ahorros) savingsCard(goal),
             ] else if (metas.isNotEmpty) ...[
               const _SectionHeader('Ahorros'),
               _AhorrosHint(
-                onPressed: () => _createGoal(context, ref, accounts, freeSavings: true),
+                onPressed: () =>
+                    _createGoal(context, ref, accounts, freeSavings: true),
               ),
             ],
           ];
@@ -385,7 +460,10 @@ class GoalsScreen extends ConsumerWidget {
 }
 
 class _EmptyGoalsView extends StatelessWidget {
-  const _EmptyGoalsView({required this.onPressed, required this.onSavingsPressed});
+  const _EmptyGoalsView({
+    required this.onPressed,
+    required this.onSavingsPressed,
+  });
 
   final VoidCallback onPressed;
   final VoidCallback onSavingsPressed;
@@ -400,7 +478,10 @@ class _EmptyGoalsView extends StatelessWidget {
           children: [
             const Icon(Icons.savings_outlined, size: 72),
             const SizedBox(height: 16),
-            Text('Aún no tienes metas', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'Aún no tienes metas',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 8),
             const Text(
               'Define objetivos y aporta desde tus cuentas, o guarda dinero '
@@ -448,9 +529,8 @@ class _SectionHeader extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+              style: Theme.of(context).textTheme.labelLarge
+                  ?.copyWith(color: Theme.of(context).colorScheme.primary),
             ),
           ),
           if (onAdd != null)
@@ -483,8 +563,9 @@ class _AhorrosHint extends StatelessWidget {
           children: [
             Text(
               'Ahorro libre',
-              style: theme.textTheme.titleSmall
-                  ?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
@@ -508,7 +589,13 @@ class _AhorrosHint extends StatelessWidget {
 }
 
 class _GoalDraft {
-  const _GoalDraft(this.name, this.targetAmount, this.accountId, this.deadline, [this.note]);
+  const _GoalDraft(
+    this.name,
+    this.targetAmount,
+    this.accountId,
+    this.deadline, [
+    this.note,
+  ]);
 
   final String name;
   final double targetAmount;
@@ -565,9 +652,12 @@ class _GoalDialogState extends State<_GoalDialog> {
       text: initial == null ? '' : _amountInput(initial.targetAmount),
     );
     _noteController = TextEditingController(text: initial?.note ?? '');
-    _accountId = initial?.accountId ?? (widget.accounts.isNotEmpty ? widget.accounts.first.id : null);
+    _accountId =
+        initial?.accountId ??
+        (widget.accounts.isNotEmpty ? widget.accounts.first.id : null);
     _deadline = initial?.deadline;
-    _freeSavings = widget.freeSavings || (initial != null && initial.targetAmount <= 0);
+    _freeSavings =
+        widget.freeSavings || (initial != null && initial.targetAmount <= 0);
   }
 
   String get _targetCurrency {
@@ -608,31 +698,38 @@ class _GoalDialogState extends State<_GoalDialog> {
         return;
       }
       if (_accountId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Selecciona una cuenta')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Selecciona una cuenta')));
         return;
       }
-      Navigator.of(context).pop(
-        _GoalDraft(name, 0, _accountId!, null, note.isEmpty ? null : note),
-      );
+      Navigator.of(
+        context,
+      ).pop(_GoalDraft(name, 0, _accountId!, null, note.isEmpty ? null : note));
       return;
     }
     final target = _parseAmount(_targetController.text);
     if (name.isEmpty || target == null || target <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Completa el nombre y un objetivo mayor a cero')),
+        const SnackBar(
+          content: Text('Completa el nombre y un objetivo mayor a cero'),
+        ),
       );
       return;
     }
     if (_accountId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona una cuenta')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Selecciona una cuenta')));
       return;
     }
     Navigator.of(context).pop(
-      _GoalDraft(name, target, _accountId!, _deadline, note.isEmpty ? null : note),
+      _GoalDraft(
+        name,
+        target,
+        _accountId!,
+        _deadline,
+        note.isEmpty ? null : note,
+      ),
     );
   }
 
@@ -687,7 +784,10 @@ class _GoalDialogState extends State<_GoalDialog> {
               decoration: const InputDecoration(labelText: 'Cuenta vinculada'),
               items: [
                 for (final account in widget.accounts)
-                  DropdownMenuItem(value: account.id, child: Text(account.name)),
+                  DropdownMenuItem(
+                    value: account.id,
+                    child: Text(account.name),
+                  ),
               ],
               onChanged: (value) => setState(() => _accountId = value),
             ),
@@ -734,7 +834,11 @@ class _GoalDialogState extends State<_GoalDialog> {
         ),
         FilledButton(
           onPressed: _save,
-          child: Text(isEditing ? 'Guardar' : (_freeSavings ? 'Crear ahorro' : 'Crear meta')),
+          child: Text(
+            isEditing
+                ? 'Guardar'
+                : (_freeSavings ? 'Crear ahorro' : 'Crear meta'),
+          ),
         ),
       ],
     );
@@ -854,10 +958,7 @@ class _AllocateDialogState extends State<_AllocateDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancelar'),
         ),
-        FilledButton(
-          onPressed: _save,
-          child: const Text('Aportar'),
-        ),
+        FilledButton(onPressed: _save, child: const Text('Aportar')),
       ],
     );
   }
@@ -923,7 +1024,11 @@ class _PlanLine extends StatelessWidget {
     if (plan.requiredMonthly != null) {
       return Row(
         children: [
-          const Icon(Icons.savings_outlined, size: 15, color: Color(0xFF42A5F5)),
+          const Icon(
+            Icons.savings_outlined,
+            size: 15,
+            color: Color(0xFF42A5F5),
+          ),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
@@ -991,7 +1096,8 @@ class _GoalPlanDialogState extends State<_GoalPlanDialog> {
       final monthsText = months! < 1
           ? 'menos de un mes'
           : '${months.toStringAsFixed(months >= 10 ? 0 : 1)} meses';
-      summary = 'A ese ritmo alcanzarás la meta en ~$monthsText'
+      summary =
+          'A ese ritmo alcanzarás la meta en ~$monthsText'
           '${date != null ? ' (${DateFormat('dd/MM/yyyy').format(date)})' : ''}.';
     }
 

@@ -44,7 +44,8 @@ class AppLockState {
     final enabled = hasPin && (prefs.getBool(appLockEnabledKey) ?? false);
     return AppLockState(
       enabled: enabled,
-      biometricEnabled: enabled && (prefs.getBool(appLockBiometricKey) ?? false),
+      biometricEnabled:
+          enabled && (prefs.getBool(appLockBiometricKey) ?? false),
       locked: enabled,
     );
   }

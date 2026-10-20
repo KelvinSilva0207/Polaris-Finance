@@ -24,7 +24,9 @@ class FeeRulesScreen extends ConsumerWidget {
   Future<void> _create(BuildContext context, WidgetRef ref) async {
     final draft = await _showFeeEditor(context);
     if (draft == null) return;
-    await ref.read(appDatabaseProvider).addFeeRule(
+    await ref
+        .read(appDatabaseProvider)
+        .addFeeRule(
           name: draft.name,
           fixedAmount: draft.fixed,
           percent: draft.percent,
@@ -37,7 +39,9 @@ class FeeRulesScreen extends ConsumerWidget {
   Future<void> _edit(BuildContext context, WidgetRef ref, FeeRule rule) async {
     final draft = await _showFeeEditor(context, initial: rule);
     if (draft == null) return;
-    await ref.read(appDatabaseProvider).updateFeeRule(
+    await ref
+        .read(appDatabaseProvider)
+        .updateFeeRule(
           rule.copyWith(
             name: draft.name,
             fixedAmount: draft.fixed,
@@ -49,7 +53,11 @@ class FeeRulesScreen extends ConsumerWidget {
         );
   }
 
-  Future<void> _delete(BuildContext context, WidgetRef ref, FeeRule rule) async {
+  Future<void> _delete(
+    BuildContext context,
+    WidgetRef ref,
+    FeeRule rule,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -106,11 +114,15 @@ class FeeRulesScreen extends ConsumerWidget {
                 child: ListTile(
                   leading: CircleAvatar(
                     child: Icon(
-                      rule.isActive ? Icons.price_change_outlined : Icons.lock_outline,
+                      rule.isActive
+                          ? Icons.price_change_outlined
+                          : Icons.lock_outline,
                     ),
                   ),
                   title: Text(rule.name),
-                  subtitle: Text(description.isEmpty ? 'Sin montos' : description),
+                  subtitle: Text(
+                    description.isEmpty ? 'Sin montos' : description,
+                  ),
                   isThreeLine: false,
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -118,9 +130,9 @@ class FeeRulesScreen extends ConsumerWidget {
                       Switch(
                         value: rule.isActive,
                         onChanged: (value) async {
-                          await ref.read(appDatabaseProvider).updateFeeRule(
-                                rule.copyWith(isActive: value),
-                              );
+                          await ref
+                              .read(appDatabaseProvider)
+                              .updateFeeRule(rule.copyWith(isActive: value));
                         },
                       ),
                       PopupMenuButton<String>(
@@ -134,7 +146,10 @@ class FeeRulesScreen extends ConsumerWidget {
                         },
                         itemBuilder: (context) => const [
                           PopupMenuItem(value: 'edit', child: Text('Editar')),
-                          PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Text('Eliminar'),
+                          ),
                         ],
                       ),
                     ],
@@ -150,7 +165,14 @@ class FeeRulesScreen extends ConsumerWidget {
 }
 
 class _FeeDraft {
-  const _FeeDraft(this.name, this.fixed, this.percent, this.minimum, this.maximum, this.isActive);
+  const _FeeDraft(
+    this.name,
+    this.fixed,
+    this.percent,
+    this.minimum,
+    this.maximum,
+    this.isActive,
+  );
 
   final String name;
   final double fixed;
@@ -189,7 +211,9 @@ class _FeeEditorDialogState extends State<_FeeEditorDialog> {
     super.initState();
     final initial = widget.initial;
     _nameController = TextEditingController(text: initial?.name ?? '');
-    _fixedController = TextEditingController(text: _moneyField(initial?.fixedAmount));
+    _fixedController = TextEditingController(
+      text: _moneyField(initial?.fixedAmount),
+    );
     _percentController = TextEditingController(text: _field(initial?.percent));
     _minController = TextEditingController(
       text: initial?.minAmount == null ? '' : _moneyField(initial!.minAmount),
@@ -230,9 +254,8 @@ class _FeeEditorDialogState extends State<_FeeEditorDialog> {
       );
       return;
     }
-    Navigator.of(context).pop(
-      _FeeDraft(name, fixed, percent, minValue, maxValue, _isActive),
-    );
+    Navigator.of(context)
+        .pop(_FeeDraft(name, fixed, percent, minValue, maxValue, _isActive));
   }
 
   @override
@@ -263,8 +286,12 @@ class _FeeEditorDialogState extends State<_FeeEditorDialog> {
                 Expanded(
                   child: TextField(
                     controller: _percentController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: '% sobre monto'),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: '% sobre monto',
+                    ),
                   ),
                 ),
               ],

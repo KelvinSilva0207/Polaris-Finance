@@ -33,7 +33,11 @@ double? _convertBetween(
   double? eurPerUsd,
 }) {
   if (from == to) return amount;
-  final fromFactor = _usdFactor(from, vesPerUsd: vesPerUsd, eurPerUsd: eurPerUsd);
+  final fromFactor = _usdFactor(
+    from,
+    vesPerUsd: vesPerUsd,
+    eurPerUsd: eurPerUsd,
+  );
   final toFactor = _usdFactor(to, vesPerUsd: vesPerUsd, eurPerUsd: eurPerUsd);
   if (fromFactor == null || toFactor == null) return null;
   return amount * fromFactor / toFactor;
@@ -45,7 +49,8 @@ class Accounts extends Table {
   TextColumn get type => text()();
   TextColumn get currency => text()();
   IntColumn get colorValue => integer()();
-  TextColumn get icon => text().withDefault(const Constant('account_balance'))();
+  TextColumn get icon =>
+      text().withDefault(const Constant('account_balance'))();
   BoolColumn get isDefault => boolean().withDefault(const Constant(false))();
   RealColumn get openingBalance => real().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
@@ -199,14 +204,14 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   factory AppDatabase.open() => AppDatabase(
-        driftDatabase(
-          name: 'polaris_finance',
-          web: DriftWebOptions(
-            sqlite3Wasm: Uri.parse('sqlite3.wasm'),
-            driftWorker: Uri.parse('drift_worker.js'),
-          ),
-        ),
-      );
+    driftDatabase(
+      name: 'polaris_finance',
+      web: DriftWebOptions(
+        sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+        driftWorker: Uri.parse('drift_worker.js'),
+      ),
+    ),
+  );
 
   factory AppDatabase.memory() => createMemoryDatabase();
 
@@ -215,54 +220,62 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        beforeOpen: (details) async {
-          await customStatement('PRAGMA foreign_keys = ON');
-        },
-        onUpgrade: (m, from, to) async {
-          if (from < 2) {
-            await m.addColumn(transactions, transactions.transferToId);
-          }
-          if (from < 3) {
-            await m.createTable(loans);
-            await m.createTable(loanPayments);
-          }
-          if (from < 4) {
-            await m.createTable(budgets);
-          }
-          if (from < 5) {
-            await m.addColumn(accounts, accounts.openingBalance);
-          }
-          if (from < 6) {
-            await m.addColumn(transactions, transactions.credAmount);
-            await m.addColumn(transactions, transactions.credCurrency);
-          }
-        },
-      );
+    beforeOpen: (details) async {
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.addColumn(transactions, transactions.transferToId);
+      }
+      if (from < 3) {
+        await m.createTable(loans);
+        await m.createTable(loanPayments);
+      }
+      if (from < 4) {
+        await m.createTable(budgets);
+      }
+      if (from < 5) {
+        await m.addColumn(accounts, accounts.openingBalance);
+      }
+      if (from < 6) {
+        await m.addColumn(transactions, transactions.credAmount);
+        await m.addColumn(transactions, transactions.credCurrency);
+      }
+    },
+  );
 
-  Stream<List<Account>> watchAccounts() =>
-      (select(accounts)..orderBy([(t) => OrderingTerm.asc(t.createdAt)])).watch();
+  Stream<List<Account>> watchAccounts() => (select(
+    accounts,
+  )..orderBy([(t) => OrderingTerm.asc(t.createdAt)])).watch();
 
-  Stream<List<Category>> watchCategories() => (select(categories)
-        ..orderBy([(t) => OrderingTerm.asc(t.sortOrder), (t) => OrderingTerm.asc(t.name)]))
-      .watch();
+  Stream<List<Category>> watchCategories() =>
+      (select(categories)..orderBy([
+            (t) => OrderingTerm.asc(t.sortOrder),
+            (t) => OrderingTerm.asc(t.name),
+          ]))
+          .watch();
 
-  Stream<List<Transaction>> watchTransactions() =>
-      (select(transactions)..orderBy([(t) => OrderingTerm.desc(t.date)])).watch();
+  Stream<List<Transaction>> watchTransactions() => (select(
+    transactions,
+  )..orderBy([(t) => OrderingTerm.desc(t.date)])).watch();
 
-  Stream<List<CurrencyRate>> watchRates() =>
-      (select(currencyRates)..orderBy([(t) => OrderingTerm.desc(t.date)])).watch();
+  Stream<List<CurrencyRate>> watchRates() => (select(
+    currencyRates,
+  )..orderBy([(t) => OrderingTerm.desc(t.date)])).watch();
 
   Stream<List<FeeRule>> watchFeeRules() => select(feeRules).watch();
 
   Stream<List<SavingsGoal>> watchGoals() => select(savingsGoals).watch();
 
-  Stream<List<RecurringService>> watchServices() => select(recurringServices).watch();
+  Stream<List<RecurringService>> watchServices() =>
+      select(recurringServices).watch();
 
   Stream<List<Loan>> watchLoans() =>
       (select(loans)..orderBy([(t) => OrderingTerm.asc(t.name)])).watch();
 
-  Stream<List<LoanPayment>> watchLoanPayments() =>
-      (select(loanPayments)..orderBy([(t) => OrderingTerm.desc(t.date)])).watch();
+  Stream<List<LoanPayment>> watchLoanPayments() => (select(
+    loanPayments,
+  )..orderBy([(t) => OrderingTerm.desc(t.date)])).watch();
 
   Future<Account> addAccount({
     required String name,
@@ -287,12 +300,13 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  Future<void> updateAccount(Account account) => update(accounts).replace(account);
+  Future<void> updateAccount(Account account) =>
+      update(accounts).replace(account);
 
   Future<void> deleteAccount(String id) async {
-    final used = await (select(transactions)
-          ..where((t) => t.accountId.equals(id) | t.transferToId.equals(id)))
-        .get();
+    final used = await (select(
+      transactions,
+    )..where((t) => t.accountId.equals(id) | t.transferToId.equals(id))).get();
     if (used.isNotEmpty) {
       throw StateError('La cuenta tiene movimientos asociados');
     }
@@ -300,7 +314,8 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<int> transactionsForAccountCount(String id) =>
-      (select(transactions)..where((t) => t.accountId.equals(id) | t.transferToId.equals(id)))
+      (select(transactions)
+            ..where((t) => t.accountId.equals(id) | t.transferToId.equals(id)))
           .get()
           .then((rows) => rows.length);
 
@@ -322,10 +337,13 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  Future<void> updateCategory(Category category) => update(categories).replace(category);
+  Future<void> updateCategory(Category category) =>
+      update(categories).replace(category);
 
   Future<void> deleteCategory(String id) async {
-    final used = await (select(transactions)..where((t) => t.categoryId.equals(id))).get();
+    final used = await (select(
+      transactions,
+    )..where((t) => t.categoryId.equals(id))).get();
     if (used.isNotEmpty) {
       throw StateError('La categoría está en uso por algún movimiento');
     }
@@ -390,7 +408,8 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  Future<void> updateGoal(SavingsGoal goal) => update(savingsGoals).replace(goal);
+  Future<void> updateGoal(SavingsGoal goal) =>
+      update(savingsGoals).replace(goal);
 
   Future<void> deleteGoal(String id) =>
       (delete(savingsGoals)..where((t) => t.id.equals(id))).go();
@@ -401,9 +420,9 @@ class AppDatabase extends _$AppDatabase {
     required String fundingAccountId,
   }) async {
     if (fundingAccountId != goal.accountId) {
-      final funding = await (select(accounts)
-            ..where((t) => t.id.equals(fundingAccountId)))
-          .getSingle();
+      final funding = await (select(
+        accounts,
+      )..where((t) => t.id.equals(fundingAccountId))).getSingle();
       await addTransaction(
         type: TransactionType.transfer,
         accountId: fundingAccountId,
@@ -414,10 +433,11 @@ class AppDatabase extends _$AppDatabase {
         note: 'Aporte a meta: ${goal.name}',
       );
     }
-    await (update(savingsGoals)..where((t) => t.id.equals(goal.id)))
-        .write(SavingsGoalsCompanion(
-      allocatedAmount: Value(goal.allocatedAmount + amount),
-    ));
+    await (update(savingsGoals)..where((t) => t.id.equals(goal.id))).write(
+      SavingsGoalsCompanion(
+        allocatedAmount: Value(goal.allocatedAmount + amount),
+      ),
+    );
   }
 
   Future<FeeRule> addFeeRule({
@@ -518,14 +538,16 @@ class AppDatabase extends _$AppDatabase {
     if (service.accountId == null) {
       throw StateError('Asigna una cuenta al servicio antes de pagarlo');
     }
-    final account = await (select(accounts)
-          ..where((t) => t.id.equals(service.accountId!)))
-        .getSingle();
+    final account = await (select(
+      accounts,
+    )..where((t) => t.id.equals(service.accountId!))).getSingle();
     var amount = amountOverride ?? service.amount;
     if (service.currency != account.currency) {
       final vesRate = await latestVesRate();
       if (vesRate == null) {
-        throw StateError('Guarda una tasa de referencia en Monedas para pagar en otra moneda');
+        throw StateError(
+          'Guarda una tasa de referencia en Monedas para pagar en otra moneda',
+        );
       }
       final eurRate = await latestRateFor('USD/EUR', 'api');
       final converted = _convertBetween(
@@ -559,31 +581,37 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<CurrencyRate?> latestRate() async {
-    final rows = await (select(currencyRates)
-          ..orderBy([(t) => OrderingTerm.desc(t.date)])
-          ..limit(1))
-        .get();
+    final rows =
+        await (select(currencyRates)
+              ..orderBy([(t) => OrderingTerm.desc(t.date)])
+              ..limit(1))
+            .get();
     return rows.isEmpty ? null : rows.first;
   }
 
   /// Última tasa VES guardada (cualquier proveedor del par `USD/VES`), sin
   /// mezclar con otras monedas como el euro.
   Future<CurrencyRate?> latestVesRate() async {
-    final rows = await (select(currencyRates)
-          ..where((t) => t.rateCode.equals('USD/VES'))
-          ..orderBy([(t) => OrderingTerm.desc(t.date)])
-          ..limit(1))
-        .get();
+    final rows =
+        await (select(currencyRates)
+              ..where((t) => t.rateCode.equals('USD/VES'))
+              ..orderBy([(t) => OrderingTerm.desc(t.date)])
+              ..limit(1))
+            .get();
     return rows.isEmpty ? null : rows.first;
   }
 
   /// Última tasa guardada para un [rateCode] de un [provider] concreto.
   Future<CurrencyRate?> latestRateFor(String rateCode, String provider) async {
-    final rows = await (select(currencyRates)
-          ..where((t) => t.rateCode.equals(rateCode) & t.provider.equals(provider))
-          ..orderBy([(t) => OrderingTerm.desc(t.date)])
-          ..limit(1))
-        .get();
+    final rows =
+        await (select(currencyRates)
+              ..where(
+                (t) =>
+                    t.rateCode.equals(rateCode) & t.provider.equals(provider),
+              )
+              ..orderBy([(t) => OrderingTerm.desc(t.date)])
+              ..limit(1))
+            .get();
     return rows.isEmpty ? null : rows.first;
   }
 
@@ -602,15 +630,15 @@ class AppDatabase extends _$AppDatabase {
         note: Value(note),
       ),
     );
-    await (update(loans)..where((t) => t.id.equals(loan.id)))
-        .write(LoansCompanion(
-      paidAmount: Value(loan.paidAmount + amount),
-    ));
+    await (update(loans)..where((t) => t.id.equals(loan.id))).write(
+      LoansCompanion(paidAmount: Value(loan.paidAmount + amount)),
+    );
     return payment;
   }
 
-  Stream<List<Budget>> watchBudgets() =>
-      (select(budgets)..orderBy([(t) => OrderingTerm.asc(t.categoryId)])).watch();
+  Stream<List<Budget>> watchBudgets() => (select(
+    budgets,
+  )..orderBy([(t) => OrderingTerm.asc(t.categoryId)])).watch();
 
   Future<Budget> addBudget({
     required String categoryId,
@@ -634,7 +662,9 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> restoreBackup(Map<String, dynamic> json) async {
     if (json['app'] != 'Polaris Finance') {
-      throw const FormatException('El archivo no es un respaldo de Polaris Finance');
+      throw const FormatException(
+        'El archivo no es un respaldo de Polaris Finance',
+      );
     }
     List<Map<String, dynamic>> rows(String key) =>
         (json[key] as List<dynamic>? ?? const [])
@@ -684,18 +714,12 @@ class AppDatabase extends _$AppDatabase {
           currencyRates,
           rows('rates').map(CurrencyRate.fromJson).toList(),
         );
-        batch.insertAll(
-          loans,
-          rows('loans').map(Loan.fromJson).toList(),
-        );
+        batch.insertAll(loans, rows('loans').map(Loan.fromJson).toList());
         batch.insertAll(
           loanPayments,
           rows('loanPayments').map(LoanPayment.fromJson).toList(),
         );
-        batch.insertAll(
-          budgets,
-          rows('budgets').map(Budget.fromJson).toList(),
-        );
+        batch.insertAll(budgets, rows('budgets').map(Budget.fromJson).toList());
       });
     });
   }

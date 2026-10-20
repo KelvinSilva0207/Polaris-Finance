@@ -92,7 +92,11 @@ MonthlyReportData computeMonthlyReport({
     } else {
       expense += value;
       final key = transaction.categoryId ?? '';
-      byCategory.update(key, (current) => current + value, ifAbsent: () => value);
+      byCategory.update(
+        key,
+        (current) => current + value,
+        ifAbsent: () => value,
+      );
     }
   }
 
@@ -121,8 +125,7 @@ MonthlyReportData computeMonthlyReport({
   );
 }
 
-String _money(double value) =>
-    NumberFormat('#,##0.00', 'es').format(value);
+String _money(double value) => NumberFormat('#,##0.00', 'es').format(value);
 
 Future<List<int>> buildMonthlyReportPdf({
   required MonthlyReportData report,
@@ -132,18 +135,21 @@ Future<List<int>> buildMonthlyReportPdf({
   required Map<String, double> balances,
 }) async {
   final document = pw.Document();
-  final accountNames = {for (final account in accounts) account.id: account.name};
+  final accountNames = {
+    for (final account in accounts) account.id: account.name,
+  };
   final categoryNames = {
     for (final category in categories) category.id: category.name,
   };
   final monthStart = DateTime(report.month.year, report.month.month, 1);
   final monthEnd = DateTime(report.month.year, report.month.month + 1, 1);
-  final monthTx = transactions
-      .where(
-        (t) => !t.date.isBefore(monthStart) && t.date.isBefore(monthEnd),
-      )
-      .toList()
-    ..sort((a, b) => b.date.compareTo(a.date));
+  final monthTx =
+      transactions
+          .where(
+            (t) => !t.date.isBefore(monthStart) && t.date.isBefore(monthEnd),
+          )
+          .toList()
+        ..sort((a, b) => b.date.compareTo(a.date));
 
   document.addPage(
     pw.MultiPage(
@@ -176,7 +182,10 @@ Future<List<int>> buildMonthlyReportPdf({
             ['Egresos', _money(report.expenseVes)],
             ['Balance', _money(report.balanceVes)],
           ],
-          headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
+          headerStyle: pw.TextStyle(
+            fontWeight: pw.FontWeight.bold,
+            fontSize: 9,
+          ),
           cellStyle: const pw.TextStyle(fontSize: 9),
           headerDecoration: pw.BoxDecoration(color: PdfColors.grey300),
           cellAlignments: {1: pw.Alignment.centerRight},
@@ -207,8 +216,10 @@ Future<List<int>> buildMonthlyReportPdf({
               for (final entry in report.expensesByCategory)
                 [entry.label, _money(entry.total)],
             ],
-            headerStyle:
-                pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
+            headerStyle: pw.TextStyle(
+              fontWeight: pw.FontWeight.bold,
+              fontSize: 9,
+            ),
             cellStyle: const pw.TextStyle(fontSize: 9),
             headerDecoration: pw.BoxDecoration(color: PdfColors.grey300),
             cellAlignments: {1: pw.Alignment.centerRight},
@@ -229,7 +240,10 @@ Future<List<int>> buildMonthlyReportPdf({
                 _money(balances[account.id] ?? 0),
               ],
           ],
-          headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
+          headerStyle: pw.TextStyle(
+            fontWeight: pw.FontWeight.bold,
+            fontSize: 9,
+          ),
           cellStyle: const pw.TextStyle(fontSize: 9),
           headerDecoration: pw.BoxDecoration(color: PdfColors.grey300),
           cellAlignments: {2: pw.Alignment.centerRight},
@@ -241,7 +255,15 @@ Future<List<int>> buildMonthlyReportPdf({
         ),
         pw.SizedBox(height: 6),
         pw.TableHelper.fromTextArray(
-          headers: ['Fecha', 'Tipo', 'Monto', 'Mon.', 'Cuenta', 'Categoría', 'Nota'],
+          headers: [
+            'Fecha',
+            'Tipo',
+            'Monto',
+            'Mon.',
+            'Cuenta',
+            'Categoría',
+            'Nota',
+          ],
           data: [
             for (final transaction in monthTx)
               [
@@ -256,7 +278,10 @@ Future<List<int>> buildMonthlyReportPdf({
                 transaction.note ?? '',
               ],
           ],
-          headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8),
+          headerStyle: pw.TextStyle(
+            fontWeight: pw.FontWeight.bold,
+            fontSize: 8,
+          ),
           cellStyle: const pw.TextStyle(fontSize: 7),
           headerDecoration: pw.BoxDecoration(color: PdfColors.grey300),
           cellAlignments: {2: pw.Alignment.centerRight},
@@ -284,10 +309,7 @@ class MonthlyReportDialog extends StatefulWidget {
 class _MonthlyReportDialogState extends State<MonthlyReportDialog> {
   late final List<DateTime> _months = List.generate(
     widget.monthsBack,
-    (index) => DateTime(
-      DateTime.now().year,
-      DateTime.now().month - index,
-    ),
+    (index) => DateTime(DateTime.now().year, DateTime.now().month - index),
   );
 
   @override

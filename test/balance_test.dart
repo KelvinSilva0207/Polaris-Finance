@@ -13,8 +13,9 @@ import 'package:polaris_finance/features/export/export_screen.dart';
 import 'package:polaris_finance/shared/widgets/account_card.dart';
 
 void main() {
-  testWidgets('La cuenta muestra el saldo fijado sin movimientos',
-      (WidgetTester tester) async {
+  testWidgets('La cuenta muestra el saldo fijado sin movimientos', (
+    WidgetTester tester,
+  ) async {
     final database = AppDatabase.memory();
     addTearDown(database.close);
     await database.addAccount(
@@ -46,8 +47,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
   });
 
-  testWidgets('Editar el saldo fijado recalcula el saldo sin crear ingresos',
-      (WidgetTester tester) async {
+  testWidgets('Editar el saldo fijado recalcula el saldo sin crear ingresos', (
+    WidgetTester tester,
+  ) async {
     final database = AppDatabase.memory();
     addTearDown(database.close);
     final account = await database.addAccount(
@@ -125,8 +127,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
   });
 
-  testWidgets('El saldo solo admite números y permite negativos',
-      (WidgetTester tester) async {
+  testWidgets('El saldo solo admite números y permite negativos', (
+    WidgetTester tester,
+  ) async {
     final database = AppDatabase.memory();
     addTearDown(database.close);
     await database.addAccount(
