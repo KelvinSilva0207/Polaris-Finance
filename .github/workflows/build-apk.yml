@@ -51,6 +51,22 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Install Android NDK (required by plugins with native code)
+        run: |
+          set -uo pipefail
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          FLUTTER_ROOT="$(dirname "$(dirname "$(command -v flutter)")")"
+          NDK="$(sed -n 's/.*val ndkVersion: String = "\([^"]*\)".*/\1/p' "$FLUTTER_ROOT/packages/flutter_tools/gradle/src/main/kotlin/FlutterExtension.kt")"
+          if [ -z "$NDK" ]; then echo "::error::No se pudo leer ndkVersion de Flutter"; exit 1; fi
+          echo "NDK requerido por Flutter: $NDK"
+          if [ -d "$SDK/ndk/$NDK" ]; then echo "NDK ya instalado"; exit 0; fi
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          for attempt in 1 2 3; do
+            if "$SDK/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK"; then break; fi
+            echo "Fallo la instalacion del NDK (intento $attempt)"; sleep 15
+          done
+          test -d "$SDK/ndk/$NDK"
+
       - name: Verify formatting
         run: dart format --output=none --set-exit-if-changed lib test
 
