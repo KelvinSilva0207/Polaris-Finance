@@ -41,7 +41,9 @@ android {
         applicationId = "com.polarisfinance.polaris_finance"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // sentry_flutter (crash reporting) exige Android 8.0+ (API 26).
+        // Se respeta el mínimo de Flutter por si este sube en el futuro.
+        minSdk = maxOf(flutter.minSdkVersion, 26)
         targetSdk = flutter.targetSdkVersion
         // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
         // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
