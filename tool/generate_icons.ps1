@@ -8,11 +8,17 @@
 #
 # El logo se recorta a su caja visible y se centra en un lienzo transparente
 # de 1024x1024 escalado para ocupar la fraccion indicada del lienzo.
+#
+# Nota sobre el icono adaptativo: Android muestra solo la zona central de
+# 72/108 del lienzo (66.7%) y garantiza 66/108 (61%) sin recortes. Por eso el
+# primer plano adaptativo no pasa de ~68%: a partir de ahi la mascara
+# (circulo o squircle) empieza a cortar el logo. El icono clasico no lleva
+# mascara, por eso puede ocupar hasta el 90%.
 
 param(
   [string]$LogoPath = "assets/logo.png",
-  [double]$SquareFraction = 0.82,
-  [double]$ForegroundFraction = 0.80,
+  [double]$SquareFraction = 0.90,
+  [double]$ForegroundFraction = 0.68,
   [string]$SquareOut = "icon_square.png",
   [string]$ForegroundOut = "icon_foreground.png",
   [int]$Canvas = 1024

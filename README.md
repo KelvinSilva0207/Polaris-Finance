@@ -50,7 +50,8 @@ lib/
 - Presupuestos: límite mensual por categoría de egreso con barra de progreso y semáforo (verde/naranja/rojo).
 - Restauración de respaldos: copiar respaldo al portapapeles y restaurarlo sobre la app (reemplaza todos los datos).
 - Web: `flutter build web` funciona con drift_wasm (`web/sqlite3.wasm` + `web/drift_worker.js`); las exportaciones descarchan en el navegador.
-- Iconos y marca: el logo de marca (`assets/logo.png`) es la única fuente; los derivados `icon_square.png` (logo clásico) e `icon_foreground.png` (primer plano adaptativo, dentro de la zona segura) se generan con `powershell -File tool/generate_icons.ps1`, y `flutter_launcher_icons` produce los iconos de Android (adaptativo + clásico), iOS, Web y Windows; dentro de la app se usa (dashboard, bienvenida, ajustes, onboarding) vía `BrandLogo` y la config vive en `flutter_launcher_icons.yaml`. Regenerar con `powershell -File tool/generate_icons.ps1` y luego `dart run flutter_launcher_icons`.
+- Iconos y marca: el logo de marca (`assets/logo.png`) es la única fuente; los derivados `icon_square.png` (logo clásico, 90%) e `icon_foreground.png` (primer plano adaptativo, 68%) se generan con `powershell -File tool/generate_icons.ps1`, y `flutter_launcher_icons` produce los iconos de Android (adaptativo + clásico), iOS, Web y Windows; dentro de la app se usa (dashboard, bienvenida, ajustes, onboarding) vía `BrandLogo` y la config vive en `flutter_launcher_icons.yaml`. El 68% es el máximo que Android muestra sin recortar el logo (la zona visible es 72/108 del lienzo); el icono clásico no lleva máscara, por eso llega al 90%.
+- Actualización in-app (OTA): el CI publica un APK por arquitectura (`arm64-v8a`, `armeabi-v7a`) y un universal, y escribe `version.json` con el mapa de descargas; la app elige el APK que corresponde a su ABI (`lib/core/platform/device_abi.dart`), de modo que descarga ~36 MB en vez de ~115 MB.
 
 ## Roadmap
 
