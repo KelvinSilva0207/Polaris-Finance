@@ -84,29 +84,48 @@ jobs:
           path: coverage/lcov.info
           if-no-files-found: ignore
 
-      - name: Build release APK
+      - name: Build release APKs
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
+          set -euo pipefail
+          mkdir -p build/ota
           if [ -n "$SENTRY_DSN" ]; then
-            flutter build apk --release --build-number=${{ github.run_number }} --dart-define=SENTRY_DSN="$SENTRY_DSN"
+            DART_DEFINE="--dart-define=SENTRY_DSN=$SENTRY_DSN"
           else
-            flutter build apk --release --build-number=${{ github.run_number }}
+            DART_DEFINE=""
           fi
-          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/polaris-finance.apk
+
+          # 1) APK por arquitectura: el telefono descarga solo ~36 MB en vez
+          #    del universal de ~76 MB, que es lo que hace que la descarga
+          #    in-app se quede colgada al final.
+          flutter build apk --release --split-per-abi --build-number=${{ github.run_number }} $DART_DEFINE
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            if [ -f "build/app/outputs/flutter-apk/app-$abi-release.apk" ]; then
+              cp "build/app/outputs/flutter-apk/app-$abi-release.apk" "build/ota/polaris-finance-$abi.apk"
+            fi
+          done
+
+          # 2) APK universal (arm64-v8a + armeabi-v7a) como respaldo para
+          #    versiones antiguas de la app, que no saben elegir por ABI.
+          flutter build apk --release --build-number=${{ github.run_number }} $DART_DEFINE
+          cp build/app/outputs/flutter-apk/app-release.apk build/ota/polaris-finance.apk
+          ls -lh build/ota
 
       - name: Verify APK signing
         if: env.ANDROID_KEYSTORE_PATH != ''
         run: |
           SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
           APKSIGNER=$(ls "$SDK"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)
-          "$APKSIGNER" verify --print-certs build/app/outputs/flutter-apk/polaris-finance.apk
+          for apk in build/ota/*.apk; do
+            "$APKSIGNER" verify --print-certs "$apk"
+          done
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
           name: apks
-          path: build/app/outputs/flutter-apk/polaris-finance.apk
+          path: build/ota
           if-no-files-found: error
 
       - name: Publish "latest" release
@@ -114,22 +133,41 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           VERSION="$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml | head -1)"
           if [ -z "$VERSION" ]; then echo "::error::No se pudo leer la version de pubspec.yaml"; exit 1; fi
           gh release view latest >/dev/null 2>&1 || gh release create latest --title "Última versión" --notes "APK más reciente generado automáticamente."
-          gh release upload latest build/app/outputs/flutter-apk/polaris-finance.apk --clobber
+
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/latest/polaris-finance.apk"
+          for apk in build/ota/*.apk; do
+            gh release upload latest "$apk" --clobber
+          done
 
           # Manifiesto de versión para la actualización in-app (OTA):
           # el tag del release es literalmente "latest", por lo que la app lee
           # la versión real desde version.json en main.
-          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/latest/polaris-finance.apk"
+          # Además se publica un APK por arquitectura para que cada teléfono
+          # descargue solo el que le corresponde.
           BUILD_NUMBER="${{ github.run_number }}"
           PUBLISHED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           NOTES="$(gh release view latest --json body -q .body 2>/dev/null || echo '')"
-          printf '{\n  "version": "%s",\n  "build": %s,\n  "download_url": "%s",\n  "published_at": "%s",\n  "notes": %s\n}\n' \
-            "$VERSION" "$BUILD_NUMBER" "$DOWNLOAD_URL" "$PUBLISHED" \
-            "$(printf '%s' "$NOTES" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')" \
-            > version.json
+          python3 - "$VERSION" "$BUILD_NUMBER" "$DOWNLOAD_URL" "$PUBLISHED" "$NOTES" > version.json <<'PY'
+          import json, os, sys
+          version, build, url, published, notes = sys.argv[1:6]
+          base = url.rsplit('/', 1)[0]
+          downloads = {}
+          for abi in ('arm64-v8a', 'armeabi-v7a', 'x86_64'):
+              if os.path.exists(f"build/ota/polaris-finance-{abi}.apk"):
+                  downloads[abi] = f"{base}/polaris-finance-{abi}.apk"
+          json.dump({
+              "version": version,
+              "build": int(build),
+              "download_url": url,
+              "downloads": downloads,
+              "published_at": published,
+              "notes": notes,
+          }, sys.stdout, indent=2)
+          PY
           gh release upload latest version.json --clobber
 
       - name: Commit version manifest

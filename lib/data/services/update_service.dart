@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart' as launcher;
 
+import '../../core/platform/device_abi.dart';
+
 /// Resultado de una verificación de actualizaciones.
 enum UpdateStatus { upToDate, updateAvailable, error }
 
@@ -90,6 +92,16 @@ int compareVersions(String a, String b) {
   return 0;
 }
 
+/// Extrae la arquitectura del nombre de un APK publicado por el CI
+/// (`polaris-finance-arm64-v8a.apk` → `arm64-v8a`).
+/// Devuelve `null` si el nombre no corresponde a un APK por arquitectura.
+String? abiFromApkName(String name) {
+  for (final abi in const ['arm64-v8a', 'armeabi-v7a', 'x86_64', 'riscv64']) {
+    if (name.endsWith('-$abi.apk')) return abi;
+  }
+  return null;
+}
+
 /// Version publicada que el CI escribe junto a cada release (fuente primaria,
 /// ya que el tag de GitHub es literalmente `latest`).
 /// Ej: `{"version": "1.0.2", "notes": "...", "published_at": "..."}`.
@@ -99,12 +111,37 @@ class _VersionManifest {
     this.notes,
     this.downloadUrl,
     this.publishedAt,
+    this.downloads = const {},
   });
 
   final String version;
   final String? notes;
   final String? downloadUrl;
   final DateTime? publishedAt;
+
+  /// APK especifico por arquitectura (`arm64-v8a`, `armeabi-v7a`, `x86_64`).
+  /// Permite descargar solo los ~36 MB que corresponden al telefono.
+  final Map<String, String> downloads;
+
+  /// URL del APK que corresponde a este dispositivo.
+  String? urlForDevice() =>
+      urlForAbi(currentDeviceAbi(), downloads, downloadUrl);
+}
+
+/// Elige la URL del APK para la arquitectura dada.
+///
+/// Si el manifiesto no publica un APK para esa arquitectura se usa el APK
+/// universal ([fallback]).
+String? urlForAbi(
+  String? abi,
+  Map<String, String> downloads,
+  String? fallback,
+) {
+  if (abi != null) {
+    final specific = downloads[abi];
+    if (specific != null && specific.isNotEmpty) return specific;
+  }
+  return fallback;
 }
 
 class UpdateService {
@@ -165,7 +202,7 @@ class UpdateService {
         latestVersion: release.version,
         status: status,
         releaseNotes: release.notes,
-        downloadUrl: release.downloadUrl,
+        downloadUrl: release.urlForDevice() ?? release.downloadUrl,
         publishedAt: release.publishedAt,
       );
     } on UpdateCheckException catch (error) {
@@ -206,11 +243,22 @@ class UpdateService {
       final version = json['version']?.toString();
       if (version == null || version.isEmpty) return null;
       final published = json['published_at']?.toString();
+      final downloads = <String, String>{};
+      final rawDownloads = json['downloads'];
+      if (rawDownloads is Map) {
+        for (final entry in rawDownloads.entries) {
+          final url = entry.value?.toString();
+          if (entry.key != null && url != null && url.isNotEmpty) {
+            downloads[entry.key.toString()] = url;
+          }
+        }
+      }
       return _VersionManifest(
         version: version,
         notes: json['notes']?.toString(),
         downloadUrl: json['download_url']?.toString() ?? _apkUrl(),
         publishedAt: published == null ? null : DateTime.tryParse(published),
+        downloads: downloads,
       );
     } catch (_) {
       return null;
@@ -244,11 +292,13 @@ class UpdateService {
     if (version == null || parseVersion(version) == null) return null;
 
     final published = json['published_at']?.toString();
+    final assets = json['assets'];
     return _VersionManifest(
       version: version,
       notes: json['body']?.toString(),
-      downloadUrl: _apkUrlFromAssets(json['assets']) ?? _apkUrl(),
+      downloadUrl: _universalApkFromAssets(assets) ?? _apkUrl(),
       publishedAt: published == null ? null : DateTime.tryParse(published),
+      downloads: _apkByAbiFromAssets(assets),
     );
   }
 
@@ -285,15 +335,33 @@ class UpdateService {
     return versions.first;
   }
 
-  String? _apkUrlFromAssets(Object? assets) {
+  /// URL del APK universal (`polaris-finance.apk`) entre los assets.
+  String? _universalApkFromAssets(Object? assets) {
     if (assets is! List) return null;
     for (final asset in assets) {
-      if (asset is Map<String, dynamic> &&
-          asset['browser_download_url']?.toString().endsWith('.apk') == true) {
-        return asset['browser_download_url'].toString();
-      }
+      if (asset is! Map<String, dynamic>) continue;
+      final name = asset['name']?.toString() ?? '';
+      final url = asset['browser_download_url']?.toString();
+      if (url == null || !url.endsWith('.apk')) continue;
+      if (name == 'polaris-finance.apk') return url;
     }
     return null;
+  }
+
+  /// Mapa de APK por arquitectura a partir de los assets del release
+  /// (`polaris-finance-arm64-v8a.apk` → `arm64-v8a`).
+  Map<String, String> _apkByAbiFromAssets(Object? assets) {
+    if (assets is! List) return const {};
+    final result = <String, String>{};
+    for (final asset in assets) {
+      if (asset is! Map<String, dynamic>) continue;
+      final name = asset['name']?.toString() ?? '';
+      final url = asset['browser_download_url']?.toString();
+      if (url == null || !url.endsWith('.apk')) continue;
+      final abi = abiFromApkName(name);
+      if (abi != null) result[abi] = url;
+    }
+    return result;
   }
 
   String _apkUrl() =>

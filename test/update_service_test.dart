@@ -40,6 +40,43 @@ void main() {
     });
   });
 
+  group('urlForAbi', () {
+    const downloads = {
+      'arm64-v8a': 'https://example.com/polaris-finance-arm64-v8a.apk',
+      'armeabi-v7a': 'https://example.com/polaris-finance-armeabi-v7a.apk',
+    };
+    const universal = 'https://example.com/polaris-finance.apk';
+
+    test('elige el APK de la arquitectura del dispositivo', () {
+      expect(
+        urlForAbi('arm64-v8a', downloads, universal),
+        'https://example.com/polaris-finance-arm64-v8a.apk',
+      );
+      expect(
+        urlForAbi('armeabi-v7a', downloads, universal),
+        'https://example.com/polaris-finance-armeabi-v7a.apk',
+      );
+    });
+
+    test('usa el universal si no hay APK para esa arquitectura', () {
+      expect(urlForAbi('x86_64', downloads, universal), universal);
+      expect(urlForAbi(null, downloads, universal), universal);
+    });
+  });
+
+  group('abiFromApkName', () {
+    test('extrae la arquitectura del nombre del APK', () {
+      expect(abiFromApkName('polaris-finance-arm64-v8a.apk'), 'arm64-v8a');
+      expect(abiFromApkName('polaris-finance-armeabi-v7a.apk'), 'armeabi-v7a');
+      expect(abiFromApkName('polaris-finance-x86_64.apk'), 'x86_64');
+    });
+
+    test('devuelve null para el APK universal', () {
+      expect(abiFromApkName('polaris-finance.apk'), isNull);
+      expect(abiFromApkName('version.json'), isNull);
+    });
+  });
+
   group('UpdateService', () {
     test('lee version.json y detecta actualización', () async {
       final client = MockClient((request) async {
@@ -65,6 +102,40 @@ void main() {
       expect(info.currentVersion, '1.0.0');
       expect(info.releaseNotes, 'Novedades');
       expect(info.downloadUrl, contains('polaris-finance.apk'));
+    });
+
+    test('lee el mapa de APKs por arquitectura del manifiesto', () async {
+      final client = MockClient((request) async {
+        if (request.url.path.endsWith('version.json')) {
+          return http.Response(
+            jsonEncode({
+              'version': '1.0.2',
+              'download_url': 'https://example.com/polaris-finance.apk',
+              'downloads': {
+                'arm64-v8a':
+                    'https://example.com/polaris-finance-arm64-v8a.apk',
+                'armeabi-v7a':
+                    'https://example.com/polaris-finance-armeabi-v7a.apk',
+              },
+            }),
+            200,
+          );
+        }
+        return http.Response('not found', 404);
+      });
+
+      final service = UpdateService(
+        owner: 'x',
+        repo: 'y',
+        client: client,
+        currentVersionLoader: () async => '1.0.0',
+      );
+
+      final info = await service.check();
+      expect(info.status, UpdateStatus.updateAvailable);
+      // En el host de pruebas la ABI no es Android, asi que se usa el
+      // universal; el mapa por arquitectura se valida en urlForAbi.
+      expect(info.downloadUrl, 'https://example.com/polaris-finance.apk');
     });
 
     test('está al día si las versiones son iguales', () async {
