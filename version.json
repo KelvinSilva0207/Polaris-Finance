@@ -1,7 +1,11 @@
 {
-  "version": "1.0.1",
-  "build": 91,
+  "version": "1.0.2",
+  "build": 93,
   "download_url": "https://github.com/KelvinSilva0207/Polaris-Finance/releases/download/latest/polaris-finance.apk",
-  "published_at": "2026-10-21T17:11:32Z",
+  "downloads": {
+    "arm64-v8a": "https://github.com/KelvinSilva0207/Polaris-Finance/releases/download/latest/polaris-finance-arm64-v8a.apk",
+    "armeabi-v7a": "https://github.com/KelvinSilva0207/Polaris-Finance/releases/download/latest/polaris-finance-armeabi-v7a.apk"
+  },
+  "published_at": "2026-10-21T18:06:22Z",
   "notes": "APK m\u00e1s reciente generado autom\u00e1ticamente."
 }
