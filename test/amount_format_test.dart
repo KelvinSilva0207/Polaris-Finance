@@ -42,33 +42,30 @@ void main() {
       );
     }
 
-    test('agrupa miles mientras se escribe', () {
+    test('interpreta la secuencia como caja registradora (2 centavos)', () {
       expect(update('1').text, '1');
       expect(update('12').text, '12');
-      expect(update('123').text, '123');
-      expect(update('1234').text, '1.234');
-      expect(update('1234567').text, '1.234.567');
-      expect(update('000000').text, '000.000');
+      expect(update('123').text, '1,23');
+      expect(update('1234').text, '12,34');
+      expect(update('12345').text, '123,45');
+      expect(update('123456').text, '1.234,56');
+      expect(update('1234567890').text, '12.345.678,90');
     });
 
-    test('el punto digitado se muestra como coma decimal', () {
-      expect(update('12.5').text, '12,5');
-      expect(update('0.00').text, '0,00');
-    });
-
-    test('acepta máximo dos decimales', () {
-      expect(update('12,345').text, '12,34');
-      expect(update('1234,5').text, '1.234,5');
+    test('agrupa miles y separa centavos automáticamente', () {
+      expect(update('100000').text, '1.000,00');
+      expect(update('100000000').text, '1.000.000,00');
     });
 
     test('descarta caracteres no numéricos', () {
       expect(update('abc').text, '');
-      expect(update('a1b2c3').text, '123');
+      expect(update('a1b2c3').text, '1,23');
     });
 
     test('negativo solo si allowNegative', () {
-      expect(update('-500').text, '500');
-      expect(update('-500.5', allowNegative: true).text, '-500,5');
+      expect(update('-500').text, '5,00');
+      expect(update('-500', allowNegative: true).text, '-5,00');
+      expect(update('-12345', allowNegative: true).text, '-123,45');
     });
 
     test('el cursor se conserva sobre el texto formateado', () {
@@ -79,64 +76,50 @@ void main() {
           selection: const TextSelection.collapsed(offset: 4),
         ),
       );
-      expect(result.text, '1.234.567');
+      expect(result.text, '12.345,67');
       expect(result.selection.baseOffset, greaterThan(0));
     });
 
-    test('permite escribir cifras grandes (miles, millones, billones)', () {
+    test('al teclear al final el dígito entra y desplaza los centavos', () {
       final formatter = veAmountFormatter();
       TextEditingValue value(String text) => TextEditingValue(
         text: text,
         selection: TextSelection.collapsed(offset: text.length),
       );
-      var previous = value('');
-      const digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
-      const expected = [
-        '1',
-        '12',
-        '123',
-        '1.234',
-        '12.345',
-        '123.456',
-        '1.234.567',
-        '12.345.678',
-        '123.456.789',
-        '1.234.567.890',
-      ];
-      for (var index = 0; index < digits.length; index++) {
-        final typed = value(previous.text + digits[index]);
-        final next = formatter.formatEditUpdate(previous, typed);
-        expect(next.text, expected[index], reason: 'dígito ${index + 1}');
-        previous = next;
-      }
+      // 1234 → 12,34 ; añadir 5 al final → 123,45 (NO se bloquea).
+      var previous = formatter.formatEditUpdate(
+        TextEditingValue.empty,
+        value('1234'),
+      );
+      expect(previous.text, '12,34');
+      expect(previous.selection.extentOffset, previous.text.length);
+
+      previous = formatter.formatEditUpdate(previous, value('12,345'));
+      expect(previous.text, '123,45');
+      expect(previous.selection.extentOffset, previous.text.length);
+
+      previous = formatter.formatEditUpdate(previous, value('123,456'));
+      expect(previous.text, '1.234,56');
+      expect(previous.selection.extentOffset, previous.text.length);
     });
 
-    test('el punto seguido de 0-2 dígitos es decimal, si no, es miles', () {
+    test('al borrar desde el final se elimina el último dígito', () {
       final formatter = veAmountFormatter();
       TextEditingValue value(String text) => TextEditingValue(
         text: text,
         selection: TextSelection.collapsed(offset: text.length),
       );
-      expect(
-        formatter.formatEditUpdate(value('1234'), value('1.234')).text,
-        '1.234',
+      var previous = formatter.formatEditUpdate(
+        TextEditingValue.empty,
+        value('123456'),
       );
-      expect(
-        formatter.formatEditUpdate(value('1.234'), value('1.2345')).text,
-        '12.345',
-      );
-      expect(
-        formatter.formatEditUpdate(value('1234'), value('1.234.')).text,
-        '1.234,',
-      );
-      expect(
-        formatter.formatEditUpdate(value('12'), value('12.50')).text,
-        '12,50',
-      );
-      expect(
-        formatter.formatEditUpdate(value('12,5'), value('12,50')).text,
-        '12,50',
-      );
+      expect(previous.text, '1.234,56');
+      previous = formatter.formatEditUpdate(previous, value('1.234,5'));
+      expect(previous.text, '123,45');
+      previous = formatter.formatEditUpdate(previous, value('123,4'));
+      expect(previous.text, '12,34');
+      previous = formatter.formatEditUpdate(previous, value('12,3'));
+      expect(previous.text, '1,23');
     });
 
     group('cursor al escribir dígito a dígito', () {
@@ -166,37 +149,25 @@ void main() {
         return value;
       }
 
-      test('el punto de miles no desplaza el cursor', () {
+      test('nunca bloquea y mantiene el cursor al final', () {
         final formatter = veAmountFormatter();
-        expect(type(formatter, '1000').text, '1.000');
-        expect(type(formatter, '10000').text, '10.000');
-        expect(type(formatter, '1000000').text, '1.000.000');
+        expect(type(formatter, '12345').text, '123,45');
+        expect(type(formatter, '1000000').text, '10.000,00');
+        expect(type(formatter, '1234567890').text, '12.345.678,90');
       });
 
-      test('los ceros tras la coma decimal no rompen el valor', () {
+      test('los ceros a la derecha no rompen el valor', () {
         final formatter = veAmountFormatter();
-        expect(type(formatter, '1250,00').text, '1.250,00');
-        expect(type(formatter, '1000,00').text, '1.000,00');
-        expect(type(formatter, '0,00').text, '0,00');
-        expect(type(formatter, '12,05').text, '12,05');
-        expect(type(formatter, '100000,50').text, '100.000,50');
+        expect(type(formatter, '100000').text, '1.000,00');
+        expect(type(formatter, '1200').text, '12,00');
+        expect(type(formatter, '5').text, '5');
       });
 
       test('el valor final es el esperado', () {
         final formatter = veAmountFormatter();
-        expect(parseAmountInput(type(formatter, '1250,00').text), 1250);
-        expect(parseAmountInput(type(formatter, '1000,00').text), 1000);
-        expect(parseAmountInput(type(formatter, '10,00').text), 10);
-      });
-
-      test('la coma como primer carácter produce 0,', () {
-        final formatter = veAmountFormatter();
-        expect(type(formatter, ',05').text, '0,05');
-      });
-
-      test('el punto decimal acepta ceros', () {
-        final formatter = veAmountFormatter();
-        expect(type(formatter, '1000.00').text, '1.000,00');
+        expect(parseAmountInput(type(formatter, '125000').text), 1250);
+        expect(parseAmountInput(type(formatter, '100000').text), 1000);
+        expect(parseAmountInput(type(formatter, '1234').text), 12.34);
       });
     });
 
@@ -206,18 +177,17 @@ void main() {
         text: text,
         selection: TextSelection.collapsed(offset: text.length),
       );
-      var previous = value('');
-      previous = formatter.formatEditUpdate(
+      var previous = formatter.formatEditUpdate(
         TextEditingValue.empty,
         value('100000'),
       );
-      expect(previous.text, '100.000');
-      previous = formatter.formatEditUpdate(previous, value('10000'));
-      expect(previous.text, '10.000');
-      previous = formatter.formatEditUpdate(previous, value('1000'));
-      expect(previous.text, '1.000');
-      previous = formatter.formatEditUpdate(previous, value('100'));
-      expect(previous.text, '100');
+      expect(previous.text, '1.000,00');
+      previous = formatter.formatEditUpdate(previous, value('1.000,0'));
+      expect(previous.text, '100,00');
+      previous = formatter.formatEditUpdate(previous, value('100,0'));
+      expect(previous.text, '10,00');
+      previous = formatter.formatEditUpdate(previous, value('10,0'));
+      expect(previous.text, '1,00');
     });
 
     test('borrar desde un millón no reduce drásticamente el monto', () {
@@ -230,11 +200,11 @@ void main() {
         TextEditingValue.empty,
         value('1000000'),
       );
-      expect(previous.text, '1.000.000');
-      previous = formatter.formatEditUpdate(previous, value('100000'));
-      expect(previous.text, '100.000');
-      previous = formatter.formatEditUpdate(previous, value('10000'));
-      expect(previous.text, '10.000');
+      expect(previous.text, '10.000,00');
+      previous = formatter.formatEditUpdate(previous, value('10.000,0'));
+      expect(previous.text, '1.000,00');
+      previous = formatter.formatEditUpdate(previous, value('1.000,0'));
+      expect(previous.text, '100,00');
     });
   });
 }

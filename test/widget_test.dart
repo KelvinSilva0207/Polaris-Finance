@@ -86,7 +86,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 700));
 
-    await tester.enterText(find.byType(TextField).first, '100');
+    await tester.enterText(find.byType(TextField).first, '10000');
     await tester.pump();
     await tester.scrollUntilVisible(
       find.text('Registrar'),

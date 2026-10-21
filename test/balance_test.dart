@@ -100,9 +100,9 @@ void main() {
         .toList();
     expect(controllers[1].text, '400,00');
 
-    await tester.enterText(find.byType(TextField).at(1), '1000');
+    await tester.enterText(find.byType(TextField).at(1), '100000');
     await tester.pump();
-    expect(controllers[1].text, '1.000');
+    expect(controllers[1].text, '1.000,00');
 
     final saveButton = find.text('Guardar cambios');
     await tester.scrollUntilVisible(
@@ -170,11 +170,11 @@ void main() {
     await tester.enterText(find.byType(TextField).at(1), 'abc');
     expect(controllers[1].text, '');
 
-    await tester.enterText(find.byType(TextField).at(1), '12.5x');
-    expect(controllers[1].text, '12,5');
+    await tester.enterText(find.byType(TextField).at(1), '12,5x');
+    expect(controllers[1].text, '1,25');
 
-    await tester.enterText(find.byType(TextField).at(1), '-250.5');
-    expect(controllers[1].text, '-250,5');
+    await tester.enterText(find.byType(TextField).at(1), '-25050');
+    expect(controllers[1].text, '-250,50');
 
     final saveButton = find.text('Guardar cambios');
     await tester.scrollUntilVisible(

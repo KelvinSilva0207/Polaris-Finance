@@ -30,12 +30,20 @@ double? parseAmountInput(String raw) {
   return double.parse(parsed.toStringAsFixed(2));
 }
 
-/// Formatea el texto mientras se escribe: inserta los separadores de miles,
-/// acepta un único separador decimal (mostrado como `,`) y hasta dos decimales.
-/// Un `.` se interpreta como decimal solo si es el último y tiene 0-2 dígitos
-/// después; en cualquier otro caso se trata como separador de miles, de modo
-/// que se pueden escribir cifras largas (millones, billones, etc.). Si
-/// [allowNegative] es true admite un `-` inicial.
+/// Formateador de entrada de montos con comportamiento tipo caja registradora
+/// (igual que las apps bancarias, p. ej. Banco de Venezuela):
+///
+/// * El valor se interpreta siempre como una secuencia de dígitos donde los
+///   **últimos dos son los centavos**; el resto son enteros.
+/// * Al teclear un dígito con el cursor al final, la secuencia crece y los
+///   centavos se desplazan: `1.234,56` + `7` → `12.345,67`.
+/// * Al borrar desde el final se elimina el último dígito de la secuencia.
+/// * Los puntos de miles y la coma decimal se insertan automáticamente y no
+///   desplazan la posición lógica del cursor.
+///
+/// El cursor se maneja por número de dígitos (no por índice de carácter), de
+/// modo que escribir al final nunca bloquea el campo ni pierde pulsaciones.
+/// Si [allowNegative] es true admite un `-` inicial.
 class VeAmountFormatter extends TextInputFormatter {
   VeAmountFormatter({this.allowNegative = false});
 
@@ -46,72 +54,63 @@ class VeAmountFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    final text = newValue.text;
-    final formatted = _formatEntry(text);
-    if (formatted == text) return newValue;
+    final rawDigits = _digitsOf(newValue.text);
+    final negative = allowNegative && newValue.text.contains('-');
 
-    final offset = _caretOffset(
-      text,
-      newValue.selection.extentOffset,
+    // Sin dígitos: el campo queda vacío (o solo el signo).
+    if (rawDigits.isEmpty) {
+      final text = negative ? '-' : '';
+      return TextEditingValue(
+        text: text,
+        selection: TextSelection.collapsed(offset: text.length),
+      );
+    }
+
+    final formatted = _render(rawDigits, negative);
+
+    // Posición lógica del cursor: cuántos dígitos hay antes de él.
+    final digitsBefore = _countDigitsBefore(newValue.text, newValue.selection);
+    final offset = _caretFor(
       formatted,
+      digitsBefore: digitsBefore,
+      totalDigits: rawDigits.length,
+      negative: negative,
     );
+
     return TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: offset),
     );
   }
 
-  String _formatEntry(String raw) {
-    final negative = allowNegative && raw.startsWith('-');
-    final working = raw.replaceAll('-', '');
-    final separatorIndex = _findSeparatorIndex(working);
-    final hasSeparator = separatorIndex >= 0;
+  /// Extrae solo los dígitos del texto (ignora puntos, comas, signos, etc.).
+  String _digitsOf(String text) => text.replaceAll(RegExp(r'[^0-9]'), '');
 
-    final String integer;
-    var decimals = '';
-    if (hasSeparator) {
-      integer = working
-          .substring(0, separatorIndex)
-          .replaceAll(RegExp(r'[^0-9]'), '');
-      decimals = working
-          .substring(separatorIndex + 1)
-          .replaceAll(RegExp(r'[^0-9]'), '');
-      if (decimals.length > 2) decimals = decimals.substring(0, 2);
+  /// Construye el texto formateado a partir de la secuencia de dígitos.
+  /// Los dos últimos dígitos son los centavos.
+  String _render(String digits, bool negative) {
+    String intPart;
+    String decPart;
+    if (digits.length <= 2) {
+      // Menos de tres dígitos: todo son centavos y no hay parte entera visible
+      // hasta tener al menos un dígito que no sea decimal. Aun así, estilo
+      // banco clásico: con 1-2 dígitos se muestran como enteros sin decimales.
+      intPart = digits;
+      decPart = '';
     } else {
-      integer = working.replaceAll(RegExp(r'[^0-9]'), '');
+      intPart = digits.substring(0, digits.length - 2);
+      decPart = digits.substring(digits.length - 2);
     }
 
-    final grouped = _groupThousands(integer);
-    if (grouped.isEmpty && decimals.isEmpty && !hasSeparator) {
-      return negative ? '-' : '';
-    }
-
+    final grouped = _groupThousands(intPart);
     final buffer = StringBuffer();
     if (negative) buffer.write('-');
-    buffer.write(grouped.isEmpty && hasSeparator ? '0' : grouped);
-    if (hasSeparator) {
+    buffer.write(grouped);
+    if (decPart.isNotEmpty) {
       buffer.write(',');
-      buffer.write(decimals);
+      buffer.write(decPart);
     }
     return buffer.toString();
-  }
-
-  /// Índice del separador decimal dentro de [body] (ya sin el signo), o -1 si
-  /// no hay parte decimal. La coma siempre es decimal; el punto solo lo es si
-  /// va al final o seguido de uno o dos dígitos; en otro caso es separador de
-  /// miles.
-  int _findSeparatorIndex(String body) {
-    if (body.contains(',')) return body.indexOf(',');
-    if (body.contains('.')) {
-      final lastDot = body.lastIndexOf('.');
-      final after = body.substring(lastDot + 1);
-      final digitsAfter = after.replaceAll(RegExp(r'[^0-9]'), '');
-      if (after.isEmpty ||
-          (digitsAfter.isNotEmpty && digitsAfter.length <= 2)) {
-        return lastDot;
-      }
-    }
-    return -1;
   }
 
   String _groupThousands(String digits) {
@@ -123,79 +122,35 @@ class VeAmountFormatter extends TextInputFormatter {
     return result.toString();
   }
 
-  /// Calcula la posición del cursor tras reformatear, tomando como referencia
-  /// los dígitos (y la posición respecto al separador decimal) que había antes
-  /// del cursor. Los puntos de miles que inserta el formateador no cuentan, así
-  /// que el cursor no se desplaza al escribirlos (p.ej. `1000`+`,`).
-  int _caretOffset(String raw, int cursor, String formatted) {
-    final negative = allowNegative && raw.startsWith('-');
-    final bodyStart = negative ? 1 : 0;
-    final body = raw.substring(bodyStart);
-    final separatorIndex = _findSeparatorIndex(body);
-    final separatorOffset = separatorIndex < 0
-        ? -1
-        : separatorIndex + bodyStart;
-
-    var intDigits = 0;
-    var decDigits = 0;
-    for (var i = 0; i < cursor && i < raw.length; i++) {
-      final code = raw.codeUnitAt(i);
-      if (code < 48 || code > 57) continue;
-      if (separatorOffset >= 0 && i > separatorOffset) {
-        decDigits++;
-      } else {
-        intDigits++;
-      }
+  /// Cuenta cuántos dígitos hay antes de la posición del cursor en [text].
+  int _countDigitsBefore(String text, TextSelection selection) {
+    final cursor = selection.isValid ? selection.extentOffset : text.length;
+    var count = 0;
+    final limit = cursor.clamp(0, text.length);
+    for (var i = 0; i < limit; i++) {
+      final code = text.codeUnitAt(i);
+      if (code >= 48 && code <= 57) count++;
     }
-    final afterSeparator = separatorOffset >= 0 && cursor > separatorOffset;
-
-    return _offsetFor(
-      formatted,
-      intDigits: intDigits,
-      decDigits: decDigits,
-      afterSeparator: afterSeparator,
-    );
+    return count;
   }
 
-  int _offsetFor(
+  /// Traduce "dígitos antes del cursor" a un índice de carácter en el texto
+  /// formateado, ignorando los separadores automáticos.
+  int _caretFor(
     String formatted, {
-    required int intDigits,
-    required int decDigits,
-    required bool afterSeparator,
+    required int digitsBefore,
+    required int totalDigits,
+    required bool negative,
   }) {
-    var index = 0;
-    if (index < formatted.length && formatted[index] == '-') index++;
+    // Cursor al final: se coloca al final del texto (caso más común al teclear).
+    if (digitsBefore >= totalDigits) return formatted.length;
 
-    // El formateador antepone un `0` a la coma cuando no hay dígitos enteros;
-    // ese cero no debe consumir una posición de dígito del cursor.
-    if (intDigits == 0 &&
-        index + 1 < formatted.length &&
-        formatted[index] == '0' &&
-        formatted[index + 1] == ',') {
-      return _consumeDecimals(formatted, index + 2, decDigits);
-    }
-
+    var index = negative ? 1 : 0;
     var counted = 0;
-    while (index < formatted.length && counted < intDigits) {
+    while (index < formatted.length && counted < digitsBefore) {
       final ch = formatted[index];
-      if (ch == ',') break;
       index++;
-      if (ch != '.') counted++;
-    }
-
-    if (afterSeparator || decDigits > 0) {
-      if (index < formatted.length && formatted[index] == ',') {
-        return _consumeDecimals(formatted, index + 1, decDigits);
-      }
-    }
-    return index;
-  }
-
-  int _consumeDecimals(String formatted, int index, int decDigits) {
-    var counted = 0;
-    while (index < formatted.length && counted < decDigits) {
-      if (formatted[index] != '.') counted++;
-      index++;
+      if (ch != '.' && ch != ',') counted++;
     }
     return index;
   }

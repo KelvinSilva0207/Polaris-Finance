@@ -61,7 +61,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    await tester.enterText(find.byType(TextField).first, '200');
+    await tester.enterText(find.byType(TextField).first, '20000');
     await tester.pump();
 
     await tester.tap(find.text('Crear'));
