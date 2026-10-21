@@ -50,8 +50,10 @@ Page<T> _fadeSlidePage<T>({
 /// Solo se recrea el router cuando los módulos activos cambian.
 /// Los cambios de tema, tipografía, colores, etc. no deben resetear la navegación.
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final settings = ref.watch(appSettingsProvider);
-  final modules = settings.activeModules;
+  final enabledModules = ref.watch(activeModuleIdsProvider);
+  final modules = FeatureModule.all
+      .where((m) => enabledModules.contains(m.id))
+      .toList();
 
   Widget screenFor(FeatureModule module) {
     return switch (module.id) {
@@ -89,4 +91,4 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', redirect: (context, state) => '/dashboard'),
     ],
   );
-}, dependencies: const []);
+}, dependencies: [activeModuleIdsProvider]);

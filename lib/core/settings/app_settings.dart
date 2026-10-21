@@ -38,6 +38,15 @@ final appSettingsProvider =
       AppSettingsController.new,
     );
 
+/// Módulos activos aislados del resto de ajustes (tema, tipografía, colores).
+///
+/// El router depende solo de esta lista, de modo que cambiar cualquier otro
+/// ajuste no recrea el [GoRouter] ni reinicia la navegación.
+final activeModuleIdsProvider = Provider<List<String>>(
+  (ref) => ref.watch(appSettingsProvider.select((s) => s.enabledModules)),
+  dependencies: const [],
+);
+
 class AppSettingsState {
   const AppSettingsState({
     this.enabledModules = FeatureModule.allIds,
