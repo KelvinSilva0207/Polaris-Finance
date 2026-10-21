@@ -203,11 +203,14 @@ void main() {
     test('al borrar el último dígito no corrompe ni bloquea el campo', () {
       final formatter = veAmountFormatter();
       TextEditingValue value(String text) => TextEditingValue(
-            text: text,
-            selection: TextSelection.collapsed(offset: text.length),
-          );
+        text: text,
+        selection: TextSelection.collapsed(offset: text.length),
+      );
       var previous = value('');
-      previous = formatter.formatEditUpdate(TextEditingValue.empty, value('100000'));
+      previous = formatter.formatEditUpdate(
+        TextEditingValue.empty,
+        value('100000'),
+      );
       expect(previous.text, '100.000');
       previous = formatter.formatEditUpdate(previous, value('10000'));
       expect(previous.text, '10.000');
@@ -220,9 +223,9 @@ void main() {
     test('borrar desde un millón no reduce drásticamente el monto', () {
       final formatter = veAmountFormatter();
       TextEditingValue value(String text) => TextEditingValue(
-            text: text,
-            selection: TextSelection.collapsed(offset: text.length),
-          );
+        text: text,
+        selection: TextSelection.collapsed(offset: text.length),
+      );
       var previous = formatter.formatEditUpdate(
         TextEditingValue.empty,
         value('1000000'),

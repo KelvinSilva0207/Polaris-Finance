@@ -50,7 +50,7 @@ lib/
 - Presupuestos: límite mensual por categoría de egreso con barra de progreso y semáforo (verde/naranja/rojo).
 - Restauración de respaldos: copiar respaldo al portapapeles y restaurarlo sobre la app (reemplaza todos los datos).
 - Web: `flutter build web` funciona con drift_wasm (`web/sqlite3.wasm` + `web/drift_worker.js`); las exportaciones descarchan en el navegador.
-- Iconos y marca: logo del usuario (`logo.png`/`logo.ico`) usado en iconos de app generados con `flutter_launcher_icons` (Android, Windows y Web) y dentro de la app (dashboard, bienvenida, ajustes, onboarding) vía `BrandLogo`; fuente cuadrada en `icon_square.png`, config en `flutter_launcher_icons.yaml`.
+- Iconos y marca: el logo de marca (`assets/logo.png`) es la única fuente; `flutter_launcher_icons` genera los iconos de Android (adaptativo + clásico), iOS, Web y Windows, y dentro de la app se usa (dashboard, bienvenida, ajustes, onboarding) vía `BrandLogo`; los derivados `icon_square.png` (92%) e `icon_foreground.png` (64% con zona segura) se generan desde el logo y la config vive en `flutter_launcher_icons.yaml`. Regenerar con `dart run flutter_launcher_icons`.
 
 ## Roadmap
 

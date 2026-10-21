@@ -4,7 +4,7 @@
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0C3A88",
-    "theme_color": "#0175C2",
+    "theme_color": "#0C3A88",
     "description": "Gestion financiera personal minimalista, modular y multimoneda.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
