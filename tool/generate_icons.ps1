@@ -11,8 +11,8 @@
 
 param(
   [string]$LogoPath = "assets/logo.png",
-  [double]$SquareFraction = 0.78,
-  [double]$ForegroundFraction = 0.72,
+  [double]$SquareFraction = 0.82,
+  [double]$ForegroundFraction = 0.80,
   [string]$SquareOut = "icon_square.png",
   [string]$ForegroundOut = "icon_foreground.png",
   [int]$Canvas = 1024
