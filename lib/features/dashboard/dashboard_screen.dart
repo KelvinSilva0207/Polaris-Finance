@@ -6,6 +6,7 @@ import '../../core/settings/app_settings.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
 import '../../data/models/enums.dart';
+import '../../data/services/update_service.dart';
 import '../../shared/utils/amount_format.dart';
 import '../../shared/utils/schedule.dart';
 import '../../shared/utils/transaction_math.dart';
@@ -15,6 +16,7 @@ import '../../shared/widgets/brand_logo.dart';
 import '../../shared/widgets/fade_slide_in.dart';
 import '../accounts/account_form_screen.dart';
 import '../settings/tips_data.dart';
+import '../settings/update_dialog.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -25,6 +27,25 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _reordering = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // Verificación silenciosa: si hay versión nueva, aparece el banner.
+      ref
+          .read(updateControllerProvider.notifier)
+          .check()
+          .catchError(
+            (Object _) => const UpdateInfo(
+              currentVersion: '',
+              latestVersion: '',
+              status: UpdateStatus.error,
+            ),
+          );
+    });
+  }
 
   void _openAccountEditor(BuildContext context, {Account? initial}) {
     Navigator.of(context).push(
@@ -132,6 +153,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               return Column(
                 children: [
                   _dashboardHeader(context),
+                  const _UpdateBanner(),
                   Expanded(
                     child: ReorderableListView.builder(
                       padding: const EdgeInsets.all(16),
@@ -791,6 +813,61 @@ class _WelcomeView extends StatelessWidget {
                 label: const Text('Crear mi primera cuenta'),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Banner discreto que aparece cuando la verificación silenciosa detectó una
+/// versión nueva.
+class _UpdateBanner extends ConsumerWidget {
+  const _UpdateBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final update = ref.watch(updateControllerProvider);
+    if (update == null) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+      child: Material(
+        color: scheme.primary.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => showUpdateDialog(context, update),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Icon(Icons.system_update_alt, color: scheme.primary, size: 22),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Actualización disponible',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        'Versión ${update.latestVersion} lista para instalar',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: scheme.primary, size: 20),
+              ],
+            ),
           ),
         ),
       ),

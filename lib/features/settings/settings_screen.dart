@@ -8,6 +8,7 @@ import '../../core/security/biometric_service.dart';
 import '../../core/settings/app_settings.dart';
 import '../../core/theme/app_fonts.dart';
 import '../../data/models/enums.dart';
+import '../../data/services/update_service.dart';
 import '../../shared/widgets/brand_logo.dart';
 import '../categories/categories_screen.dart';
 import '../fees/fee_rules_screen.dart';
@@ -18,6 +19,7 @@ import 'backup_screen.dart';
 import 'notifications_screen.dart';
 import 'theme_editor_screen.dart';
 import 'tips_screen.dart';
+import 'update_dialog.dart';
 
 const _accentOptions = <Color>[
   Color(0xFF9C6BFF),
@@ -92,6 +94,7 @@ class SettingsScreen extends ConsumerWidget {
     final lockController = ref.read(appLockProvider.notifier);
     final biometricAvailable =
         ref.watch(biometricAvailableProvider).asData?.value ?? false;
+    final pendingUpdate = ref.watch(updateControllerProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Ajustes')),
@@ -324,6 +327,18 @@ class SettingsScreen extends ConsumerWidget {
             child: Column(
               children: [
                 ListTile(
+                  leading: _UpdateIcon(hasUpdate: pendingUpdate != null),
+                  title: const Text('Buscar actualizaciones'),
+                  subtitle: Text(
+                    pendingUpdate != null
+                        ? 'Versión ${pendingUpdate.latestVersion} disponible'
+                        : 'Comprueba si hay una versión nueva',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => runUpdateCheck(context, ref),
+                ),
+                const Divider(height: 1),
+                ListTile(
                   leading: const Icon(Icons.lightbulb_outline),
                   title: const Text('Consejos'),
                   subtitle: const Text('Ahorro, inversión y organización'),
@@ -403,6 +418,24 @@ class _SectionHeader extends StatelessWidget {
         style: Theme.of(context).textTheme.labelLarge
             ?.copyWith(color: Theme.of(context).colorScheme.primary),
       ),
+    );
+  }
+}
+
+/// Icono de actualización con un punto rojo sutil cuando hay una versión nueva.
+class _UpdateIcon extends StatelessWidget {
+  const _UpdateIcon({required this.hasUpdate});
+
+  final bool hasUpdate;
+
+  @override
+  Widget build(BuildContext context) {
+    const icon = Icon(Icons.system_update_alt);
+    if (!hasUpdate) return icon;
+    return Badge(
+      backgroundColor: Theme.of(context).colorScheme.error,
+      smallSize: 9,
+      child: icon,
     );
   }
 }

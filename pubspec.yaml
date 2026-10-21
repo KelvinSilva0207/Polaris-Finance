@@ -57,6 +57,8 @@ dependencies:
   flutter_secure_storage: ^11.2.0
   cryptography: ^2.9.0
   sqlite3: ^3.7.1
+  package_info_plus: ^10.2.2
+  url_launcher: ^6.3.3
 
 dev_dependencies:
   flutter_test:

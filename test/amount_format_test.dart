@@ -199,5 +199,39 @@ void main() {
         expect(type(formatter, '1000.00').text, '1.000,00');
       });
     });
+
+    test('al borrar el último dígito no corrompe ni bloquea el campo', () {
+      final formatter = veAmountFormatter();
+      TextEditingValue value(String text) => TextEditingValue(
+            text: text,
+            selection: TextSelection.collapsed(offset: text.length),
+          );
+      var previous = value('');
+      previous = formatter.formatEditUpdate(TextEditingValue.empty, value('100000'));
+      expect(previous.text, '100.000');
+      previous = formatter.formatEditUpdate(previous, value('10000'));
+      expect(previous.text, '10.000');
+      previous = formatter.formatEditUpdate(previous, value('1000'));
+      expect(previous.text, '1.000');
+      previous = formatter.formatEditUpdate(previous, value('100'));
+      expect(previous.text, '100');
+    });
+
+    test('borrar desde un millón no reduce drásticamente el monto', () {
+      final formatter = veAmountFormatter();
+      TextEditingValue value(String text) => TextEditingValue(
+            text: text,
+            selection: TextSelection.collapsed(offset: text.length),
+          );
+      var previous = formatter.formatEditUpdate(
+        TextEditingValue.empty,
+        value('1000000'),
+      );
+      expect(previous.text, '1.000.000');
+      previous = formatter.formatEditUpdate(previous, value('100000'));
+      expect(previous.text, '100.000');
+      previous = formatter.formatEditUpdate(previous, value('10000'));
+      expect(previous.text, '10.000');
+    });
   });
 }

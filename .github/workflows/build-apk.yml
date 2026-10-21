@@ -114,5 +114,31 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          VERSION="$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml | head -1)"
+          if [ -z "$VERSION" ]; then echo "::error::No se pudo leer la version de pubspec.yaml"; exit 1; fi
           gh release view latest >/dev/null 2>&1 || gh release create latest --title "Última versión" --notes "APK más reciente generado automáticamente."
           gh release upload latest build/app/outputs/flutter-apk/polaris-finance.apk --clobber
+
+          # Manifiesto de versión para la actualización in-app (OTA):
+          # el tag del release es literalmente "latest", por lo que la app lee
+          # la versión real desde version.json en main.
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/latest/polaris-finance.apk"
+          BUILD_NUMBER="${{ github.run_number }}"
+          PUBLISHED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          NOTES="$(gh release view latest --json body -q .body 2>/dev/null || echo '')"
+          printf '{\n  "version": "%s",\n  "build": %s,\n  "download_url": "%s",\n  "published_at": "%s",\n  "notes": %s\n}\n' \
+            "$VERSION" "$BUILD_NUMBER" "$DOWNLOAD_URL" "$PUBLISHED" \
+            "$(printf '%s' "$NOTES" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')" \
+            > version.json
+          gh release upload latest version.json --clobber
+
+      - name: Commit version manifest
+        if: github.ref == 'refs/heads/main'
+        run: |
+          if [ ! -f version.json ]; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add version.json
+          if git diff --cached --quiet; then echo "Sin cambios en version.json"; exit 0; fi
+          git commit -m "chore: actualizar manifiesto de version (OTA) [skip ci]"
+          git push
