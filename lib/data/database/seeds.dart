@@ -178,6 +178,16 @@ Future<void> seedDatabase(AppDatabase database) async {
   final existing = await database.select(database.categories).get();
   if (existing.isNotEmpty) return;
   await _insertBuiltInCategories(database, builtInCategories);
+  await _insertDefaultFeeRule(database);
+}
+
+/// Inserta el perfil de comisión por defecto del pago móvil (Banco de
+/// Venezuela). Solo se hace en la primera ejecución, de modo que si el
+/// usuario lo elimina no vuelve a aparecer.
+Future<void> _insertDefaultFeeRule(AppDatabase database) async {
+  final existing = await database.select(database.feeRules).get();
+  if (existing.any((rule) => rule.id == defaultFeeRuleId)) return;
+  await database.into(database.feeRules).insert(buildDefaultFeeRule());
 }
 
 /// Reinserta, de forma idempotente, las categorías sugeridas que falten.

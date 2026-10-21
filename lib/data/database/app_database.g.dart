@@ -1873,6 +1873,63 @@ class $FeeRulesTable extends FeeRules with TableInfo<$FeeRulesTable, FeeRule> {
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _feeTypeMeta = const VerificationMeta(
+    'feeType',
+  );
+  @override
+  late final GeneratedColumn<String> feeType = GeneratedColumn<String>(
+    'fee_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('simple'),
+  );
+  static const VerificationMeta _appliesToMeta = const VerificationMeta(
+    'appliesTo',
+  );
+  @override
+  late final GeneratedColumn<String> appliesTo = GeneratedColumn<String>(
+    'applies_to',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('expense,pagoMovil,transfer'),
+  );
+  static const VerificationMeta _tierThresholdMeta = const VerificationMeta(
+    'tierThreshold',
+  );
+  @override
+  late final GeneratedColumn<double> tierThreshold = GeneratedColumn<double>(
+    'tier_threshold',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _tierFixedAmountMeta = const VerificationMeta(
+    'tierFixedAmount',
+  );
+  @override
+  late final GeneratedColumn<double> tierFixedAmount = GeneratedColumn<double>(
+    'tier_fixed_amount',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _tierPercentMeta = const VerificationMeta(
+    'tierPercent',
+  );
+  @override
+  late final GeneratedColumn<double> tierPercent = GeneratedColumn<double>(
+    'tier_percent',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1883,6 +1940,11 @@ class $FeeRulesTable extends FeeRules with TableInfo<$FeeRulesTable, FeeRule> {
     minAmount,
     maxAmount,
     isActive,
+    feeType,
+    appliesTo,
+    tierThreshold,
+    tierFixedAmount,
+    tierPercent,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1948,6 +2010,45 @@ class $FeeRulesTable extends FeeRules with TableInfo<$FeeRulesTable, FeeRule> {
         isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
       );
     }
+    if (data.containsKey('fee_type')) {
+      context.handle(
+        _feeTypeMeta,
+        feeType.isAcceptableOrUnknown(data['fee_type']!, _feeTypeMeta),
+      );
+    }
+    if (data.containsKey('applies_to')) {
+      context.handle(
+        _appliesToMeta,
+        appliesTo.isAcceptableOrUnknown(data['applies_to']!, _appliesToMeta),
+      );
+    }
+    if (data.containsKey('tier_threshold')) {
+      context.handle(
+        _tierThresholdMeta,
+        tierThreshold.isAcceptableOrUnknown(
+          data['tier_threshold']!,
+          _tierThresholdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('tier_fixed_amount')) {
+      context.handle(
+        _tierFixedAmountMeta,
+        tierFixedAmount.isAcceptableOrUnknown(
+          data['tier_fixed_amount']!,
+          _tierFixedAmountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('tier_percent')) {
+      context.handle(
+        _tierPercentMeta,
+        tierPercent.isAcceptableOrUnknown(
+          data['tier_percent']!,
+          _tierPercentMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1989,6 +2090,26 @@ class $FeeRulesTable extends FeeRules with TableInfo<$FeeRulesTable, FeeRule> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_active'],
       )!,
+      feeType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}fee_type'],
+      )!,
+      appliesTo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}applies_to'],
+      )!,
+      tierThreshold: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}tier_threshold'],
+      ),
+      tierFixedAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}tier_fixed_amount'],
+      ),
+      tierPercent: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}tier_percent'],
+      ),
     );
   }
 
@@ -2007,6 +2128,21 @@ class FeeRule extends DataClass implements Insertable<FeeRule> {
   final double? minAmount;
   final double? maxAmount;
   final bool isActive;
+
+  /// Tipo de cálculo: `simple` o `tiered` (ver [FeeType]).
+  final String feeType;
+
+  /// Tipos de transacción a los que aplica, separados por coma.
+  final String appliesTo;
+
+  /// Tramos: desde este monto (inclusive) se cobra el porcentaje.
+  final double? tierThreshold;
+
+  /// Tramos: monto fijo que se cobra por debajo del umbral.
+  final double? tierFixedAmount;
+
+  /// Tramos: porcentaje que se cobra a partir del umbral.
+  final double? tierPercent;
   const FeeRule({
     required this.id,
     required this.name,
@@ -2016,6 +2152,11 @@ class FeeRule extends DataClass implements Insertable<FeeRule> {
     this.minAmount,
     this.maxAmount,
     required this.isActive,
+    required this.feeType,
+    required this.appliesTo,
+    this.tierThreshold,
+    this.tierFixedAmount,
+    this.tierPercent,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2034,6 +2175,17 @@ class FeeRule extends DataClass implements Insertable<FeeRule> {
       map['max_amount'] = Variable<double>(maxAmount);
     }
     map['is_active'] = Variable<bool>(isActive);
+    map['fee_type'] = Variable<String>(feeType);
+    map['applies_to'] = Variable<String>(appliesTo);
+    if (!nullToAbsent || tierThreshold != null) {
+      map['tier_threshold'] = Variable<double>(tierThreshold);
+    }
+    if (!nullToAbsent || tierFixedAmount != null) {
+      map['tier_fixed_amount'] = Variable<double>(tierFixedAmount);
+    }
+    if (!nullToAbsent || tierPercent != null) {
+      map['tier_percent'] = Variable<double>(tierPercent);
+    }
     return map;
   }
 
@@ -2053,6 +2205,17 @@ class FeeRule extends DataClass implements Insertable<FeeRule> {
           ? const Value.absent()
           : Value(maxAmount),
       isActive: Value(isActive),
+      feeType: Value(feeType),
+      appliesTo: Value(appliesTo),
+      tierThreshold: tierThreshold == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tierThreshold),
+      tierFixedAmount: tierFixedAmount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tierFixedAmount),
+      tierPercent: tierPercent == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tierPercent),
     );
   }
 
@@ -2070,6 +2233,11 @@ class FeeRule extends DataClass implements Insertable<FeeRule> {
       minAmount: serializer.fromJson<double?>(json['minAmount']),
       maxAmount: serializer.fromJson<double?>(json['maxAmount']),
       isActive: serializer.fromJson<bool>(json['isActive']),
+      feeType: serializer.fromJson<String>(json['feeType']),
+      appliesTo: serializer.fromJson<String>(json['appliesTo']),
+      tierThreshold: serializer.fromJson<double?>(json['tierThreshold']),
+      tierFixedAmount: serializer.fromJson<double?>(json['tierFixedAmount']),
+      tierPercent: serializer.fromJson<double?>(json['tierPercent']),
     );
   }
   @override
@@ -2084,6 +2252,11 @@ class FeeRule extends DataClass implements Insertable<FeeRule> {
       'minAmount': serializer.toJson<double?>(minAmount),
       'maxAmount': serializer.toJson<double?>(maxAmount),
       'isActive': serializer.toJson<bool>(isActive),
+      'feeType': serializer.toJson<String>(feeType),
+      'appliesTo': serializer.toJson<String>(appliesTo),
+      'tierThreshold': serializer.toJson<double?>(tierThreshold),
+      'tierFixedAmount': serializer.toJson<double?>(tierFixedAmount),
+      'tierPercent': serializer.toJson<double?>(tierPercent),
     };
   }
 
@@ -2096,6 +2269,11 @@ class FeeRule extends DataClass implements Insertable<FeeRule> {
     Value<double?> minAmount = const Value.absent(),
     Value<double?> maxAmount = const Value.absent(),
     bool? isActive,
+    String? feeType,
+    String? appliesTo,
+    Value<double?> tierThreshold = const Value.absent(),
+    Value<double?> tierFixedAmount = const Value.absent(),
+    Value<double?> tierPercent = const Value.absent(),
   }) => FeeRule(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -2105,6 +2283,15 @@ class FeeRule extends DataClass implements Insertable<FeeRule> {
     minAmount: minAmount.present ? minAmount.value : this.minAmount,
     maxAmount: maxAmount.present ? maxAmount.value : this.maxAmount,
     isActive: isActive ?? this.isActive,
+    feeType: feeType ?? this.feeType,
+    appliesTo: appliesTo ?? this.appliesTo,
+    tierThreshold: tierThreshold.present
+        ? tierThreshold.value
+        : this.tierThreshold,
+    tierFixedAmount: tierFixedAmount.present
+        ? tierFixedAmount.value
+        : this.tierFixedAmount,
+    tierPercent: tierPercent.present ? tierPercent.value : this.tierPercent,
   );
   FeeRule copyWithCompanion(FeeRulesCompanion data) {
     return FeeRule(
@@ -2118,6 +2305,17 @@ class FeeRule extends DataClass implements Insertable<FeeRule> {
       minAmount: data.minAmount.present ? data.minAmount.value : this.minAmount,
       maxAmount: data.maxAmount.present ? data.maxAmount.value : this.maxAmount,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
+      feeType: data.feeType.present ? data.feeType.value : this.feeType,
+      appliesTo: data.appliesTo.present ? data.appliesTo.value : this.appliesTo,
+      tierThreshold: data.tierThreshold.present
+          ? data.tierThreshold.value
+          : this.tierThreshold,
+      tierFixedAmount: data.tierFixedAmount.present
+          ? data.tierFixedAmount.value
+          : this.tierFixedAmount,
+      tierPercent: data.tierPercent.present
+          ? data.tierPercent.value
+          : this.tierPercent,
     );
   }
 
@@ -2131,7 +2329,12 @@ class FeeRule extends DataClass implements Insertable<FeeRule> {
           ..write('percent: $percent, ')
           ..write('minAmount: $minAmount, ')
           ..write('maxAmount: $maxAmount, ')
-          ..write('isActive: $isActive')
+          ..write('isActive: $isActive, ')
+          ..write('feeType: $feeType, ')
+          ..write('appliesTo: $appliesTo, ')
+          ..write('tierThreshold: $tierThreshold, ')
+          ..write('tierFixedAmount: $tierFixedAmount, ')
+          ..write('tierPercent: $tierPercent')
           ..write(')'))
         .toString();
   }
@@ -2146,6 +2349,11 @@ class FeeRule extends DataClass implements Insertable<FeeRule> {
     minAmount,
     maxAmount,
     isActive,
+    feeType,
+    appliesTo,
+    tierThreshold,
+    tierFixedAmount,
+    tierPercent,
   );
   @override
   bool operator ==(Object other) =>
@@ -2158,7 +2366,12 @@ class FeeRule extends DataClass implements Insertable<FeeRule> {
           other.percent == this.percent &&
           other.minAmount == this.minAmount &&
           other.maxAmount == this.maxAmount &&
-          other.isActive == this.isActive);
+          other.isActive == this.isActive &&
+          other.feeType == this.feeType &&
+          other.appliesTo == this.appliesTo &&
+          other.tierThreshold == this.tierThreshold &&
+          other.tierFixedAmount == this.tierFixedAmount &&
+          other.tierPercent == this.tierPercent);
 }
 
 class FeeRulesCompanion extends UpdateCompanion<FeeRule> {
@@ -2170,6 +2383,11 @@ class FeeRulesCompanion extends UpdateCompanion<FeeRule> {
   final Value<double?> minAmount;
   final Value<double?> maxAmount;
   final Value<bool> isActive;
+  final Value<String> feeType;
+  final Value<String> appliesTo;
+  final Value<double?> tierThreshold;
+  final Value<double?> tierFixedAmount;
+  final Value<double?> tierPercent;
   final Value<int> rowid;
   const FeeRulesCompanion({
     this.id = const Value.absent(),
@@ -2180,6 +2398,11 @@ class FeeRulesCompanion extends UpdateCompanion<FeeRule> {
     this.minAmount = const Value.absent(),
     this.maxAmount = const Value.absent(),
     this.isActive = const Value.absent(),
+    this.feeType = const Value.absent(),
+    this.appliesTo = const Value.absent(),
+    this.tierThreshold = const Value.absent(),
+    this.tierFixedAmount = const Value.absent(),
+    this.tierPercent = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   FeeRulesCompanion.insert({
@@ -2191,6 +2414,11 @@ class FeeRulesCompanion extends UpdateCompanion<FeeRule> {
     this.minAmount = const Value.absent(),
     this.maxAmount = const Value.absent(),
     this.isActive = const Value.absent(),
+    this.feeType = const Value.absent(),
+    this.appliesTo = const Value.absent(),
+    this.tierThreshold = const Value.absent(),
+    this.tierFixedAmount = const Value.absent(),
+    this.tierPercent = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name);
@@ -2203,6 +2431,11 @@ class FeeRulesCompanion extends UpdateCompanion<FeeRule> {
     Expression<double>? minAmount,
     Expression<double>? maxAmount,
     Expression<bool>? isActive,
+    Expression<String>? feeType,
+    Expression<String>? appliesTo,
+    Expression<double>? tierThreshold,
+    Expression<double>? tierFixedAmount,
+    Expression<double>? tierPercent,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2214,6 +2447,11 @@ class FeeRulesCompanion extends UpdateCompanion<FeeRule> {
       if (minAmount != null) 'min_amount': minAmount,
       if (maxAmount != null) 'max_amount': maxAmount,
       if (isActive != null) 'is_active': isActive,
+      if (feeType != null) 'fee_type': feeType,
+      if (appliesTo != null) 'applies_to': appliesTo,
+      if (tierThreshold != null) 'tier_threshold': tierThreshold,
+      if (tierFixedAmount != null) 'tier_fixed_amount': tierFixedAmount,
+      if (tierPercent != null) 'tier_percent': tierPercent,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2227,6 +2465,11 @@ class FeeRulesCompanion extends UpdateCompanion<FeeRule> {
     Value<double?>? minAmount,
     Value<double?>? maxAmount,
     Value<bool>? isActive,
+    Value<String>? feeType,
+    Value<String>? appliesTo,
+    Value<double?>? tierThreshold,
+    Value<double?>? tierFixedAmount,
+    Value<double?>? tierPercent,
     Value<int>? rowid,
   }) {
     return FeeRulesCompanion(
@@ -2238,6 +2481,11 @@ class FeeRulesCompanion extends UpdateCompanion<FeeRule> {
       minAmount: minAmount ?? this.minAmount,
       maxAmount: maxAmount ?? this.maxAmount,
       isActive: isActive ?? this.isActive,
+      feeType: feeType ?? this.feeType,
+      appliesTo: appliesTo ?? this.appliesTo,
+      tierThreshold: tierThreshold ?? this.tierThreshold,
+      tierFixedAmount: tierFixedAmount ?? this.tierFixedAmount,
+      tierPercent: tierPercent ?? this.tierPercent,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2269,6 +2517,21 @@ class FeeRulesCompanion extends UpdateCompanion<FeeRule> {
     if (isActive.present) {
       map['is_active'] = Variable<bool>(isActive.value);
     }
+    if (feeType.present) {
+      map['fee_type'] = Variable<String>(feeType.value);
+    }
+    if (appliesTo.present) {
+      map['applies_to'] = Variable<String>(appliesTo.value);
+    }
+    if (tierThreshold.present) {
+      map['tier_threshold'] = Variable<double>(tierThreshold.value);
+    }
+    if (tierFixedAmount.present) {
+      map['tier_fixed_amount'] = Variable<double>(tierFixedAmount.value);
+    }
+    if (tierPercent.present) {
+      map['tier_percent'] = Variable<double>(tierPercent.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2286,6 +2549,11 @@ class FeeRulesCompanion extends UpdateCompanion<FeeRule> {
           ..write('minAmount: $minAmount, ')
           ..write('maxAmount: $maxAmount, ')
           ..write('isActive: $isActive, ')
+          ..write('feeType: $feeType, ')
+          ..write('appliesTo: $appliesTo, ')
+          ..write('tierThreshold: $tierThreshold, ')
+          ..write('tierFixedAmount: $tierFixedAmount, ')
+          ..write('tierPercent: $tierPercent, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6917,6 +7185,11 @@ typedef $$FeeRulesTableCreateCompanionBuilder = FeeRulesCompanion Function({
   Value<double?> minAmount,
   Value<double?> maxAmount,
   Value<bool> isActive,
+  Value<String> feeType,
+  Value<String> appliesTo,
+  Value<double?> tierThreshold,
+  Value<double?> tierFixedAmount,
+  Value<double?> tierPercent,
   Value<int> rowid,
 });
 typedef $$FeeRulesTableUpdateCompanionBuilder = FeeRulesCompanion Function({
@@ -6928,6 +7201,11 @@ typedef $$FeeRulesTableUpdateCompanionBuilder = FeeRulesCompanion Function({
   Value<double?> minAmount,
   Value<double?> maxAmount,
   Value<bool> isActive,
+  Value<String> feeType,
+  Value<String> appliesTo,
+  Value<double?> tierThreshold,
+  Value<double?> tierFixedAmount,
+  Value<double?> tierPercent,
   Value<int> rowid,
 });
 
@@ -6977,6 +7255,31 @@ class $$FeeRulesTableFilterComposer
 
   ColumnFilters<bool> get isActive => $composableBuilder(
     column: $table.isActive,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get feeType => $composableBuilder(
+    column: $table.feeType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get appliesTo => $composableBuilder(
+    column: $table.appliesTo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get tierThreshold => $composableBuilder(
+    column: $table.tierThreshold,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get tierFixedAmount => $composableBuilder(
+    column: $table.tierFixedAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get tierPercent => $composableBuilder(
+    column: $table.tierPercent,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -7029,6 +7332,31 @@ class $$FeeRulesTableOrderingComposer
     column: $table.isActive,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get feeType => $composableBuilder(
+    column: $table.feeType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get appliesTo => $composableBuilder(
+    column: $table.appliesTo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get tierThreshold => $composableBuilder(
+    column: $table.tierThreshold,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get tierFixedAmount => $composableBuilder(
+    column: $table.tierFixedAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get tierPercent => $composableBuilder(
+    column: $table.tierPercent,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$FeeRulesTableAnnotationComposer
@@ -7065,6 +7393,27 @@ class $$FeeRulesTableAnnotationComposer
 
   GeneratedColumn<bool> get isActive =>
       $composableBuilder(column: $table.isActive, builder: (column) => column);
+
+  GeneratedColumn<String> get feeType =>
+      $composableBuilder(column: $table.feeType, builder: (column) => column);
+
+  GeneratedColumn<String> get appliesTo =>
+      $composableBuilder(column: $table.appliesTo, builder: (column) => column);
+
+  GeneratedColumn<double> get tierThreshold => $composableBuilder(
+    column: $table.tierThreshold,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get tierFixedAmount => $composableBuilder(
+    column: $table.tierFixedAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get tierPercent => $composableBuilder(
+    column: $table.tierPercent,
+    builder: (column) => column,
+  );
 }
 
 class $$FeeRulesTableTableManager
@@ -7103,6 +7452,11 @@ class $$FeeRulesTableTableManager
                 Value<double?> minAmount = const Value.absent(),
                 Value<double?> maxAmount = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
+                Value<String> feeType = const Value.absent(),
+                Value<String> appliesTo = const Value.absent(),
+                Value<double?> tierThreshold = const Value.absent(),
+                Value<double?> tierFixedAmount = const Value.absent(),
+                Value<double?> tierPercent = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FeeRulesCompanion(
                 id: id,
@@ -7113,6 +7467,11 @@ class $$FeeRulesTableTableManager
                 minAmount: minAmount,
                 maxAmount: maxAmount,
                 isActive: isActive,
+                feeType: feeType,
+                appliesTo: appliesTo,
+                tierThreshold: tierThreshold,
+                tierFixedAmount: tierFixedAmount,
+                tierPercent: tierPercent,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -7125,6 +7484,11 @@ class $$FeeRulesTableTableManager
                 Value<double?> minAmount = const Value.absent(),
                 Value<double?> maxAmount = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
+                Value<String> feeType = const Value.absent(),
+                Value<String> appliesTo = const Value.absent(),
+                Value<double?> tierThreshold = const Value.absent(),
+                Value<double?> tierFixedAmount = const Value.absent(),
+                Value<double?> tierPercent = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FeeRulesCompanion.insert(
                 id: id,
@@ -7135,6 +7499,11 @@ class $$FeeRulesTableTableManager
                 minAmount: minAmount,
                 maxAmount: maxAmount,
                 isActive: isActive,
+                feeType: feeType,
+                appliesTo: appliesTo,
+                tierThreshold: tierThreshold,
+                tierFixedAmount: tierFixedAmount,
+                tierPercent: tierPercent,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

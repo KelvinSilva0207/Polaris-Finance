@@ -30,6 +30,126 @@ double? parseAmountInput(String raw) {
   return double.parse(parsed.toStringAsFixed(2));
 }
 
+/// Texto de un porcentaje sin el símbolo `%` (ej. `0.3` → `0,30`).
+String vePercentText(double value) {
+  final rounded = double.parse(value.toStringAsFixed(4));
+  var text = rounded.toString();
+  if (!text.contains('.')) text = '$text.00';
+  final parts = text.split('.');
+  if (parts[1].length == 1) text = '${parts[0]}.${parts[1]}0';
+  return text.replaceAll('.', ',');
+}
+
+/// Formatea un porcentaje como texto: `0.3` → `0,30 %`, `0.305` → `0,305 %`.
+String formatVePercent(double value) => '${vePercentText(value)} %';
+
+/// Parsea un texto de porcentaje a [double].
+///
+/// A diferencia de los montos, aquí **no hay separador de miles**: el punto
+/// es un decimal, de modo que `0.30` y `0,30` valen `0.30` (y no `30`).
+/// Se aceptan hasta 4 decimales. Devuelve `null` si el texto no es un
+/// porcentaje válido.
+double? parsePercentInput(String raw) {
+  var text = raw.trim().replaceAll(' ', '').replaceAll('%', '');
+  if (text.isEmpty) return null;
+  if (text.startsWith('-')) return null;
+
+  if (text.contains(',')) {
+    // La coma es el separador decimal; los puntos son separadores de miles.
+    text = text.replaceAll('.', '').replaceAll(',', '.');
+  } else if (text.contains('.')) {
+    // El último punto es el separador decimal; los anteriores son de miles.
+    final lastDot = text.lastIndexOf('.');
+    final head = text.substring(0, lastDot).replaceAll('.', '');
+    final tail = text.substring(lastDot + 1);
+    text = '$head.$tail';
+  }
+  if (text.endsWith('.')) text = text.substring(0, text.length - 1);
+  if (text.isEmpty) return null;
+
+  final parsed = double.tryParse(text);
+  if (parsed == null || parsed < 0) return null;
+  return double.parse(parsed.toStringAsFixed(4));
+}
+
+/// Formateador de entrada para campos de porcentaje.
+///
+/// * Solo admite dígitos y un separador decimal (`,` o `.`), que se
+///   normaliza a `,`.
+/// * Un segundo separador se descarta y se aceptan hasta 4 decimales.
+class VePercentFormatter extends TextInputFormatter {
+  VePercentFormatter({this.maxDecimals = 4});
+
+  final int maxDecimals;
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final source = newValue.text;
+    final buffer = StringBuffer();
+    var seenSeparator = false;
+    var decimals = 0;
+    for (var i = 0; i < source.length; i++) {
+      final ch = source[i];
+      final code = ch.codeUnitAt(0);
+      if (code >= 48 && code <= 57) {
+        if (seenSeparator) {
+          decimals++;
+          if (decimals > maxDecimals) continue;
+        }
+        buffer.write(ch);
+      } else if ((ch == ',' || ch == '.') && !seenSeparator) {
+        seenSeparator = true;
+        buffer.write(',');
+      }
+    }
+    final formatted = buffer.toString();
+    if (formatted == source) return newValue;
+
+    // La posición del cursor se cuenta en caracteres conservados, que se
+    // mantienen en el mismo orden dentro del texto formateado.
+    final cursor = newValue.selection.isValid
+        ? newValue.selection.extentOffset.clamp(0, source.length)
+        : source.length;
+    var keptBefore = 0;
+    var seen = false;
+    for (var i = 0; i < cursor; i++) {
+      final ch = source[i];
+      final code = ch.codeUnitAt(0);
+      if (code >= 48 && code <= 57) {
+        keptBefore++;
+      } else if ((ch == ',' || ch == '.') && !seen) {
+        seen = true;
+        keptBefore++;
+      }
+    }
+    var offset = 0;
+    var counted = 0;
+    var seenFormatted = false;
+    while (offset < formatted.length && counted < keptBefore) {
+      final ch = formatted[offset];
+      offset++;
+      if (ch == ',') {
+        if (!seenFormatted) {
+          seenFormatted = true;
+          counted++;
+        }
+      } else {
+        counted++;
+      }
+    }
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: offset),
+    );
+  }
+}
+
+TextInputFormatter vePercentFormatter({int maxDecimals = 4}) =>
+    VePercentFormatter(maxDecimals: maxDecimals);
+
 /// Formateador de entrada de montos con comportamiento tipo caja registradora
 /// (igual que las apps bancarias, p. ej. Banco de Venezuela):
 ///

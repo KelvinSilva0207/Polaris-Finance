@@ -101,9 +101,54 @@ class FeeRules extends Table {
   RealColumn get maxAmount => real().nullable()();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
 
+  /// Tipo de cálculo: `simple` o `tiered` (ver [FeeType]).
+  TextColumn get feeType => text().withDefault(const Constant('simple'))();
+
+  /// Tipos de transacción a los que aplica, separados por coma.
+  TextColumn get appliesTo =>
+      text().withDefault(const Constant('expense,pagoMovil,transfer'))();
+
+  /// Tramos: desde este monto (inclusive) se cobra el porcentaje.
+  RealColumn get tierThreshold => real().nullable()();
+
+  /// Tramos: monto fijo que se cobra por debajo del umbral.
+  RealColumn get tierFixedAmount => real().nullable()();
+
+  /// Tramos: porcentaje que se cobra a partir del umbral.
+  RealColumn get tierPercent => real().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
+
+/// Identificador del perfil de comisión por defecto del pago móvil.
+const defaultFeeRuleId = 'seed_fee_pago_movil_bdv';
+
+/// Nombre del perfil de comisión por defecto del pago móvil.
+const defaultFeeRuleName = 'Pago móvil (BDV)';
+
+/// Monto límite de los tramos del perfil por defecto (a partir de aquí se
+/// cobra el porcentaje en vez del monto fijo).
+const defaultFeeRuleThreshold = 5000.0;
+
+/// Monto fijo del perfil por defecto por debajo del límite.
+const defaultFeeRuleFixedAmount = 14.0;
+
+/// Porcentaje del perfil por defecto a partir del límite.
+const defaultFeeRulePercent = 0.3;
+
+/// Perfil de comisión por defecto del pago móvil (Banco de Venezuela):
+/// 14 Bs fijos por debajo de 5.000 Bs y 0,30 % a partir de ese monto.
+/// El usuario puede editarlo o eliminarlo desde Comisiones.
+FeeRulesCompanion buildDefaultFeeRule() => FeeRulesCompanion.insert(
+  id: defaultFeeRuleId,
+  name: defaultFeeRuleName,
+  feeType: const Value('tiered'),
+  appliesTo: const Value('pagoMovil'),
+  tierThreshold: const Value(defaultFeeRuleThreshold),
+  tierFixedAmount: const Value(defaultFeeRuleFixedAmount),
+  tierPercent: const Value(defaultFeeRulePercent),
+);
 
 class SavingsGoals extends Table {
   TextColumn get id => text()();
@@ -216,7 +261,7 @@ class AppDatabase extends _$AppDatabase {
   factory AppDatabase.memory() => createMemoryDatabase();
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -240,6 +285,29 @@ class AppDatabase extends _$AppDatabase {
       if (from < 6) {
         await m.addColumn(transactions, transactions.credAmount);
         await m.addColumn(transactions, transactions.credCurrency);
+      }
+      if (from < 7) {
+        await m.addColumn(feeRules, feeRules.feeType);
+        await m.addColumn(feeRules, feeRules.appliesTo);
+        await m.addColumn(feeRules, feeRules.tierThreshold);
+        await m.addColumn(feeRules, feeRules.tierFixedAmount);
+        await m.addColumn(feeRules, feeRules.tierPercent);
+        // Perfil de comisión por defecto del pago móvil (Banco de Venezuela).
+        await customStatement(
+          'INSERT OR IGNORE INTO fee_rules (id, name, fee_type, applies_to, '
+          'tier_threshold, tier_fixed_amount, tier_percent, is_active) '
+          'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            defaultFeeRuleId,
+            defaultFeeRuleName,
+            'tiered',
+            'pagoMovil',
+            defaultFeeRuleThreshold,
+            defaultFeeRuleFixedAmount,
+            defaultFeeRulePercent,
+            true,
+          ],
+        );
       }
     },
   );
@@ -447,6 +515,11 @@ class AppDatabase extends _$AppDatabase {
     double? minAmount,
     double? maxAmount,
     bool isActive = true,
+    FeeType feeType = FeeType.simple,
+    Iterable<TransactionType> appliesTo = defaultFeeRuleTypes,
+    double? tierThreshold,
+    double? tierFixedAmount,
+    double? tierPercent,
   }) {
     return into(feeRules).insertReturning(
       FeeRulesCompanion.insert(
@@ -457,6 +530,11 @@ class AppDatabase extends _$AppDatabase {
         minAmount: Value(minAmount),
         maxAmount: Value(maxAmount),
         isActive: Value(isActive),
+        feeType: Value(feeType.name),
+        appliesTo: Value(encodeFeeRuleTypes(appliesTo)),
+        tierThreshold: Value(tierThreshold),
+        tierFixedAmount: Value(tierFixedAmount),
+        tierPercent: Value(tierPercent),
       ),
     );
   }
@@ -674,6 +752,17 @@ class AppDatabase extends _$AppDatabase {
     final accountRows = rows('accounts');
     for (final row in accountRows) {
       row.putIfAbsent('openingBalance', () => 0);
+    }
+
+    // Reglas de comisión guardadas antes de que existieran el tipo de
+    // cálculo por tramos y el alcance por tipo de transacción.
+    final feeRuleRows = rows('feeRules');
+    for (final row in feeRuleRows) {
+      row.putIfAbsent('feeType', () => 'simple');
+      row.putIfAbsent(
+        'appliesTo',
+        () => encodeFeeRuleTypes(defaultFeeRuleTypes),
+      );
     }
 
     await transaction(() async {

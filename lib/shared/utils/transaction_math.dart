@@ -1,5 +1,6 @@
 import '../../data/database/app_database.dart';
 import '../../data/models/enums.dart';
+import 'amount_format.dart';
 
 double signedAmount(Transaction transaction) {
   final type = TransactionType.fromStorage(transaction.type);
@@ -199,6 +200,48 @@ List<({DateTime date, double rate})> dailyRateSeries(
   return points;
 }
 
+/// Tipos de transacción a los que aplica una regla de comisión.
+Set<TransactionType> feeRuleTypes(FeeRule rule) =>
+    decodeFeeRuleTypes(rule.appliesTo);
+
+/// Indica si la regla de comisión aplica al tipo de transacción dado.
+bool feeRuleAppliesTo(FeeRule rule, TransactionType type) =>
+    feeRuleTypes(rule).contains(type);
+
+/// Resumen legible de una regla de comisión, para las listas y el formulario.
+String feeRuleSummary(FeeRule rule) {
+  final parts = <String>[];
+  if (rule.feeType == FeeType.tiered.name && rule.tierThreshold != null) {
+    final threshold = rule.tierThreshold!;
+    parts.add(
+      '${formatVeNumber(rule.tierFixedAmount ?? 0)} Bs hasta '
+      '${formatVeNumber(threshold)}',
+    );
+    parts.add(
+      '${formatVePercent(rule.tierPercent ?? 0)} desde '
+      '${formatVeNumber(threshold)}',
+    );
+  } else {
+    if (rule.fixedAmount > 0) {
+      parts.add('${formatVeNumber(rule.fixedAmount)} Bs fijos');
+    }
+    if (rule.percent > 0) parts.add(formatVePercent(rule.percent));
+  }
+  if (rule.minAmount != null) {
+    parts.add('mín ${formatVeNumber(rule.minAmount!)}');
+  }
+  if (rule.maxAmount != null) {
+    parts.add('máx ${formatVeNumber(rule.maxAmount!)}');
+  }
+  return parts.join(' · ');
+}
+
+/// Calcula la comisión de una regla para un monto dado.
+///
+/// Las reglas *simples* cobran el monto fijo más el porcentaje sobre el
+/// monto. Las reglas *por tramos* cobran un monto fijo por debajo del umbral
+/// y el porcentaje a partir de él (como el pago móvil del Banco de
+/// Venezuela: monto fijo hasta el límite y porcentaje a partir del límite).
 double feeFor(
   FeeRule rule,
   double amount, {
@@ -206,7 +249,15 @@ double feeFor(
   double? vesPerUsd,
   double? eurPerUsd,
 }) {
-  var fee = rule.fixedAmount + amount * rule.percent / 100;
+  double fee;
+  final threshold = rule.tierThreshold;
+  if (rule.feeType == FeeType.tiered.name && threshold != null) {
+    fee = amount < threshold
+        ? (rule.tierFixedAmount ?? 0)
+        : amount * (rule.tierPercent ?? 0) / 100;
+  } else {
+    fee = rule.fixedAmount + amount * rule.percent / 100;
+  }
   if (rule.minAmount != null && fee < rule.minAmount!) fee = rule.minAmount!;
   if (rule.maxAmount != null && fee > rule.maxAmount!) fee = rule.maxAmount!;
   if (fee <= 0) return 0;

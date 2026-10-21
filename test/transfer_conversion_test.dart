@@ -189,6 +189,8 @@ void main() {
       fixedAmount: 3,
       percent: 0,
       isActive: true,
+      feeType: 'simple',
+      appliesTo: 'expense,pagoMovil,transfer',
     );
     expect(
       feeFor(rule, 100, accountCurrency: 'USD', vesPerUsd: 90),

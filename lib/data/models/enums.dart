@@ -47,7 +47,71 @@ enum RateProvider {
       .firstWhere((e) => e.name == value, orElse: () => RateProvider.bcv);
 }
 
-enum FeeType { fixed, percent, mixed }
+/// Tipos de transacción a los que aplica una regla de comisión, serializados
+/// como una lista separada por comas.
+const _feeRuleTypeSeparator = ',';
+
+/// Serializa los tipos a los que aplica una regla de comisión.
+String encodeFeeRuleTypes(Iterable<TransactionType> types) =>
+    types.map((t) => t.name).join(_feeRuleTypeSeparator);
+
+/// Lee los tipos a los que aplica una regla de comisión. Si el valor está
+/// vacío o es desconocido, se asume que aplica a los tipos de salida de
+/// dinero (egreso, pago móvil y transferencia).
+Set<TransactionType> decodeFeeRuleTypes(String? value) {
+  final names = (value ?? '')
+      .split(_feeRuleTypeSeparator)
+      .map((v) => v.trim())
+      .where((v) => v.isNotEmpty)
+      .toList();
+  if (names.isEmpty) {
+    return {
+      TransactionType.expense,
+      TransactionType.pagoMovil,
+      TransactionType.transfer,
+    };
+  }
+  final types = <TransactionType>{};
+  for (final name in names) {
+    final match = TransactionType.values.where((t) => t.name == name);
+    if (match.isNotEmpty) types.add(match.first);
+  }
+  return types.isEmpty
+      ? {
+          TransactionType.expense,
+          TransactionType.pagoMovil,
+          TransactionType.transfer,
+        }
+      : types;
+}
+
+/// Tipos de transacción que admiten comisión por defecto.
+const defaultFeeRuleTypes = <TransactionType>[
+  TransactionType.expense,
+  TransactionType.pagoMovil,
+  TransactionType.transfer,
+];
+
+/// Como se calcula la comisión de una regla.
+///
+/// * [simple]: monto fijo + porcentaje sobre el monto de la operación.
+/// * [tiered]: por tramos, como el cobro del Banco de Venezuela en pago
+///   móvil: un monto fijo por debajo de un umbral y un porcentaje a partir
+///   de ese umbral.
+enum FeeType {
+  simple('Simple', 'Monto fijo + % sobre el monto'),
+  tiered('Por tramos', 'Monto fijo hasta un límite y % a partir del límite');
+
+  const FeeType(this.label, this.description);
+
+  final String label;
+  final String description;
+
+  static FeeType fromStorage(String? value) => FeeType.values.firstWhere(
+    (e) => e.name == value,
+    orElse: () => FeeType.simple,
+  );
+}
 
 enum LoanType {
   debt('Debo', Icons.trending_down),

@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:polaris_finance/core/security/database_key.dart';
+import 'package:polaris_finance/data/database/app_database.dart';
 import 'package:polaris_finance/data/database/app_database_open_io.dart';
 import 'package:polaris_finance/data/models/enums.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -62,12 +63,26 @@ void main() {
       'INSERT INTO accounts (id, name, type, currency, color_value) '
       "VALUES ('a1', 'Vieja', 'bank', 'VES', 1)",
     );
+    legacy.execute(
+      'CREATE TABLE fee_rules ('
+      'id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL, bank_type TEXT, '
+      'fixed_amount REAL NOT NULL DEFAULT 0, '
+      'percent REAL NOT NULL DEFAULT 0, min_amount REAL, max_amount REAL, '
+      'is_active INTEGER NOT NULL DEFAULT 1)',
+    );
     legacy.execute('PRAGMA user_version = 6');
     legacy.close();
 
     final db = openAppDatabase();
     final accounts = await db.select(db.accounts).get();
     expect(accounts.where((account) => account.name == 'Vieja'), hasLength(1));
+
+    // La migración de la v7 deja el perfil de pago móvil del BDV.
+    final rules = await db.select(db.feeRules).get();
+    expect(rules.where((rule) => rule.id == defaultFeeRuleId), hasLength(1));
+    expect(rules.first.appliesTo, 'pagoMovil');
+    expect(rules.first.tierThreshold, 5000);
+    expect(rules.first.tierPercent, 0.3);
 
     await db.addAccount(
       name: 'Nueva',
@@ -85,7 +100,7 @@ void main() {
 
     final reopened = sqlite3.open(dbPath());
     reopened.execute("PRAGMA key = '${key.replaceAll("'", "''")}'");
-    expect(reopened.select('PRAGMA user_version').single.values.first, 6);
+    expect(reopened.select('PRAGMA user_version').single.values.first, 7);
     expect(
       reopened
           .select('SELECT name FROM accounts ORDER BY name')

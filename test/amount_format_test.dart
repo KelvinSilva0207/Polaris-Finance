@@ -31,6 +31,62 @@ void main() {
     });
   });
 
+  group('parsePercentInput', () {
+    test('el punto es decimal, no separador de miles', () {
+      expect(parsePercentInput('0.30'), 0.3);
+      expect(parsePercentInput('0,30'), 0.3);
+      expect(parsePercentInput('0.305'), 0.305);
+      expect(parsePercentInput('30'), 30);
+      expect(parsePercentInput('1,5'), 1.5);
+      expect(parsePercentInput(' 0,30 '), 0.3);
+      expect(parsePercentInput('0,30%'), 0.3);
+    });
+
+    test('devuelve null para vacío, inválido o negativo', () {
+      expect(parsePercentInput(''), isNull);
+      expect(parsePercentInput('  '), isNull);
+      expect(parsePercentInput('abc'), isNull);
+      expect(parsePercentInput('-0,30'), isNull);
+    });
+  });
+
+  group('formatVePercent', () {
+    test('muestra el porcentaje con coma y decimales', () {
+      expect(formatVePercent(0.3), '0,30 %');
+      expect(formatVePercent(0.305), '0,305 %');
+      expect(formatVePercent(30), '30,00 %');
+      expect(formatVePercent(0), '0,00 %');
+    });
+  });
+
+  group('VePercentFormatter', () {
+    TextEditingValue update(String raw) {
+      return vePercentFormatter().formatEditUpdate(
+        TextEditingValue.empty,
+        TextEditingValue(
+          text: raw,
+          selection: TextSelection.collapsed(offset: raw.length),
+        ),
+      );
+    }
+
+    test('normaliza el separador decimal a coma', () {
+      expect(update('0.30').text, '0,30');
+      expect(update('0,30').text, '0,30');
+      expect(update('30').text, '30');
+    });
+
+    test('descarta un segundo separador y letras', () {
+      expect(update('0.3.0').text, '0,30');
+      expect(update('0,30,5').text, '0,305');
+      expect(update('abc').text, '');
+    });
+
+    test('acepta hasta 4 decimales', () {
+      expect(update('0,123456').text, '0,1234');
+    });
+  });
+
   group('VeAmountFormatter', () {
     TextEditingValue update(String raw, {bool allowNegative = false}) {
       return veAmountFormatter(allowNegative: allowNegative).formatEditUpdate(

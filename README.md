@@ -41,7 +41,7 @@ lib/
 - Categorías personalizadas (ingresos/egresos) sobre el set predefinido.
 - Tasas de referencia: BCV (bcv.today con fallback al sitio oficial bcv.org.ve), Binance P2P (USDT/VES) y manual, con historial guardado.
 - Metas de ahorro: objetivos vinculados a cuentas, aportes (virtuales o con transferencia real), historial de progreso y cierre.
-- Comisiones configurables: reglas fijo + % con mínimo/máximo, aplicadas a movimientos con cálculo en vivo.
+- Comisiones configurables: cada regla indica a qué tipos de transacción aplica (ingreso, egreso, transferencia, pago móvil) y se calcula de dos formas: **simple** (monto fijo + % con mínimo/máximo) o **por tramos** (monto fijo hasta un límite y % a partir de ese límite, como el pago móvil del BDV: 14 Bs hasta 5.000 Bs y 0,30 % desde 5.000 Bs). Viene un perfil por defecto de pago móvil (BDV) que se puede editar, duplicar o eliminar, y en el formulario de movimientos el campo de comisión aparece solo con las reglas del tipo elegido y calcula el monto en vivo.
 - Préstamos/deudas: "Debo" y "Me deben" con pagos/cobros, historial, estado abierta/cerrada e interés.
 - Onboarding de primer uso: país + creación rápida de cuentas sugeridas (omisible).
 - Servicios recurrentes: pago en 1 clic con ajuste del recibo, día del mes, pausa/activar y estado "Pendiente".

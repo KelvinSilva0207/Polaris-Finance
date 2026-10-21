@@ -12,6 +12,7 @@ import '../../data/models/enums.dart';
 import '../../shared/utils/amount_format.dart';
 import '../../shared/utils/transaction_math.dart';
 import '../categories/category_editor.dart';
+import '../fees/fee_rules_screen.dart';
 
 String _amountInput(double value) => formatVeNumber(value);
 
@@ -83,7 +84,24 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       _type = selection.first;
       _categoryId = null;
       _destinationAccountId = null;
+      _syncFeeRuleWithType();
     });
+  }
+
+  /// Mantiene la regla de comisión coherente con el tipo de transacción:
+  /// si la seleccionada deja de aplicar, se elige la primera que aplique
+  /// (por ejemplo, al marcar *Pago Móvil* se toma el perfil de ese banco).
+  void _syncFeeRuleWithType() {
+    final rules = ref.read(feeRulesProvider).value ?? const [];
+    final applicable = rules
+        .where((rule) => rule.isActive && feeRuleAppliesTo(rule, _type))
+        .toList();
+    final selected = rules.where((rule) => rule.id == _feeRuleId).toList();
+    if (selected.isNotEmpty &&
+        applicable.any((rule) => rule.id == selected.first.id)) {
+      return;
+    }
+    _feeRuleId = applicable.isEmpty ? null : applicable.first.id;
   }
 
   double? _parsedAmount() => parseAmountInput(_amountController.text);
@@ -296,8 +314,30 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
   List<Widget> _buildFeeSection(Account? source) {
     final feeRules = ref.watch(feeRulesProvider).value ?? const [];
-    final activeFeeRules = feeRules.where((r) => r.isActive).toList();
-    if (activeFeeRules.isEmpty) return const [];
+    final activeFeeRules = feeRules
+        .where((r) => r.isActive && feeRuleAppliesTo(r, _type))
+        .toList();
+    if (activeFeeRules.isEmpty) {
+      if (_type == TransactionType.income) return const [];
+      return [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (context) => const FeeRulesScreen(),
+              ),
+            ),
+            icon: const Icon(Icons.sell_outlined, size: 18),
+            label: Text('Agregar comisión para ${_type.label}'),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+        ),
+      ];
+    }
     FeeRule? selectedRule;
     if (_feeRuleId != null) {
       for (final rule in activeFeeRules) {
@@ -326,8 +366,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
           );
     return [
       DropdownButtonFormField<String>(
-        key: ValueKey('fee-${_feeRuleId ?? 'none'}'),
-        initialValue: _feeRuleId,
+        key: ValueKey('fee-${selectedRule?.id ?? 'none'}'),
+        initialValue: selectedRule?.id,
         decoration: const InputDecoration(labelText: 'Comisión'),
         hint: const Text('Sin comisión'),
         items: [
@@ -335,7 +375,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
           for (final rule in activeFeeRules)
             DropdownMenuItem(value: rule.id, child: Text(rule.name)),
         ],
-        onChanged: (value) => setState(() => _feeRuleId = value),
+        onChanged: (value) =>
+            setState(() => _feeRuleId = value == _noneFee ? null : value),
       ),
       if (estimatedFee != null)
         Padding(
