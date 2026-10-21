@@ -51,13 +51,6 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-
-        // Solo las arquitecturas reales de telefono. La ABI x86_64 (usada por
-        // el emulador) anade ~39 MB al APK y hace que la descarga de la
-        // actualizacion in-app sea mucho mas lenta de lo necesario.
-        ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
-        }
     }
 
     buildTypes {

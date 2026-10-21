@@ -99,7 +99,9 @@ jobs:
           # 1) APK por arquitectura: el telefono descarga solo ~36 MB en vez
           #    del universal de ~76 MB, que es lo que hace que la descarga
           #    in-app se quede colgada al final.
-          flutter build apk --release --split-per-abi --build-number=${{ github.run_number }} $DART_DEFINE
+          #    Solo se compilan las ABIs reales de telefono: x86_64 (emulador)
+          #    anade ~39 MB que no sirven en un movil.
+          flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64 --build-number=${{ github.run_number }} $DART_DEFINE
           for abi in arm64-v8a armeabi-v7a x86_64; do
             if [ -f "build/app/outputs/flutter-apk/app-$abi-release.apk" ]; then
               cp "build/app/outputs/flutter-apk/app-$abi-release.apk" "build/ota/polaris-finance-$abi.apk"
@@ -108,7 +110,7 @@ jobs:
 
           # 2) APK universal (arm64-v8a + armeabi-v7a) como respaldo para
           #    versiones antiguas de la app, que no saben elegir por ABI.
-          flutter build apk --release --build-number=${{ github.run_number }} $DART_DEFINE
+          flutter build apk --release --target-platform android-arm,android-arm64 --build-number=${{ github.run_number }} $DART_DEFINE
           cp build/app/outputs/flutter-apk/app-release.apk build/ota/polaris-finance.apk
           ls -lh build/ota
 
@@ -167,6 +169,7 @@ jobs:
               "published_at": published,
               "notes": notes,
           }, sys.stdout, indent=2)
+          sys.stdout.write("\n")
           PY
           gh release upload latest version.json --clobber
 
