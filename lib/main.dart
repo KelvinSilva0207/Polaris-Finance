@@ -8,6 +8,8 @@ import 'app.dart';
 import 'core/security/app_lock.dart';
 import 'core/settings/app_settings.dart';
 import 'data/services/backup_service.dart';
+import 'data/sync/sync_config.dart';
+import 'data/sync/sync_providers.dart';
 
 /// DSN opcional inyectado en tiempo de compilación:
 /// `flutter build apk --dart-define=SENTRY_DSN=https://...`.
@@ -24,6 +26,7 @@ Future<void> main() async {
   }
   final initialSettings = AppSettingsState.fromPrefs(prefs);
   final initialLock = AppLockState.fromPrefs(prefs);
+  final initialSync = await SyncConfig.load(prefs);
 
   void run() {
     runApp(
@@ -31,6 +34,7 @@ Future<void> main() async {
         overrides: [
           initialSettingsProvider.overrideWithValue(initialSettings),
           initialAppLockProvider.overrideWithValue(initialLock),
+          initialSyncConfigProvider.overrideWithValue(initialSync),
         ],
         child: const PolarisFinanceAppWrapper(),
       ),

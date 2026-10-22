@@ -47,7 +47,11 @@ class ServicesScreen extends ConsumerWidget {
   const ServicesScreen({super.key});
 
   Future<void> _create(BuildContext context, WidgetRef ref) async {
-    final draft = await _showServiceEditor(context, ref);
+    final draft = await _showServiceEditor(
+      context,
+      ref,
+      categories: ref.read(categoriesProvider).value ?? const [],
+    );
     if (draft == null) return;
     await ref
         .read(appDatabaseProvider)
@@ -68,7 +72,12 @@ class ServicesScreen extends ConsumerWidget {
     WidgetRef ref,
     RecurringService service,
   ) async {
-    final draft = await _showServiceEditor(context, ref, initial: service);
+    final draft = await _showServiceEditor(
+      context,
+      ref,
+      initial: service,
+      categories: ref.read(categoriesProvider).value ?? const [],
+    );
     if (draft == null) return;
     await ref
         .read(appDatabaseProvider)
@@ -151,6 +160,9 @@ class ServicesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final servicesAsync = ref.watch(servicesProvider);
     final accounts = ref.watch(accountsProvider).value ?? const [];
+    // Mantiene vivo el provider de categorías para que los diálogos de
+    // servicios muestren siempre la lista actual.
+    ref.watch(categoriesProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Servicios')),
@@ -390,6 +402,7 @@ Future<_ServiceDraft?> _showServiceEditor(
   BuildContext context,
   WidgetRef ref, {
   RecurringService? initial,
+  required List<Category> categories,
 }) async {
   final nameController = TextEditingController(text: initial?.name ?? '');
   final amountController = TextEditingController(
@@ -403,9 +416,7 @@ Future<_ServiceDraft?> _showServiceEditor(
   var isActive = initial?.isActive ?? true;
 
   final accounts = ref.read(accountsProvider).value ?? const [];
-  final categories = (ref.read(categoriesProvider).value ?? const []).where(
-    (category) => !category.isIncome,
-  );
+  final expenseCategories = categories.where((category) => !category.isIncome);
 
   final draft = await showDialog<_ServiceDraft>(
     context: context,
@@ -501,7 +512,7 @@ Future<_ServiceDraft?> _showServiceEditor(
                     value: _noneCategory,
                     child: Text('Sin categoría'),
                   ),
-                  for (final category in categories)
+                  for (final category in expenseCategories)
                     DropdownMenuItem(
                       value: category.id,
                       child: Text(category.name),

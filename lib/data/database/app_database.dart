@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:uuid/uuid.dart';
@@ -231,6 +233,48 @@ class Budgets extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Bitácora de sincronización: una fila por elemento modificado.
+///
+/// La clave primaria es `coleccion:idDelRegistro`, de modo que cada
+/// elemento tiene una sola entrada que se va actualizando. `deleted` marca
+/// las lápidas (borrados) que hay que propagar al resto de dispositivos.
+///
+/// `seq` es un contador local estrictamente creciente: la base de datos
+/// guarda las fechas con precisión de segundos, así que dos cambios
+/// seguidos dentro del mismo segundo serían indistinguibles. El contador
+/// permite saber exactamente qué falta por enviar.
+///
+/// `updatedAtMs` guarda la fecha del cambio en milisegundos, que sí es
+/// comparable entre dispositivos, y `originSeq` el número de secuencia que
+/// tuvo el cambio en el dispositivo que lo originó.
+class SyncRecords extends Table {
+  TextColumn get id => text()();
+  TextColumn get collection => text()();
+  TextColumn get recordId => text()();
+  IntColumn get seq => integer().withDefault(const Constant(0))();
+  DateTimeColumn get updatedAt => dateTime()();
+  IntColumn get updatedAtMs => integer().withDefault(const Constant(0))();
+  IntColumn get originSeq => integer().withDefault(const Constant(0))();
+  BoolColumn get deleted => boolean().withDefault(const Constant(false))();
+  TextColumn get deviceId => text().withDefault(const Constant(''))();
+  TextColumn get payload => text().withDefault(const Constant(''))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Estado de la sincronización en este dispositivo (una sola fila).
+class SyncStates extends Table {
+  TextColumn get id => text()();
+  TextColumn get deviceId => text().withDefault(const Constant(''))();
+  IntColumn get lastPushedSeq => integer().withDefault(const Constant(0))();
+  DateTimeColumn get lastPulledAt => dateTime().nullable()();
+  DateTimeColumn get lastSyncAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DriftDatabase(
   tables: [
     Accounts,
@@ -243,6 +287,8 @@ class Budgets extends Table {
     Loans,
     LoanPayments,
     Budgets,
+    SyncRecords,
+    SyncStates,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -261,7 +307,7 @@ class AppDatabase extends _$AppDatabase {
   factory AppDatabase.memory() => createMemoryDatabase();
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -309,6 +355,11 @@ class AppDatabase extends _$AppDatabase {
           ],
         );
       }
+      if (from < 8) {
+        // Base de la sincronización: bitácora de cambios y estado local.
+        await m.createTable(syncRecords);
+        await m.createTable(syncStates);
+      }
     },
   );
 
@@ -353,8 +404,8 @@ class AppDatabase extends _$AppDatabase {
     String icon = 'account_balance',
     bool isDefault = false,
     double openingBalance = 0,
-  }) {
-    return into(accounts).insertReturning(
+  }) async {
+    final account = await into(accounts).insertReturning(
       AccountsCompanion.insert(
         id: Uuid().v4(),
         name: name,
@@ -366,10 +417,14 @@ class AppDatabase extends _$AppDatabase {
         openingBalance: Value(openingBalance),
       ),
     );
+    await _logChange('accounts', account.id, account.toJson());
+    return account;
   }
 
-  Future<void> updateAccount(Account account) =>
-      update(accounts).replace(account);
+  Future<void> updateAccount(Account account) async {
+    await update(accounts).replace(account);
+    await _logChange('accounts', account.id, account.toJson());
+  }
 
   Future<void> deleteAccount(String id) async {
     final used = await (select(
@@ -379,6 +434,7 @@ class AppDatabase extends _$AppDatabase {
       throw StateError('La cuenta tiene movimientos asociados');
     }
     await (delete(accounts)..where((t) => t.id.equals(id))).go();
+    await _logChange('accounts', id, const {}, deleted: true);
   }
 
   Future<int> transactionsForAccountCount(String id) =>
@@ -392,8 +448,17 @@ class AppDatabase extends _$AppDatabase {
     required String icon,
     required int colorValue,
     required bool isIncome,
-  }) {
-    return into(categories).insertReturning(
+  }) async {
+    // Las categorías nuevas se colocan al final de su sección (ingresos o
+    // egresos) para que la lista no se reordene al crearlas.
+    final siblings = await (select(
+      categories,
+    )..where((c) => c.isIncome.equals(isIncome))).get();
+    var nextOrder = 0;
+    for (final category in siblings) {
+      if (category.sortOrder > nextOrder) nextOrder = category.sortOrder;
+    }
+    final category = await into(categories).insertReturning(
       CategoriesCompanion.insert(
         id: Uuid().v4(),
         name: name,
@@ -401,12 +466,17 @@ class AppDatabase extends _$AppDatabase {
         colorValue: colorValue,
         isBuiltIn: const Value(false),
         isIncome: Value(isIncome),
+        sortOrder: Value(nextOrder + 1),
       ),
     );
+    await _logChange('categories', category.id, category.toJson());
+    return category;
   }
 
-  Future<void> updateCategory(Category category) =>
-      update(categories).replace(category);
+  Future<void> updateCategory(Category category) async {
+    await update(categories).replace(category);
+    await _logChange('categories', category.id, category.toJson());
+  }
 
   Future<void> deleteCategory(String id) async {
     final used = await (select(
@@ -416,6 +486,7 @@ class AppDatabase extends _$AppDatabase {
       throw StateError('La categoría está en uso por algún movimiento');
     }
     await (delete(categories)..where((t) => t.id.equals(id))).go();
+    await _logChange('categories', id, const {}, deleted: true);
   }
 
   Future<Transaction> addTransaction({
@@ -431,8 +502,8 @@ class AppDatabase extends _$AppDatabase {
     double feeAmount = 0,
     double? creditedAmount,
     String? creditedCurrency,
-  }) {
-    return into(transactions).insertReturning(
+  }) async {
+    final transaction = await into(transactions).insertReturning(
       TransactionsCompanion.insert(
         id: Uuid().v4(),
         accountId: accountId,
@@ -449,13 +520,19 @@ class AppDatabase extends _$AppDatabase {
         credCurrency: Value(creditedCurrency),
       ),
     );
+    await _logChange('transactions', transaction.id, transaction.toJson());
+    return transaction;
   }
 
-  Future<void> updateTransaction(Transaction transaction) =>
-      update(transactions).replace(transaction);
+  Future<void> updateTransaction(Transaction transaction) async {
+    await update(transactions).replace(transaction);
+    await _logChange('transactions', transaction.id, transaction.toJson());
+  }
 
-  Future<void> deleteTransaction(String id) =>
-      (delete(transactions)..where((t) => t.id.equals(id))).go();
+  Future<void> deleteTransaction(String id) async {
+    await (delete(transactions)..where((t) => t.id.equals(id))).go();
+    await _logChange('transactions', id, const {}, deleted: true);
+  }
 
   Future<SavingsGoal> addGoal({
     required String name,
@@ -463,8 +540,8 @@ class AppDatabase extends _$AppDatabase {
     required String accountId,
     DateTime? deadline,
     String? note,
-  }) {
-    return into(savingsGoals).insertReturning(
+  }) async {
+    final goal = await into(savingsGoals).insertReturning(
       SavingsGoalsCompanion.insert(
         id: Uuid().v4(),
         name: name,
@@ -474,13 +551,19 @@ class AppDatabase extends _$AppDatabase {
         note: Value(note),
       ),
     );
+    await _logChange('goals', goal.id, goal.toJson());
+    return goal;
   }
 
-  Future<void> updateGoal(SavingsGoal goal) =>
-      update(savingsGoals).replace(goal);
+  Future<void> updateGoal(SavingsGoal goal) async {
+    await update(savingsGoals).replace(goal);
+    await _logChange('goals', goal.id, goal.toJson());
+  }
 
-  Future<void> deleteGoal(String id) =>
-      (delete(savingsGoals)..where((t) => t.id.equals(id))).go();
+  Future<void> deleteGoal(String id) async {
+    await (delete(savingsGoals)..where((t) => t.id.equals(id))).go();
+    await _logChange('goals', id, const {}, deleted: true);
+  }
 
   Future<void> allocateToGoal({
     required SavingsGoal goal,
@@ -506,6 +589,10 @@ class AppDatabase extends _$AppDatabase {
         allocatedAmount: Value(goal.allocatedAmount + amount),
       ),
     );
+    final updated = await (select(
+      savingsGoals,
+    )..where((t) => t.id.equals(goal.id))).getSingle();
+    await _logChange('goals', updated.id, updated.toJson());
   }
 
   Future<FeeRule> addFeeRule({
@@ -520,8 +607,8 @@ class AppDatabase extends _$AppDatabase {
     double? tierThreshold,
     double? tierFixedAmount,
     double? tierPercent,
-  }) {
-    return into(feeRules).insertReturning(
+  }) async {
+    final rule = await into(feeRules).insertReturning(
       FeeRulesCompanion.insert(
         id: Uuid().v4(),
         name: name,
@@ -537,12 +624,19 @@ class AppDatabase extends _$AppDatabase {
         tierPercent: Value(tierPercent),
       ),
     );
+    await _logChange('feeRules', rule.id, rule.toJson());
+    return rule;
   }
 
-  Future<void> updateFeeRule(FeeRule rule) => update(feeRules).replace(rule);
+  Future<void> updateFeeRule(FeeRule rule) async {
+    await update(feeRules).replace(rule);
+    await _logChange('feeRules', rule.id, rule.toJson());
+  }
 
-  Future<void> deleteFeeRule(String id) =>
-      (delete(feeRules)..where((t) => t.id.equals(id))).go();
+  Future<void> deleteFeeRule(String id) async {
+    await (delete(feeRules)..where((t) => t.id.equals(id))).go();
+    await _logChange('feeRules', id, const {}, deleted: true);
+  }
 
   Future<Loan> addLoan({
     required String name,
@@ -553,8 +647,8 @@ class AppDatabase extends _$AppDatabase {
     required DateTime startDate,
     DateTime? dueDate,
     String? note,
-  }) {
-    return into(loans).insertReturning(
+  }) async {
+    final loan = await into(loans).insertReturning(
       LoansCompanion.insert(
         id: Uuid().v4(),
         name: name,
@@ -567,13 +661,25 @@ class AppDatabase extends _$AppDatabase {
         note: Value(note),
       ),
     );
+    await _logChange('loans', loan.id, loan.toJson());
+    return loan;
   }
 
-  Future<void> updateLoan(Loan loan) => update(loans).replace(loan);
+  Future<void> updateLoan(Loan loan) async {
+    await update(loans).replace(loan);
+    await _logChange('loans', loan.id, loan.toJson());
+  }
 
   Future<void> deleteLoan(String id) async {
+    final payments = await (select(
+      loanPayments,
+    )..where((t) => t.loanId.equals(id))).get();
     await (delete(loanPayments)..where((t) => t.loanId.equals(id))).go();
     await (delete(loans)..where((t) => t.id.equals(id))).go();
+    for (final payment in payments) {
+      await _logChange('loanPayments', payment.id, const {}, deleted: true);
+    }
+    await _logChange('loans', id, const {}, deleted: true);
   }
 
   Future<RecurringService> addService({
@@ -585,8 +691,8 @@ class AppDatabase extends _$AppDatabase {
     String? categoryId,
     bool isActive = true,
     String? note,
-  }) {
-    return into(recurringServices).insertReturning(
+  }) async {
+    final service = await into(recurringServices).insertReturning(
       RecurringServicesCompanion.insert(
         id: Uuid().v4(),
         name: name,
@@ -599,13 +705,18 @@ class AppDatabase extends _$AppDatabase {
         note: Value(note),
       ),
     );
+    await _logChange('services', service.id, service.toJson());
+    return service;
   }
 
-  Future<void> updateService(RecurringService service) =>
-      update(recurringServices).replace(service);
+  Future<void> updateService(RecurringService service) async {
+    await update(recurringServices).replace(service);
+    await _logChange('services', service.id, service.toJson());
+  }
 
   Future<void> deleteService(String id) async {
     await (delete(recurringServices)..where((t) => t.id.equals(id))).go();
+    await _logChange('services', id, const {}, deleted: true);
   }
 
   Future<Transaction> payService(
@@ -655,6 +766,10 @@ class AppDatabase extends _$AppDatabase {
     );
     await (update(recurringServices)..where((t) => t.id.equals(service.id)))
         .write(RecurringServicesCompanion(lastPaidDate: Value(date)));
+    final updated = await (select(
+      recurringServices,
+    )..where((t) => t.id.equals(service.id))).getSingle();
+    await _logChange('services', updated.id, updated.toJson());
     return transaction;
   }
 
@@ -711,6 +826,11 @@ class AppDatabase extends _$AppDatabase {
     await (update(loans)..where((t) => t.id.equals(loan.id))).write(
       LoansCompanion(paidAmount: Value(loan.paidAmount + amount)),
     );
+    final updated = await (select(
+      loans,
+    )..where((t) => t.id.equals(loan.id))).getSingle();
+    await _logChange('loans', updated.id, updated.toJson());
+    await _logChange('loanPayments', payment.id, payment.toJson());
     return payment;
   }
 
@@ -722,8 +842,8 @@ class AppDatabase extends _$AppDatabase {
     required String categoryId,
     required double amount,
     required String currency,
-  }) {
-    return into(budgets).insertReturning(
+  }) async {
+    final budget = await into(budgets).insertReturning(
       BudgetsCompanion.insert(
         id: Uuid().v4(),
         categoryId: categoryId,
@@ -731,12 +851,19 @@ class AppDatabase extends _$AppDatabase {
         currency: Value(currency),
       ),
     );
+    await _logChange('budgets', budget.id, budget.toJson());
+    return budget;
   }
 
-  Future<void> updateBudget(Budget budget) => update(budgets).replace(budget);
+  Future<void> updateBudget(Budget budget) async {
+    await update(budgets).replace(budget);
+    await _logChange('budgets', budget.id, budget.toJson());
+  }
 
-  Future<void> deleteBudget(String id) =>
-      (delete(budgets)..where((t) => t.id.equals(id))).go();
+  Future<void> deleteBudget(String id) async {
+    await (delete(budgets)..where((t) => t.id.equals(id))).go();
+    await _logChange('budgets', id, const {}, deleted: true);
+  }
 
   Future<void> restoreBackup(Map<String, dynamic> json) async {
     if (json['app'] != 'Polaris Finance') {
@@ -811,6 +938,8 @@ class AppDatabase extends _$AppDatabase {
         batch.insertAll(budgets, rows('budgets').map(Budget.fromJson).toList());
       });
     });
+    // Tras restaurar se reconstruye la bitácora para subir el estado nuevo.
+    await logAllRecords();
   }
 
   Future<void> insertRate({
@@ -819,8 +948,8 @@ class AppDatabase extends _$AppDatabase {
     required String provider,
     required double rate,
     bool isManual = false,
-  }) {
-    return into(currencyRates).insert(
+  }) async {
+    final row = await into(currencyRates).insertReturning(
       CurrencyRatesCompanion.insert(
         id: Uuid().v4(),
         code: code,
@@ -831,7 +960,291 @@ class AppDatabase extends _$AppDatabase {
         isManual: Value(isManual),
       ),
     );
+    await _logChange('rates', row.id, row.toJson());
   }
 
-  Future<void> deleteRates() => delete(currencyRates).go();
+  Future<void> deleteRates() async {
+    final rows = await select(currencyRates).get();
+    await delete(currencyRates).go();
+    for (final row in rows) {
+      await _logChange('rates', row.id, const {}, deleted: true);
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Sincronización
+  // ---------------------------------------------------------------------
+
+  /// Colecciones de datos que viajan entre dispositivos.
+  static const syncCollections = <String>[
+    'accounts',
+    'categories',
+    'transactions',
+    'feeRules',
+    'goals',
+    'services',
+    'rates',
+    'loans',
+    'loanPayments',
+    'budgets',
+  ];
+
+  /// Identificador del dispositivo que origina los cambios locales.
+  String syncDeviceId = 'local';
+
+  /// Registra (o actualiza) un cambio local en la bitácora de sincronización.
+  Future<void> _logChange(
+    String collection,
+    String recordId,
+    Map<String, dynamic> payload, {
+    bool deleted = false,
+  }) async {
+    final now = DateTime.now();
+    final seq = await _nextSeq();
+    await into(syncRecords).insertOnConflictUpdate(
+      SyncRecordsCompanion.insert(
+        id: '$collection:$recordId',
+        collection: collection,
+        recordId: recordId,
+        seq: Value(seq),
+        updatedAt: now,
+        updatedAtMs: Value(now.millisecondsSinceEpoch),
+        originSeq: Value(seq),
+        deleted: Value(deleted),
+        deviceId: Value(syncDeviceId),
+        payload: Value(jsonEncode(payload)),
+      ),
+    );
+  }
+
+  /// Registra un cambio con la fecha y el dispositivo de origen dados.
+  ///
+  /// Se usa al aplicar cambios remotos: así la bitácora local conserva la
+  /// marca de tiempo del otro dispositivo y el cambio no vuelve a subirse
+  /// como si fuera local.
+  Future<void> logRemoteChange({
+    required String collection,
+    required String recordId,
+    required DateTime updatedAt,
+    required int updatedAtMs,
+    required int originSeq,
+    required String deviceId,
+    required Map<String, dynamic> payload,
+    required bool deleted,
+  }) async {
+    await into(syncRecords).insertOnConflictUpdate(
+      SyncRecordsCompanion.insert(
+        id: '$collection:$recordId',
+        collection: collection,
+        recordId: recordId,
+        seq: Value(await _nextSeq()),
+        updatedAt: updatedAt,
+        updatedAtMs: Value(updatedAtMs),
+        originSeq: Value(originSeq),
+        deleted: Value(deleted),
+        deviceId: Value(deviceId),
+        payload: Value(jsonEncode(payload)),
+      ),
+    );
+  }
+
+  /// Siguiente número de secuencia de la bitácora.
+  Future<int> _nextSeq() async {
+    final row = await (selectOnly(
+      syncRecords,
+    )..addColumns([syncRecords.seq.max()])).getSingle();
+    return (row.read(syncRecords.seq.max()) ?? 0) + 1;
+  }
+
+  /// Vuelca todos los registros actuales en la bitácora.
+  ///
+  /// Se usa la primera vez que se activa la sincronización para que el
+  /// dispositivo suba su estado completo al resto.
+  Future<int> logAllRecords() async {
+    var count = 0;
+    Future<void> log(String collection, List<Map<String, dynamic>> rows) async {
+      for (final row in rows) {
+        final id = row['id'];
+        if (id is! String) continue;
+        await _logChange(collection, id, row);
+        count++;
+      }
+    }
+
+    await log(
+      'accounts',
+      (await select(accounts).get()).map((e) => e.toJson()).toList(),
+    );
+    await log(
+      'categories',
+      (await select(categories).get()).map((e) => e.toJson()).toList(),
+    );
+    await log(
+      'transactions',
+      (await select(transactions).get()).map((e) => e.toJson()).toList(),
+    );
+    await log(
+      'feeRules',
+      (await select(feeRules).get()).map((e) => e.toJson()).toList(),
+    );
+    await log(
+      'goals',
+      (await select(savingsGoals).get()).map((e) => e.toJson()).toList(),
+    );
+    await log(
+      'services',
+      (await select(recurringServices).get()).map((e) => e.toJson()).toList(),
+    );
+    await log(
+      'rates',
+      (await select(currencyRates).get()).map((e) => e.toJson()).toList(),
+    );
+    await log(
+      'loans',
+      (await select(loans).get()).map((e) => e.toJson()).toList(),
+    );
+    await log(
+      'loanPayments',
+      (await select(loanPayments).get()).map((e) => e.toJson()).toList(),
+    );
+    await log(
+      'budgets',
+      (await select(budgets).get()).map((e) => e.toJson()).toList(),
+    );
+    return count;
+  }
+
+  /// Cambios locales pendientes de subir, ordenados por secuencia.
+  Future<List<SyncRecord>> pendingChanges({int afterSeq = 0, int limit = 500}) {
+    final query = select(syncRecords)
+      ..where((t) => t.seq.isBiggerThanValue(afterSeq))
+      ..orderBy([(t) => OrderingTerm.asc(t.seq)])
+      ..limit(limit);
+    return query.get();
+  }
+
+  /// Registro de la bitácora para un elemento concreto.
+  Future<SyncRecord?> findSyncRecord(String collection, String recordId) =>
+      (select(
+        syncRecords,
+      )..where((t) => t.id.equals('$collection:$recordId'))).getSingleOrNull();
+
+  /// Aplica un cambio recibido de otro dispositivo.
+  ///
+  /// Devuelve `true` si el cambio se aplicó y `false` si se descartó por
+  /// estar desactualizado (gana el cambio más reciente).
+  Future<bool> applyRemoteChange({
+    required String collection,
+    required String recordId,
+    required Map<String, dynamic> payload,
+    required bool deleted,
+  }) async {
+    switch (collection) {
+      case 'accounts':
+        if (deleted) {
+          await (delete(accounts)..where((t) => t.id.equals(recordId))).go();
+        } else {
+          await into(accounts)
+              .insertOnConflictUpdate(Account.fromJson(payload));
+        }
+      case 'categories':
+        if (deleted) {
+          await (delete(categories)..where((t) => t.id.equals(recordId))).go();
+        } else {
+          await into(categories)
+              .insertOnConflictUpdate(Category.fromJson(payload));
+        }
+      case 'transactions':
+        if (deleted) {
+          await (delete(
+            transactions,
+          )..where((t) => t.id.equals(recordId))).go();
+        } else {
+          await into(transactions)
+              .insertOnConflictUpdate(Transaction.fromJson(payload));
+        }
+      case 'feeRules':
+        if (deleted) {
+          await (delete(feeRules)..where((t) => t.id.equals(recordId))).go();
+        } else {
+          await into(feeRules)
+              .insertOnConflictUpdate(FeeRule.fromJson(payload));
+        }
+      case 'goals':
+        if (deleted) {
+          await (delete(
+            savingsGoals,
+          )..where((t) => t.id.equals(recordId))).go();
+        } else {
+          await into(savingsGoals)
+              .insertOnConflictUpdate(SavingsGoal.fromJson(payload));
+        }
+      case 'services':
+        if (deleted) {
+          await (delete(
+            recurringServices,
+          )..where((t) => t.id.equals(recordId))).go();
+        } else {
+          await into(recurringServices)
+              .insertOnConflictUpdate(RecurringService.fromJson(payload));
+        }
+      case 'rates':
+        if (deleted) {
+          await (delete(
+            currencyRates,
+          )..where((t) => t.id.equals(recordId))).go();
+        } else {
+          await into(currencyRates)
+              .insertOnConflictUpdate(CurrencyRate.fromJson(payload));
+        }
+      case 'loans':
+        if (deleted) {
+          await (delete(loans)..where((t) => t.id.equals(recordId))).go();
+        } else {
+          await into(loans).insertOnConflictUpdate(Loan.fromJson(payload));
+        }
+      case 'loanPayments':
+        if (deleted) {
+          await (delete(
+            loanPayments,
+          )..where((t) => t.id.equals(recordId))).go();
+        } else {
+          await into(loanPayments)
+              .insertOnConflictUpdate(LoanPayment.fromJson(payload));
+        }
+      case 'budgets':
+        if (deleted) {
+          await (delete(budgets)..where((t) => t.id.equals(recordId))).go();
+        } else {
+          await into(budgets).insertOnConflictUpdate(Budget.fromJson(payload));
+        }
+      default:
+        return false;
+    }
+    return true;
+  }
+
+  /// Estado de sincronización guardado en este dispositivo.
+  Future<SyncState?> readSyncState() => (select(
+    syncStates,
+  )..where((t) => t.id.equals('default'))).getSingleOrNull();
+
+  /// Guarda el estado de sincronización de este dispositivo.
+  Future<void> writeSyncState({
+    required String deviceId,
+    int? lastPushedSeq,
+    DateTime? lastPulledAt,
+    DateTime? lastSyncAt,
+  }) async {
+    final current = await readSyncState();
+    await into(syncStates).insertOnConflictUpdate(
+      SyncStatesCompanion.insert(
+        id: 'default',
+        deviceId: Value(deviceId),
+        lastPushedSeq: Value(lastPushedSeq ?? current?.lastPushedSeq ?? 0),
+        lastPulledAt: Value(lastPulledAt ?? current?.lastPulledAt),
+        lastSyncAt: Value(lastSyncAt ?? current?.lastSyncAt),
+      ),
+    );
+  }
 }

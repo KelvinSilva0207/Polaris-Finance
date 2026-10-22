@@ -471,6 +471,19 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Mantiene vivos y actualizados los providers para que la exportación
+    // incluya siempre los datos más recientes (categorías nuevas incluidas).
+    ref.watch(accountsProvider);
+    ref.watch(categoriesProvider);
+    ref.watch(transactionsProvider);
+    ref.watch(feeRulesProvider);
+    ref.watch(goalsProvider);
+    ref.watch(servicesProvider);
+    ref.watch(ratesProvider);
+    ref.watch(loansProvider);
+    ref.watch(loanPaymentsProvider);
+    ref.watch(budgetsProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Exportar datos')),
       body: ListView(

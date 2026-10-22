@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/services/update_service.dart';
 import '../../shared/widgets/brand_logo.dart';
+import 'update_download_sheet.dart';
 
 /// Ejecuta la verificación mostrando un diálogo de carga y, según el
 /// resultado, presenta el diálogo de actualización disponible o un aviso
@@ -77,6 +78,17 @@ class _UpdateAvailableDialog extends ConsumerWidget {
   final UpdateInfo info;
 
   Future<void> _update(BuildContext context, WidgetRef ref) async {
+    final url = info.downloadUrl;
+    if (url == null || url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay enlace de descarga.')),
+      );
+      return;
+    }
+    await showUpdateDownloadSheet(context, info);
+  }
+
+  Future<void> _openInBrowser(BuildContext context, WidgetRef ref) async {
     final opened = await ref
         .read(updateServiceProvider)
         .openDownload(info.downloadUrl);
@@ -157,8 +169,8 @@ class _UpdateAvailableDialog extends ConsumerWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Se abrirá el enlace de descarga del APK. Instálalo para '
-                    'actualizar la app manteniendo tus datos.',
+                    'La actualización se descarga dentro de la app y luego se '
+                    'instala. Tus datos se conservan.',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: scheme.onSurfaceVariant,
                     ),
@@ -173,6 +185,10 @@ class _UpdateAvailableDialog extends ConsumerWidget {
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Más tarde'),
+        ),
+        TextButton(
+          onPressed: () => _openInBrowser(context, ref),
+          child: const Text('Navegador'),
         ),
         FilledButton.icon(
           onPressed: () => _update(context, ref),

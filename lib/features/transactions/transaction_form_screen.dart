@@ -38,6 +38,11 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   String? _feeRuleId;
   bool _saving = false;
 
+  /// Categorías creadas desde este formulario. Se agregan a la lista del
+  /// desplegable al instante, sin esperar a que el stream de la base de datos
+  /// emita la actualización.
+  final List<Category> _localCategories = [];
+
   bool get _isEditing => widget.initial != null;
   bool get _isTransfer =>
       _type == TransactionType.transfer || _type == TransactionType.pagoMovil;
@@ -69,6 +74,23 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   }
 
   void _onAmountChanged() => setState(() {});
+
+  /// Categorías disponibles para el tipo de movimiento actual. Combina las
+  /// que llegan del provider con las creadas en este formulario para que
+  /// nunca falte la recién creada.
+  List<Category> _categoryOptions() {
+    final byId = <String, Category>{};
+    for (final category in ref.watch(categoriesProvider).value ?? const []) {
+      byId[category.id] = category;
+    }
+    for (final category in _localCategories) {
+      byId[category.id] = category;
+    }
+    final wantsIncome = _type == TransactionType.income;
+    return byId.values
+        .where((category) => category.isIncome == wantsIncome)
+        .toList();
+  }
 
   @override
   void dispose() {
@@ -140,7 +162,13 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         context,
         defaultIsIncome: _type == TransactionType.income,
       );
-      if (created != null) setState(() => _categoryId = created.id.toString());
+      if (created == null) return;
+      setState(() {
+        _categoryId = created.id;
+        if (!_localCategories.any((category) => category.id == created.id)) {
+          _localCategories.add(created);
+        }
+      });
       return;
     }
     setState(() => _categoryId = value == _noneCategory ? null : value);
@@ -611,13 +639,11 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                   value: _noneCategory,
                   child: Text('Sin categoría'),
                 ),
-                for (final category
-                    in ref.read(categoriesProvider).value ?? const [])
-                  if (category.isIncome == (_type == TransactionType.income))
-                    DropdownMenuItem(
-                      value: category.id,
-                      child: Text(category.name),
-                    ),
+                for (final category in _categoryOptions())
+                  DropdownMenuItem(
+                    value: category.id,
+                    child: Text(category.name),
+                  ),
                 const DropdownMenuItem(
                   value: _newCategory,
                   child: Text('Nueva categoría…'),

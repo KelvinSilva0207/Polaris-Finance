@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Rutas que el FileProvider puede compartir con el instalador del sistema.
+     El APK descargado vive en la carpeta cache/updates de la app. -->
+<paths>
+    <cache-path name="updates" path="updates/" />
+    <external-cache-path name="external_updates" path="updates/" />
+</paths>

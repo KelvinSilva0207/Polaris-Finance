@@ -100,7 +100,7 @@ void main() {
 
     final reopened = sqlite3.open(dbPath());
     reopened.execute("PRAGMA key = '${key.replaceAll("'", "''")}'");
-    expect(reopened.select('PRAGMA user_version').single.values.first, 7);
+    expect(reopened.select('PRAGMA user_version').single.values.first, 8);
     expect(
       reopened
           .select('SELECT name FROM accounts ORDER BY name')

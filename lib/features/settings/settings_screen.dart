@@ -17,6 +17,7 @@ import '../onboarding/tutorial_screen.dart';
 import 'about_screen.dart';
 import 'backup_screen.dart';
 import 'notifications_screen.dart';
+import 'sync_screen.dart';
 import 'theme_editor_screen.dart';
 import 'tips_screen.dart';
 import 'update_dialog.dart';
@@ -303,6 +304,20 @@ class SettingsScreen extends ConsumerWidget {
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (context) => const FeeRulesScreen(),
+                    ),
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.cloud_sync_outlined),
+                  title: const Text('Sincronización'),
+                  subtitle: const Text(
+                    'Sincroniza tus datos entre dispositivos',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (context) => const SyncScreen(),
                     ),
                   ),
                 ),
