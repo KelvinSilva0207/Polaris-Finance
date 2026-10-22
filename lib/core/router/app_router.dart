@@ -12,7 +12,6 @@ import '../../features/services/services_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/transactions/transactions_screen.dart';
 import '../feature_module.dart';
-import '../settings/app_settings.dart';
 import 'home_shell.dart';
 
 /// Transición de página propia: fundido + deslizamiento corto.
@@ -47,14 +46,10 @@ Page<T> _fadeSlidePage<T>({
   );
 }
 
-/// Solo se recrea el router cuando los módulos activos cambian.
-/// Los cambios de tema, tipografía, colores, etc. no deben resetear la navegación.
+/// El router es estable: registra todas las rutas y nunca se recrea por un
+/// cambio de ajustes (módulos, tema, tipografía...). [HomeShell] decide qué
+/// destinos mostrar y redirige al inicio si el módulo actual se desactiva.
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final enabledModules = ref.watch(activeModuleIdsProvider);
-  final modules = FeatureModule.all
-      .where((m) => enabledModules.contains(m.id))
-      .toList();
-
   Widget screenFor(FeatureModule module) {
     return switch (module.id) {
       'transactions' => const TransactionsScreen(),
@@ -74,13 +69,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     errorBuilder: (context, state) => const DashboardScreen(),
     routes: [
       ShellRoute(
-        builder: (context, state, child) => HomeShell(
-          modules: modules,
-          currentPath: state.uri.path,
-          child: child,
-        ),
+        builder: (context, state, child) =>
+            HomeShell(currentPath: state.uri.path, child: child),
         routes: [
-          for (final module in modules)
+          for (final module in FeatureModule.all)
             GoRoute(
               path: module.route,
               pageBuilder: (context, state) =>
@@ -91,4 +83,4 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', redirect: (context, state) => '/dashboard'),
     ],
   );
-}, dependencies: [activeModuleIdsProvider]);
+});

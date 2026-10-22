@@ -90,6 +90,18 @@ class NotificationsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 8),
+          Card(
+            child: SwitchListTile(
+              secondary: const Icon(Icons.system_update_outlined),
+              title: const Text('Novedades de la app'),
+              subtitle: const Text(
+                'Avisa cuando hay una nueva versión disponible',
+              ),
+              value: settings.notifyUpdates,
+              onChanged: controller.setNotifyUpdates,
+            ),
+          ),
+          const SizedBox(height: 8),
           if (!settings.remindersEnabled)
             Card(
               child: Padding(

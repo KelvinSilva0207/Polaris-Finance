@@ -1,25 +1,26 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../data/database/database_providers.dart';
 import '../feature_module.dart';
+import '../settings/app_settings.dart';
 
 class HomeShell extends ConsumerWidget {
-  const HomeShell({
-    super.key,
-    required this.modules,
-    required this.currentPath,
-    required this.child,
-  });
+  const HomeShell({super.key, required this.currentPath, required this.child});
 
-  final List<FeatureModule> modules;
   final String currentPath;
   final Widget child;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(seedProvider);
+
+    final enabledModules = ref.watch(activeModuleIdsProvider);
+    final modules = FeatureModule.all
+        .where((module) => enabledModules.contains(module.id))
+        .toList();
+    _redirectIfDisabled(context, modules);
 
     final selectedIndex = modules.indexWhere((m) => m.route == currentPath);
     final index = selectedIndex < 0 ? 0 : selectedIndex;
@@ -96,6 +97,19 @@ class HomeShell extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  /// Si el usuario desactiva el módulo en el que está, vuelve al inicio en
+  /// lugar de mostrar una sección que ya no existe en la navegación.
+  void _redirectIfDisabled(BuildContext context, List<FeatureModule> modules) {
+    final isModuleRoute = FeatureModule.all.any(
+      (module) => module.route == currentPath,
+    );
+    final isVisible = modules.any((module) => module.route == currentPath);
+    if (!isModuleRoute || isVisible) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.mounted) context.go(FeatureModule.dashboard.route);
+    });
   }
 
   Future<void> _openMore(

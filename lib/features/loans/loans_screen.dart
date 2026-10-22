@@ -10,6 +10,7 @@ import '../../data/models/enums.dart';
 import '../../shared/utils/amount_format.dart';
 import '../../shared/widgets/money_field.dart';
 import 'loan_detail_screen.dart';
+import 'loan_progress.dart';
 
 final _numberFormat = NumberFormat.decimalPatternDigits(
   locale: 'es',
@@ -153,9 +154,9 @@ class LoansScreen extends ConsumerWidget {
               final type = LoanType.fromStorage(loan.type);
               final active = loan.isActive;
               final remaining = loan.principal - loan.paidAmount;
-              final percent = loan.principal <= 0
-                  ? 0.0
-                  : (loan.paidAmount / loan.principal).clamp(0.0, 1.0);
+              final percent = loanProgress(loan);
+              final settled = isLoanSettled(loan);
+              const settledColor = Color(0xFF66BB6A);
               return Card(
                 child: Column(
                   children: [
@@ -210,50 +211,79 @@ class LoansScreen extends ConsumerWidget {
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                      child: Row(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
+                      child: Column(
                         children: [
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: LinearProgressIndicator(
-                                value: percent,
-                                minHeight: 6,
+                          Row(
+                            children: [
+                              Icon(
+                                settled
+                                    ? Icons.verified_outlined
+                                    : Icons.pie_chart_outline,
+                                size: 16,
+                                color: settled
+                                    ? settledColor
+                                    : Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          PopupMenuButton<String>(
-                            onSelected: (action) {
-                              switch (action) {
-                                case 'pay':
-                                  _pay(context, ref, loan);
-                                case 'toggle':
-                                  _toggleActive(context, ref, loan);
-                                case 'delete':
-                                  _delete(context, ref, loan);
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              PopupMenuItem(
-                                value: 'pay',
-                                child: Text(
-                                  type == LoanType.debt
-                                      ? 'Registrar pago'
-                                      : 'Registrar cobro',
-                                ),
+                              const SizedBox(width: 6),
+                              Text(
+                                loanProgressLabel(loan),
+                                style: Theme.of(context).textTheme.labelMedium
+                                    ?.copyWith(
+                                      color: settled ? settledColor : null,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                               ),
-                              PopupMenuItem(
-                                value: 'toggle',
-                                child: Text(
-                                  active ? 'Marcar como cerrada' : 'Reabrir',
-                                ),
-                              ),
-                              const PopupMenuItem(
-                                value: 'delete',
-                                child: Text('Eliminar'),
+                              const Spacer(),
+                              PopupMenuButton<String>(
+                                onSelected: (action) {
+                                  switch (action) {
+                                    case 'pay':
+                                      _pay(context, ref, loan);
+                                    case 'toggle':
+                                      _toggleActive(context, ref, loan);
+                                    case 'delete':
+                                      _delete(context, ref, loan);
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  PopupMenuItem(
+                                    value: 'pay',
+                                    child: Text(
+                                      type == LoanType.debt
+                                          ? 'Registrar pago'
+                                          : 'Registrar cobro',
+                                    ),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'toggle',
+                                    child: Text(
+                                      active
+                                          ? 'Marcar como cerrada'
+                                          : 'Reabrir',
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'delete',
+                                    child: Text('Eliminar'),
+                                  ),
+                                ],
                               ),
                             ],
+                          ),
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: percent,
+                              minHeight: 6,
+                              color: settled ? settledColor : null,
+                              backgroundColor: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
+                            ),
                           ),
                         ],
                       ),

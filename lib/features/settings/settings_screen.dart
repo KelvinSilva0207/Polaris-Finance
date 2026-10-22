@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/feature_module.dart';
 import '../../core/security/app_lock.dart';
 import '../../core/security/biometric_service.dart';
 import '../../core/settings/app_settings.dart';
 import '../../core/theme/app_fonts.dart';
+import '../../core/theme/custom_font.dart';
 import '../../data/models/enums.dart';
 import '../../data/services/update_service.dart';
 import '../../shared/widgets/brand_logo.dart';
+import '../../shared/widgets/profile_avatar.dart';
 import '../categories/categories_screen.dart';
 import '../fees/fee_rules_screen.dart';
 import '../lock/pin_setup_screen.dart';
@@ -17,6 +20,7 @@ import '../onboarding/tutorial_screen.dart';
 import 'about_screen.dart';
 import 'backup_screen.dart';
 import 'notifications_screen.dart';
+import 'profile_screen.dart';
 import 'sync_screen.dart';
 import 'theme_editor_screen.dart';
 import 'tips_screen.dart';
@@ -31,6 +35,14 @@ const _accentOptions = <Color>[
   Color(0xFF42A5F5),
   Color(0xFF66BB6A),
   Color(0xFFEC407A),
+  Color(0xFF00E676),
+  Color(0xFF7C4DFF),
+  Color(0xFF536DFE),
+  Color(0xFF00ACC1),
+  Color(0xFF8BC34A),
+  Color(0xFFFFA726),
+  Color(0xFFAB47BC),
+  Color(0xFF78909C),
 ];
 
 const _themeLabels = <ThemeMode, String>{
@@ -51,6 +63,49 @@ IconData _providerIcon(RateProvider provider) {
     RateProvider.binance => Icons.currency_exchange,
     RateProvider.manual => Icons.edit_outlined,
   };
+}
+
+Future<void> _pickCustomFont(
+  BuildContext context,
+  AppSettingsController controller,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final name = await pickCustomFont(prefs);
+    await controller.setCustomFontName(name);
+    await controller.setFontId(AppFonts.customId);
+    messenger.showSnackBar(
+      SnackBar(content: Text('Tipografía aplicada: $name')),
+    );
+  } on CustomFontCanceledException {
+    // El usuario cerró el selector: no hay nada que hacer.
+  } on CustomFontException catch (error) {
+    messenger.showSnackBar(SnackBar(content: Text(error.message)));
+  } catch (error) {
+    messenger.showSnackBar(
+      SnackBar(content: Text('No se pudo cargar la tipografía: $error')),
+    );
+  }
+}
+
+Future<void> _selectFont(
+  BuildContext context,
+  WidgetRef ref,
+  AppFont font,
+) async {
+  final controller = ref.read(appSettingsProvider.notifier);
+  if (!font.isCustom) {
+    await controller.setFontId(font.id);
+    return;
+  }
+  final prefs = await SharedPreferences.getInstance();
+  if (prefs.getString(customFontBytesKey) != null) {
+    await loadCustomFontFromPrefs(prefs);
+    await controller.setFontId(AppFonts.customId);
+    return;
+  }
+  if (context.mounted) await _pickCustomFont(context, controller);
 }
 
 Future<void> _toggleLock(
@@ -103,7 +158,26 @@ class SettingsScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         children: [
           const Center(child: BrandLogo(height: 64)),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: ProfileAvatar(
+                base64Image: settings.profileAvatar,
+                name: settings.profileName,
+              ),
+              title: Text(
+                settings.profileName.isEmpty
+                    ? 'Mi perfil'
+                    : settings.profileName,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: const Text('Nombre y foto para personalizar la app'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
+              ),
+            ),
+          ),
           const _SectionHeader('Aspecto'),
           Card(
             child: Padding(
@@ -173,10 +247,31 @@ class SettingsScreen extends ConsumerWidget {
                         _FontChip(
                           font: font,
                           selected: settings.fontId == font.id,
-                          onTap: () => controller.setFontId(font.id),
+                          onTap: () => _selectFont(context, ref, font),
                         ),
                     ],
                   ),
+                  if (settings.customFontName.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.font_download_outlined, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            settings.customFontName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => _pickCustomFont(context, controller),
+                          child: const Text('Cambiar archivo'),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -529,6 +624,10 @@ class _FontChip extends StatelessWidget {
               'Aa',
               style: font.family == null
                   ? theme.textTheme.titleLarge
+                  : font.isCustom
+                  ? theme.textTheme.titleLarge?.copyWith(
+                      fontFamily: AppFonts.customFamily,
+                    )
                   : GoogleFonts.getFont(font.family!),
             ),
             const SizedBox(height: 4),

@@ -3,9 +3,12 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart' as launcher;
 
 import '../../core/platform/device_abi.dart';
+import '../../core/settings/app_settings.dart';
+import 'reminder_service.dart';
 
 /// Resultado de una verificación de actualizaciones.
 enum UpdateStatus { upToDate, updateAvailable, error }
@@ -394,13 +397,36 @@ final updateServiceProvider = Provider<UpdateService>((ref) {
 /// Resultado de la última verificación silenciosa (banner del dashboard).
 /// `null` mientras nunca se ha comprobado o si el resultado fue "al día".
 class UpdateController extends Notifier<UpdateInfo?> {
+  static const _notifiedVersionKey = 'update_notified_version';
+  static const _askedPermissionKey = 'update_notify_asked';
+
   @override
   UpdateInfo? build() => null;
 
   Future<UpdateInfo> check() async {
+    final notify = ref.read(appSettingsProvider).notifyUpdates;
     final info = await ref.read(updateServiceProvider).check();
     state = info.hasUpdate ? info : null;
+    if (info.hasUpdate && notify) {
+      await _notifyOnce(info.latestVersion);
+    }
     return info;
+  }
+
+  /// Muestra una notificación local como máximo una vez por versión.
+  Future<void> _notifyOnce(String version) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getString(_notifiedVersionKey) == version) return;
+      if (!(prefs.getBool(_askedPermissionKey) ?? false)) {
+        await ReminderService.instance.requestPermission();
+        await prefs.setBool(_askedPermissionKey, true);
+      }
+      await ReminderService.instance.showUpdateNotification(version: version);
+      await prefs.setString(_notifiedVersionKey, version);
+    } catch (_) {
+      // La notificación es opcional: nunca debe romper la verificación.
+    }
   }
 }
 

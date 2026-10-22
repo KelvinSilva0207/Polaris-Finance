@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -14,7 +16,9 @@ import '../../shared/widgets/account_card.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/brand_logo.dart';
 import '../../shared/widgets/fade_slide_in.dart';
+import '../../shared/widgets/profile_avatar.dart';
 import '../accounts/account_form_screen.dart';
+import '../settings/profile_screen.dart';
 import '../settings/tips_data.dart';
 import '../settings/update_dialog.dart';
 
@@ -27,10 +31,12 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _reordering = false;
+  Timer? _tipTimer;
 
   @override
   void initState() {
     super.initState();
+    _scheduleTipRefresh();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       // Verificación silenciosa: si hay versión nueva, aparece el banner.
@@ -45,6 +51,28 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
           );
     });
+  }
+
+  /// Reconstruye la pantalla al cambiar el día para que el consejo y el
+  /// saludo se actualicen sin cerrar la app.
+  void _scheduleTipRefresh() {
+    _tipTimer?.cancel();
+    final now = DateTime.now();
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    _tipTimer = Timer(
+      tomorrow.difference(now) + const Duration(seconds: 1),
+      () {
+        if (!mounted) return;
+        setState(() {});
+        _scheduleTipRefresh();
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _tipTimer?.cancel();
+    super.dispose();
   }
 
   void _openAccountEditor(BuildContext context, {Account? initial}) {
@@ -152,7 +180,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
               return Column(
                 children: [
-                  _dashboardHeader(context),
+                  _dashboardHeader(context, settings),
                   const _UpdateBanner(),
                   Expanded(
                     child: ReorderableListView.builder(
@@ -231,7 +259,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     'diciembre',
   ];
 
-  Widget _dashboardHeader(BuildContext context) {
+  Widget _dashboardHeader(BuildContext context, AppSettingsState settings) {
     final theme = Theme.of(context);
     final now = DateTime.now();
     final greeting = now.hour < 12
@@ -239,19 +267,34 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         : now.hour < 19
         ? 'Buenas tardes'
         : 'Buenas noches';
+    final name = settings.profileName.trim();
     final date =
         '${_weekdays[now.weekday - 1]}, ${now.day} de '
         '${_months[now.month - 1]}';
+    final tip = tipOfTheDay(now);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 6, 8, 2),
+      padding: const EdgeInsets.fromLTRB(16, 6, 8, 2),
       child: Row(
         children: [
+          GestureDetector(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
+            ),
+            child: ProfileAvatar(
+              base64Image: settings.profileAvatar,
+              name: name,
+              size: 42,
+            ),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  greeting,
+                  name.isEmpty ? greeting : '$greeting, $name',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -260,6 +303,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   date,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                InkWell(
+                  onTap: () => _showTipOfTheDay(context),
+                  borderRadius: BorderRadius.circular(6),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.lightbulb_outline,
+                          size: 13,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            'Consejo: ${tip.title}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],

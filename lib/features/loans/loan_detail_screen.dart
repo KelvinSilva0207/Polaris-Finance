@@ -8,6 +8,7 @@ import '../../data/database/database_providers.dart';
 import '../../data/models/enums.dart';
 import '../../shared/utils/amount_format.dart';
 import '../../shared/widgets/money_field.dart';
+import 'loan_progress.dart';
 
 final _numberFormat = NumberFormat.decimalPatternDigits(
   locale: 'es',
@@ -152,6 +153,11 @@ class LoanDetailScreen extends ConsumerWidget {
         .where((p) => p.loanId == current.id)
         .toList();
     final remaining = current.principal - current.paidAmount;
+    final percent = loanProgress(current);
+    final settled = isLoanSettled(current);
+    final statusLabel = !current.isActive
+        ? 'Cerrada'
+        : (settled ? 'Liquidado' : 'Abierta');
 
     return Scaffold(
       appBar: AppBar(title: Text(current.name)),
@@ -197,8 +203,35 @@ class LoanDetailScreen extends ConsumerWidget {
                       ),
                       const Spacer(),
                       Chip(
-                        label: Text(current.isActive ? 'Abierta' : 'Cerrada'),
+                        label: Text(statusLabel),
                         visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: LinearProgressIndicator(
+                            value: percent,
+                            minHeight: 10,
+                            color: settled ? const Color(0xFF66BB6A) : null,
+                            backgroundColor: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        loanProgressLabel(current),
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: settled ? const Color(0xFF66BB6A) : null,
+                            ),
                       ),
                     ],
                   ),

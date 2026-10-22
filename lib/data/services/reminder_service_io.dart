@@ -11,6 +11,10 @@ const _channelId = 'payment_reminders';
 const _channelName = 'Recordatorios de pagos';
 const _channelDescription = 'Avisos de servicios y préstamos por vencer';
 
+const _updateChannelId = 'app_updates';
+const _updateChannelName = 'Actualizaciones';
+const _updateChannelDescription = 'Avisos de nuevas versiones de Polaris';
+
 /// Envuelve `flutter_local_notifications` para programar recordatorios de pagos.
 class ReminderService {
   ReminderService._();
@@ -54,6 +58,18 @@ class ReminderService {
               _channelName,
               description: _channelDescription,
               importance: Importance.high,
+            ),
+          );
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.createNotificationChannel(
+            const AndroidNotificationChannel(
+              _updateChannelId,
+              _updateChannelName,
+              description: _updateChannelDescription,
+              importance: Importance.defaultImportance,
             ),
           );
     } catch (_) {
@@ -116,6 +132,33 @@ class ReminderService {
           macOS: DarwinNotificationDetails(),
         ),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  /// Avisa una sola vez (lo controla quien llama) de que hay una versión nueva.
+  Future<void> showUpdateNotification({required String version}) async {
+    await _ensureInitialized();
+    try {
+      await _plugin.show(
+        id: 2,
+        title: 'Nueva versión disponible',
+        body:
+            'Polaris Finance $version ya está publicada. Abre Ajustes para '
+            'descargarla.',
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _updateChannelId,
+            _updateChannelName,
+            channelDescription: _updateChannelDescription,
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+          ),
+          iOS: DarwinNotificationDetails(),
+          macOS: DarwinNotificationDetails(),
+        ),
       );
     } catch (_) {
       // ignore

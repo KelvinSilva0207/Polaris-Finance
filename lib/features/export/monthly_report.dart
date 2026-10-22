@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
 
 import '../../data/database/app_database.dart';
 import '../../data/models/enums.dart';
 import '../../shared/utils/transaction_math.dart';
+import 'statistics_report.dart';
 
 const monthlyReportMonthNames = <String>[
   'enero',
@@ -125,176 +123,20 @@ MonthlyReportData computeMonthlyReport({
   );
 }
 
-String _money(double value) => NumberFormat('#,##0.00', 'es').format(value);
-
 Future<List<int>> buildMonthlyReportPdf({
   required MonthlyReportData report,
   required List<Transaction> transactions,
   required List<Account> accounts,
   required List<Category> categories,
   required Map<String, double> balances,
-}) async {
-  final document = pw.Document();
-  final accountNames = {
-    for (final account in accounts) account.id: account.name,
-  };
-  final categoryNames = {
-    for (final category in categories) category.id: category.name,
-  };
-  final monthStart = DateTime(report.month.year, report.month.month, 1);
-  final monthEnd = DateTime(report.month.year, report.month.month + 1, 1);
-  final monthTx =
-      transactions
-          .where(
-            (t) => !t.date.isBefore(monthStart) && t.date.isBefore(monthEnd),
-          )
-          .toList()
-        ..sort((a, b) => b.date.compareTo(a.date));
-
-  document.addPage(
-    pw.MultiPage(
-      pageFormat: PdfPageFormat.a4,
-      header: (context) => pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Text(
-            'Polaris Finance',
-            style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
-          ),
-          pw.Text(
-            'Reporte mensual · ${report.monthLabel}',
-            style: const pw.TextStyle(fontSize: 12),
-          ),
-          pw.Text(
-            'Generado el ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
-            style: const pw.TextStyle(fontSize: 9),
-          ),
-        ],
-      ),
-      build: (context) => [
-        pw.SizedBox(height: 14),
-        pw.Text('Resumen', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-        pw.SizedBox(height: 6),
-        pw.TableHelper.fromTextArray(
-          headers: ['Concepto', 'Monto (Bs)'],
-          data: [
-            ['Ingresos', _money(report.incomeVes)],
-            ['Egresos', _money(report.expenseVes)],
-            ['Balance', _money(report.balanceVes)],
-          ],
-          headerStyle: pw.TextStyle(
-            fontWeight: pw.FontWeight.bold,
-            fontSize: 9,
-          ),
-          cellStyle: const pw.TextStyle(fontSize: 9),
-          headerDecoration: pw.BoxDecoration(color: PdfColors.grey300),
-          cellAlignments: {1: pw.Alignment.centerRight},
-        ),
-        if (report.skipped > 0)
-          pw.Padding(
-            padding: const pw.EdgeInsets.only(top: 4),
-            child: pw.Text(
-              '${report.skipped} movimiento(s) en monedas sin tasa no incluidos en los totales.',
-              style: const pw.TextStyle(fontSize: 8),
-            ),
-          ),
-        pw.SizedBox(height: 14),
-        pw.Text(
-          'Egresos por categoría',
-          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-        ),
-        pw.SizedBox(height: 6),
-        if (report.expensesByCategory.isEmpty)
-          pw.Text(
-            'Sin egresos registrados en el mes.',
-            style: const pw.TextStyle(fontSize: 9),
-          )
-        else
-          pw.TableHelper.fromTextArray(
-            headers: ['Categoría', 'Monto (Bs)'],
-            data: [
-              for (final entry in report.expensesByCategory)
-                [entry.label, _money(entry.total)],
-            ],
-            headerStyle: pw.TextStyle(
-              fontWeight: pw.FontWeight.bold,
-              fontSize: 9,
-            ),
-            cellStyle: const pw.TextStyle(fontSize: 9),
-            headerDecoration: pw.BoxDecoration(color: PdfColors.grey300),
-            cellAlignments: {1: pw.Alignment.centerRight},
-          ),
-        pw.SizedBox(height: 14),
-        pw.Text(
-          'Saldos de cuentas',
-          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-        ),
-        pw.SizedBox(height: 6),
-        pw.TableHelper.fromTextArray(
-          headers: ['Cuenta', 'Moneda', 'Saldo'],
-          data: [
-            for (final account in accounts)
-              [
-                account.name,
-                account.currency,
-                _money(balances[account.id] ?? 0),
-              ],
-          ],
-          headerStyle: pw.TextStyle(
-            fontWeight: pw.FontWeight.bold,
-            fontSize: 9,
-          ),
-          cellStyle: const pw.TextStyle(fontSize: 9),
-          headerDecoration: pw.BoxDecoration(color: PdfColors.grey300),
-          cellAlignments: {2: pw.Alignment.centerRight},
-        ),
-        pw.SizedBox(height: 14),
-        pw.Text(
-          'Movimientos del mes',
-          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-        ),
-        pw.SizedBox(height: 6),
-        pw.TableHelper.fromTextArray(
-          headers: [
-            'Fecha',
-            'Tipo',
-            'Monto',
-            'Mon.',
-            'Cuenta',
-            'Categoría',
-            'Nota',
-          ],
-          data: [
-            for (final transaction in monthTx)
-              [
-                DateFormat('dd/MM').format(transaction.date),
-                TransactionType.fromStorage(transaction.type).label,
-                _money(transaction.amount),
-                transaction.currency,
-                accountNames[transaction.accountId] ?? '',
-                transaction.categoryId == null
-                    ? ''
-                    : (categoryNames[transaction.categoryId] ?? ''),
-                transaction.note ?? '',
-              ],
-          ],
-          headerStyle: pw.TextStyle(
-            fontWeight: pw.FontWeight.bold,
-            fontSize: 8,
-          ),
-          cellStyle: const pw.TextStyle(fontSize: 7),
-          headerDecoration: pw.BoxDecoration(color: PdfColors.grey300),
-          cellAlignments: {2: pw.Alignment.centerRight},
-          columnWidths: {
-            0: const pw.FixedColumnWidth(48),
-            2: const pw.FixedColumnWidth(58),
-            3: const pw.FixedColumnWidth(34),
-          },
-        ),
-      ],
-    ),
+}) {
+  return buildStatisticsPdf(
+    months: [report],
+    accounts: accounts,
+    balances: balances,
+    transactions: transactions,
+    categories: categories,
   );
-  return document.save();
 }
 
 class MonthlyReportDialog extends StatefulWidget {

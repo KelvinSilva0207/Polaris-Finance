@@ -133,11 +133,18 @@ void main() {
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     await openFromMore(tester, 'Analítica');
 
     expect(find.text('Ingresos vs egresos'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Egresos por categoría'),
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
     expect(find.text('Egresos por categoría'), findsOneWidget);
     expect(find.textContaining('VES'), findsWidgets);
 
@@ -154,7 +161,7 @@ void main() {
     await tester.tap(find.byTooltip('Exportar datos'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('Movimientos (CSV)'), findsOneWidget);
     expect(find.text('Respaldo completo (JSON)'), findsOneWidget);

@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../shared/widgets/brand_logo.dart';
 
-const String appVersion = '1.0.0';
-
-class AboutScreen extends StatelessWidget {
+class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
+
+  @override
+  State<AboutScreen> createState() => _AboutScreenState();
+}
+
+class _AboutScreenState extends State<AboutScreen> {
+  late final Future<PackageInfo> _packageInfo = PackageInfo.fromPlatform();
 
   static const _features = <(IconData, String, String)>[
     (
@@ -72,11 +78,22 @@ class AboutScreen extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Center(
-            child: Text(
-              'Versión $appVersion',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
+            child: FutureBuilder<PackageInfo>(
+              future: _packageInfo,
+              builder: (context, snapshot) {
+                final info = snapshot.data;
+                final label = info == null
+                    ? 'Versión ${snapshot.hasError ? 'desconocida' : '…'}'
+                    : info.buildNumber.isEmpty
+                    ? 'Versión ${info.version}'
+                    : 'Versión ${info.version} (${info.buildNumber})';
+                return Text(
+                  label,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                );
+              },
             ),
           ),
           const SizedBox(height: 20),

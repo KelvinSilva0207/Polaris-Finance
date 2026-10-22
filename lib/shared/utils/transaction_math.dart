@@ -158,6 +158,13 @@ CurrencyRate? latestReferenceRate(
   return null;
 }
 
+/// Bolívares por euro a partir de la tasa BCV (VES por USD) y la tasa de
+/// referencia del euro (euros por USD).
+double? vesPerEur(double? vesPerUsd, double? eurPerUsd) {
+  if (vesPerUsd == null || eurPerUsd == null || eurPerUsd <= 0) return null;
+  return vesPerUsd / eurPerUsd;
+}
+
 /// Última tasa guardada del euro en USD (par `USD/EUR`, proveedor `api`).
 CurrencyRate? latestEurRate(List<CurrencyRate> rates) {
   for (final rate in rates) {

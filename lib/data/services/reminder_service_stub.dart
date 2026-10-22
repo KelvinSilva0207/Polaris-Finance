@@ -9,6 +9,8 @@ class ReminderService {
   Future<bool> requestPermission() async => false;
 
   Future<void> showTestNotification() async {}
+
+  Future<void> showUpdateNotification({required String version}) async {}
 }
 
 Future<void> syncPaymentReminders({

@@ -202,6 +202,8 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
                 ),
         ),
       );
+    } on SaveCanceledException {
+      return;
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)

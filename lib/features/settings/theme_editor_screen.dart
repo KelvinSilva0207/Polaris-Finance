@@ -20,35 +20,40 @@ const themeAccentPresets = <AccentPreset>[
   AccentPreset('Coral', Color(0xFFFF7043)),
   AccentPreset('Rosa', Color(0xFFEC407A)),
   AccentPreset('Turquesa', Color(0xFF26A69A)),
+  AccentPreset('Violeta', Color(0xFF7C4DFF)),
+  AccentPreset('Índigo', Color(0xFF536DFE)),
+  AccentPreset('Cian profundo', Color(0xFF00ACC1)),
+  AccentPreset('Lima', Color(0xFF8BC34A)),
+  AccentPreset('Naranja', Color(0xFFFFA726)),
+  AccentPreset('Orquídea', Color(0xFFAB47BC)),
+  AccentPreset('Pizarra', Color(0xFF78909C)),
+  AccentPreset('Rojo', Color(0xFFEF5350)),
 ];
 
-class ThemeEditorScreen extends ConsumerStatefulWidget {
+const themeSecondaryPresets = <AccentPreset>[
+  AccentPreset('Cyan', Color(0xFF00BCD4)),
+  AccentPreset('Menta', Color(0xFF26A69A)),
+  AccentPreset('Lavanda', Color(0xFFB39DDB)),
+  AccentPreset('Cielo', Color(0xFF4FC3F7)),
+  AccentPreset('Durazno', Color(0xFFFFB74D)),
+  AccentPreset('Salvia', Color(0xFF81C784)),
+  AccentPreset('Rosa suave', Color(0xFFF48FB1)),
+  AccentPreset('Arena', Color(0xFFBCAAA4)),
+];
+
+const themeBackgroundPresets = <AccentPreset>[
+  AccentPreset('Polar', Color(0xFF0B0E14)),
+  AccentPreset('Grafito', Color(0xFF141414)),
+  AccentPreset('Noche azul', Color(0xFF0B1220)),
+  AccentPreset('Violeta', Color(0xFF100B18)),
+  AccentPreset('Bosque', Color(0xFF0B1410)),
+  AccentPreset('Vino', Color(0xFF170B0D)),
+  AccentPreset('Petróleo', Color(0xFF07161A)),
+  AccentPreset('Sepia', Color(0xFF17120C)),
+];
+
+class ThemeEditorScreen extends ConsumerWidget {
   const ThemeEditorScreen({super.key});
-
-  @override
-  ConsumerState<ThemeEditorScreen> createState() => _ThemeEditorScreenState();
-}
-
-class _ThemeEditorScreenState extends ConsumerState<ThemeEditorScreen> {
-  late HSVColor _hsv;
-
-  @override
-  void initState() {
-    super.initState();
-    final settings = ref.read(appSettingsProvider);
-    _hsv = HSVColor.fromColor(settings.accentColor);
-  }
-
-  Color get _color => _hsv.toColor();
-
-  void _apply(Color color) {
-    setState(() => _hsv = HSVColor.fromColor(color));
-    ref.read(appSettingsProvider.notifier).setAccentColor(color);
-  }
-
-  void _persist() {
-    ref.read(appSettingsProvider.notifier).setAccentColor(_color);
-  }
 
   bool _isDark(BuildContext context, ThemeMode mode) {
     switch (mode) {
@@ -62,16 +67,10 @@ class _ThemeEditorScreenState extends ConsumerState<ThemeEditorScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(appSettingsProvider);
     final controller = ref.read(appSettingsProvider.notifier);
     final dark = _isDark(context, settings.themeMode);
-    final hex = _color
-        .toARGB32()
-        .toRadixString(16)
-        .padLeft(8, '0')
-        .substring(2)
-        .toUpperCase();
 
     return Scaffold(
       appBar: AppBar(
@@ -80,7 +79,15 @@ class _ThemeEditorScreenState extends ConsumerState<ThemeEditorScreen> {
           IconButton(
             tooltip: 'Restablecer',
             icon: const Icon(Icons.restart_alt),
-            onPressed: () => _apply(const Color(0xFF9C6BFF)),
+            onPressed: () {
+              controller.setAccentColor(AppSettingsState.defaults.accentColor);
+              controller.setSecondaryColor(
+                AppSettingsState.defaults.secondaryColor,
+              );
+              controller.setBackgroundColor(
+                AppSettingsState.defaults.backgroundColor,
+              );
+            },
           ),
         ],
       ),
@@ -90,89 +97,42 @@ class _ThemeEditorScreenState extends ConsumerState<ThemeEditorScreen> {
           Text('Vista previa', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           Theme(
-            data: dark ? AppTheme.dark(_color) : AppTheme.light(_color),
-            child: _PreviewCard(dark: dark),
+            data: dark
+                ? AppTheme.dark(
+                    settings.accentColor,
+                    secondary: settings.secondaryColor,
+                    background: settings.backgroundColor,
+                  )
+                : AppTheme.light(
+                    settings.accentColor,
+                    secondary: settings.secondaryColor,
+                  ),
+            child: const _PreviewCard(),
           ),
           const SizedBox(height: 20),
-          Text(
-            'Color de acento',
-            style: Theme.of(context).textTheme.titleMedium,
+          _ColorSection(
+            title: 'Color principal',
+            value: settings.accentColor,
+            presets: themeAccentPresets,
+            onChanged: controller.setAccentColor,
           ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 14,
-            runSpacing: 14,
-            children: [
-              for (final preset in themeAccentPresets)
-                _PresetDot(
-                  preset: preset,
-                  selected: _color.toARGB32() == preset.color.toARGB32(),
-                  onTap: () => _apply(preset.color),
-                ),
-            ],
+          const SizedBox(height: 16),
+          _ColorSection(
+            title: 'Color secundario',
+            value: settings.secondaryColor,
+            presets: themeSecondaryPresets,
+            onChanged: controller.setSecondaryColor,
+          ),
+          const SizedBox(height: 16),
+          _ColorSection(
+            title: 'Fondo (modo oscuro)',
+            value: settings.backgroundColor,
+            presets: themeBackgroundPresets,
+            minValue: 0.02,
+            maxValue: 0.25,
+            onChanged: controller.setBackgroundColor,
           ),
           const SizedBox(height: 20),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: _color,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Personalizado',
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                      const Spacer(),
-                      Text(
-                        '#$hex',
-                        style: Theme.of(context).textTheme.labelMedium,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  _Slider(
-                    label: 'Tono',
-                    value: _hsv.hue,
-                    min: 0,
-                    max: 360,
-                    onChanged: (value) =>
-                        setState(() => _hsv = _hsv.withHue(value)),
-                    onChangeEnd: (_) => _persist(),
-                  ),
-                  _Slider(
-                    label: 'Saturación',
-                    value: _hsv.saturation,
-                    min: 0,
-                    max: 1,
-                    onChanged: (value) =>
-                        setState(() => _hsv = _hsv.withSaturation(value)),
-                    onChangeEnd: (_) => _persist(),
-                  ),
-                  _Slider(
-                    label: 'Brillo',
-                    value: _hsv.value,
-                    min: 0.2,
-                    max: 1,
-                    onChanged: (value) =>
-                        setState(() => _hsv = _hsv.withValue(value)),
-                    onChangeEnd: (_) => _persist(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
           Text('Modo', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
           SegmentedButton<ThemeMode>(
@@ -198,7 +158,134 @@ class _ThemeEditorScreenState extends ConsumerState<ThemeEditorScreen> {
             onSelectionChanged: (selection) =>
                 controller.setThemeMode(selection.first),
           ),
+          const SizedBox(height: 8),
+          Text(
+            'El tema claro usa un fondo suave para no cansar la vista; el '
+            'color de fondo se aplica al modo oscuro.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _ColorSection extends StatefulWidget {
+  const _ColorSection({
+    required this.title,
+    required this.value,
+    required this.presets,
+    required this.onChanged,
+    this.minValue = 0.2,
+    this.maxValue = 1,
+  });
+
+  final String title;
+  final Color value;
+  final List<AccentPreset> presets;
+  final ValueChanged<Color> onChanged;
+  final double minValue;
+  final double maxValue;
+
+  @override
+  State<_ColorSection> createState() => _ColorSectionState();
+}
+
+class _ColorSectionState extends State<_ColorSection> {
+  late HSVColor _hsv = HSVColor.fromColor(widget.value);
+  bool _expanded = false;
+
+  Color get _color => _hsv.toColor();
+
+  void _apply(Color color) {
+    setState(() => _hsv = HSVColor.fromColor(color));
+    widget.onChanged(color);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hex = _color
+        .toARGB32()
+        .toRadixString(16)
+        .padLeft(8, '0')
+        .substring(2)
+        .toUpperCase();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: _color,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: theme.colorScheme.outlineVariant),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(widget.title, style: theme.textTheme.titleSmall),
+                ),
+                Text('#$hex', style: theme.textTheme.labelMedium),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                for (final preset in widget.presets)
+                  _PresetDot(
+                    preset: preset,
+                    selected: _color.toARGB32() == preset.color.toARGB32(),
+                    onTap: () => _apply(preset.color),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            TextButton.icon(
+              onPressed: () => setState(() => _expanded = !_expanded),
+              icon: Icon(_expanded ? Icons.expand_less : Icons.tune, size: 18),
+              label: Text(_expanded ? 'Ocultar ajuste' : 'Ajuste fino'),
+            ),
+            if (_expanded) ...[
+              _Slider(
+                label: 'Tono',
+                value: _hsv.hue,
+                min: 0,
+                max: 360,
+                onChanged: (value) =>
+                    setState(() => _hsv = _hsv.withHue(value)),
+                onChangeEnd: (_) => widget.onChanged(_color),
+              ),
+              _Slider(
+                label: 'Saturación',
+                value: _hsv.saturation,
+                min: 0,
+                max: 1,
+                onChanged: (value) =>
+                    setState(() => _hsv = _hsv.withSaturation(value)),
+                onChangeEnd: (_) => widget.onChanged(_color),
+              ),
+              _Slider(
+                label: 'Brillo',
+                value: _hsv.value,
+                min: widget.minValue,
+                max: widget.maxValue,
+                onChanged: (value) =>
+                    setState(() => _hsv = _hsv.withValue(value)),
+                onChangeEnd: (_) => widget.onChanged(_color),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -231,7 +318,7 @@ class _Slider extends StatelessWidget {
         ),
         Expanded(
           child: Slider(
-            value: value,
+            value: value.clamp(min, max),
             min: min,
             max: max,
             onChanged: onChanged,
@@ -256,40 +343,41 @@ class _PresetDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        InkWell(
-          onTap: onTap,
-          customBorder: const CircleBorder(),
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: preset.color,
-              border: Border.all(
-                width: selected ? 3 : 1,
-                color: selected
-                    ? Theme.of(context).colorScheme.onSurface
-                    : Theme.of(context).colorScheme.outlineVariant,
-              ),
+    return Tooltip(
+      message: preset.label,
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: preset.color,
+            border: Border.all(
+              width: selected ? 3 : 1,
+              color: selected
+                  ? Theme.of(context).colorScheme.onSurface
+                  : Theme.of(context).colorScheme.outlineVariant,
             ),
-            child: selected
-                ? const Icon(Icons.check, color: Colors.white, size: 20)
-                : null,
           ),
+          child: selected
+              ? Icon(
+                  Icons.check,
+                  size: 20,
+                  color: preset.color.computeLuminance() > 0.6
+                      ? Colors.black
+                      : Colors.white,
+                )
+              : null,
         ),
-        const SizedBox(height: 4),
-        Text(preset.label, style: Theme.of(context).textTheme.labelSmall),
-      ],
+      ),
     );
   }
 }
 
 class _PreviewCard extends StatelessWidget {
-  const _PreviewCard({required this.dark});
-
-  final bool dark;
+  const _PreviewCard();
 
   @override
   Widget build(BuildContext context) {
@@ -337,6 +425,8 @@ class _PreviewCard extends StatelessWidget {
               FilledButton(onPressed: () {}, child: const Text('Guardar')),
               const SizedBox(width: 8),
               OutlinedButton(onPressed: () {}, child: const Text('Cancelar')),
+              const SizedBox(width: 8),
+              Icon(Icons.star, color: theme.colorScheme.secondary, size: 20),
             ],
           ),
           const SizedBox(height: 12),

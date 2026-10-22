@@ -8,6 +8,12 @@ import '../theme/app_fonts.dart';
 
 const _moduleKeyPrefix = 'module_';
 const _accentKey = 'accent_color';
+const _secondaryColorKey = 'secondary_color';
+const _backgroundColorKey = 'background_color';
+const _profileNameKey = 'profile_name';
+const _profileAvatarKey = 'profile_avatar';
+const _customFontNameKey = 'custom_font_name';
+const _notifyUpdatesKey = 'notify_updates';
 const _providerKey = 'rate_provider';
 const _hideBalancesKey = 'hide_balances';
 const _themeModeKey = 'theme_mode';
@@ -51,6 +57,8 @@ class AppSettingsState {
   const AppSettingsState({
     this.enabledModules = FeatureModule.allIds,
     this.accentColorValue = 0xFF9C6BFF,
+    this.secondaryColorValue = 0xFF00BCD4,
+    this.backgroundColorValue = 0xFF0B0E14,
     this.referenceProvider = RateProvider.bcv,
     this.hideBalances = false,
     this.themeMode = ThemeMode.system,
@@ -59,7 +67,11 @@ class AppSettingsState {
     this.reminderDaysBefore = 1,
     this.notifyServices = true,
     this.notifyLoans = true,
+    this.notifyUpdates = true,
     this.fontId = AppFonts.defaultId,
+    this.customFontName = '',
+    this.profileName = '',
+    this.profileAvatar = '',
     this.dashboardOrder = dashboardSectionIds,
   });
 
@@ -67,6 +79,8 @@ class AppSettingsState {
 
   final List<String> enabledModules;
   final int accentColorValue;
+  final int secondaryColorValue;
+  final int backgroundColorValue;
   final RateProvider referenceProvider;
   final bool hideBalances;
   final ThemeMode themeMode;
@@ -75,10 +89,18 @@ class AppSettingsState {
   final int reminderDaysBefore;
   final bool notifyServices;
   final bool notifyLoans;
+  final bool notifyUpdates;
   final String fontId;
+  final String customFontName;
+  final String profileName;
+  final String profileAvatar;
   final List<String> dashboardOrder;
 
   Color get accentColor => Color(accentColorValue);
+
+  Color get secondaryColor => Color(secondaryColorValue);
+
+  Color get backgroundColor => Color(backgroundColorValue);
 
   /// Familia tipográfica de Google Fonts a aplicar (null = fuente del sistema).
   String? get fontFamily => AppFonts.familyOf(fontId);
@@ -100,6 +122,10 @@ class AppSettingsState {
     return AppSettingsState(
       enabledModules: enabled,
       accentColorValue: prefs.getInt(_accentKey) ?? defaults.accentColorValue,
+      secondaryColorValue:
+          prefs.getInt(_secondaryColorKey) ?? defaults.secondaryColorValue,
+      backgroundColorValue:
+          prefs.getInt(_backgroundColorKey) ?? defaults.backgroundColorValue,
       referenceProvider: RateProvider.fromStorage(
         prefs.getString(_providerKey),
       ),
@@ -114,7 +140,11 @@ class AppSettingsState {
           prefs.getInt(_reminderDaysBeforeKey) ?? defaults.reminderDaysBefore,
       notifyServices: prefs.getBool(_notifyServicesKey) ?? true,
       notifyLoans: prefs.getBool(_notifyLoansKey) ?? true,
+      notifyUpdates: prefs.getBool(_notifyUpdatesKey) ?? true,
       fontId: prefs.getString(_fontKey) ?? AppFonts.defaultId,
+      customFontName: prefs.getString(_customFontNameKey) ?? '',
+      profileName: prefs.getString(_profileNameKey) ?? '',
+      profileAvatar: prefs.getString(_profileAvatarKey) ?? '',
       dashboardOrder: [
         for (final id in storedOrder)
           if (dashboardSectionIds.contains(id)) id,
@@ -127,6 +157,8 @@ class AppSettingsState {
   AppSettingsState copyWith({
     List<String>? enabledModules,
     int? accentColorValue,
+    int? secondaryColorValue,
+    int? backgroundColorValue,
     RateProvider? referenceProvider,
     bool? hideBalances,
     ThemeMode? themeMode,
@@ -135,12 +167,18 @@ class AppSettingsState {
     int? reminderDaysBefore,
     bool? notifyServices,
     bool? notifyLoans,
+    bool? notifyUpdates,
     String? fontId,
+    String? customFontName,
+    String? profileName,
+    String? profileAvatar,
     List<String>? dashboardOrder,
   }) {
     return AppSettingsState(
       enabledModules: enabledModules ?? this.enabledModules,
       accentColorValue: accentColorValue ?? this.accentColorValue,
+      secondaryColorValue: secondaryColorValue ?? this.secondaryColorValue,
+      backgroundColorValue: backgroundColorValue ?? this.backgroundColorValue,
       referenceProvider: referenceProvider ?? this.referenceProvider,
       hideBalances: hideBalances ?? this.hideBalances,
       themeMode: themeMode ?? this.themeMode,
@@ -149,7 +187,11 @@ class AppSettingsState {
       reminderDaysBefore: reminderDaysBefore ?? this.reminderDaysBefore,
       notifyServices: notifyServices ?? this.notifyServices,
       notifyLoans: notifyLoans ?? this.notifyLoans,
+      notifyUpdates: notifyUpdates ?? this.notifyUpdates,
       fontId: fontId ?? this.fontId,
+      customFontName: customFontName ?? this.customFontName,
+      profileName: profileName ?? this.profileName,
+      profileAvatar: profileAvatar ?? this.profileAvatar,
       dashboardOrder: dashboardOrder ?? this.dashboardOrder,
     );
   }
@@ -179,6 +221,31 @@ class AppSettingsController extends Notifier<AppSettingsState> {
     final prefs = await SharedPreferences.getInstance();
     state = state.copyWith(accentColorValue: color.toARGB32());
     await prefs.setInt(_accentKey, color.toARGB32());
+  }
+
+  Future<void> setSecondaryColor(Color color) async {
+    final prefs = await SharedPreferences.getInstance();
+    state = state.copyWith(secondaryColorValue: color.toARGB32());
+    await prefs.setInt(_secondaryColorKey, color.toARGB32());
+  }
+
+  Future<void> setBackgroundColor(Color color) async {
+    final prefs = await SharedPreferences.getInstance();
+    state = state.copyWith(backgroundColorValue: color.toARGB32());
+    await prefs.setInt(_backgroundColorKey, color.toARGB32());
+  }
+
+  Future<void> setProfileName(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = value.trim();
+    state = state.copyWith(profileName: name);
+    await prefs.setString(_profileNameKey, name);
+  }
+
+  Future<void> setProfileAvatar(String base64Image) async {
+    final prefs = await SharedPreferences.getInstance();
+    state = state.copyWith(profileAvatar: base64Image);
+    await prefs.setString(_profileAvatarKey, base64Image);
   }
 
   Future<void> setReferenceProvider(RateProvider provider) async {
@@ -229,10 +296,22 @@ class AppSettingsController extends Notifier<AppSettingsState> {
     await prefs.setBool(_notifyLoansKey, value);
   }
 
+  Future<void> setNotifyUpdates(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    state = state.copyWith(notifyUpdates: value);
+    await prefs.setBool(_notifyUpdatesKey, value);
+  }
+
   Future<void> setFontId(String value) async {
     final prefs = await SharedPreferences.getInstance();
     state = state.copyWith(fontId: value);
     await prefs.setString(_fontKey, value);
+  }
+
+  Future<void> setCustomFontName(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    state = state.copyWith(customFontName: value);
+    await prefs.setString(_customFontNameKey, value);
   }
 
   Future<void> setDashboardOrder(List<String> order) async {

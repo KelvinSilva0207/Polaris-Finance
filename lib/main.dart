@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app.dart';
 import 'core/security/app_lock.dart';
 import 'core/settings/app_settings.dart';
+import 'core/theme/app_fonts.dart';
+import 'core/theme/custom_font.dart';
 import 'data/services/backup_service.dart';
 import 'data/sync/sync_config.dart';
 import 'data/sync/sync_providers.dart';
@@ -25,6 +27,9 @@ Future<void> main() async {
     debugPrint('No se pudo aplicar la restauración pendiente: $error');
   }
   final initialSettings = AppSettingsState.fromPrefs(prefs);
+  if (initialSettings.fontId == AppFonts.customId) {
+    await loadCustomFontFromPrefs(prefs);
+  }
   final initialLock = AppLockState.fromPrefs(prefs);
   final initialSync = await SyncConfig.load(prefs);
 

@@ -110,6 +110,8 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
           ),
         ),
       );
+    } on SaveCanceledException {
+      return;
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)

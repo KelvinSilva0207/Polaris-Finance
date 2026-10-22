@@ -12,11 +12,19 @@ class AppFont {
   final String label;
   final String description;
   final String? family;
+
+  bool get isCustom => id == AppFonts.customId;
 }
 
 /// Catálogo de tipografías que combinan con el diseño de la app.
 abstract final class AppFonts {
   static const defaultId = 'default';
+
+  /// Identificador de la tipografía que carga el usuario desde un archivo.
+  static const customId = 'custom';
+
+  /// Familia interna con la que se registra el archivo del usuario.
+  static const customFamily = 'PolarisCustom';
 
   static const catalog = <AppFont>[
     AppFont(
@@ -53,6 +61,12 @@ abstract final class AppFonts {
       label: 'Lora',
       description: 'Serif elegante',
       family: 'Lora',
+    ),
+    AppFont(
+      id: customId,
+      label: 'Personalizada',
+      description: 'Tu archivo .ttf o .otf',
+      family: customFamily,
     ),
   ];
 

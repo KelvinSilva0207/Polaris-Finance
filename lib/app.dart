@@ -28,10 +28,13 @@ class PolarisFinanceApp extends ConsumerWidget {
       theme: AppTheme.light(
         settings.accentColor,
         fontFamily: settings.fontFamily,
+        secondary: settings.secondaryColor,
       ),
       darkTheme: AppTheme.dark(
         settings.accentColor,
         fontFamily: settings.fontFamily,
+        secondary: settings.secondaryColor,
+        background: settings.backgroundColor,
       ),
       themeMode: settings.themeMode,
       routerConfig: router,
@@ -104,10 +107,13 @@ class _PolarisFinanceAppWrapperState
     final theme = AppTheme.light(
       settings.accentColor,
       fontFamily: settings.fontFamily,
+      secondary: settings.secondaryColor,
     );
     final darkTheme = AppTheme.dark(
       settings.accentColor,
       fontFamily: settings.fontFamily,
+      secondary: settings.secondaryColor,
+      background: settings.backgroundColor,
     );
     final themeMode = settings.themeMode;
     ref.watch(reminderSyncProvider);

@@ -232,6 +232,57 @@ class _RatesScreenState extends ConsumerState<RatesScreen> {
                   ),
                 ),
               ),
+              if (bcv != null && eur != null && eur.rate > 0) ...[
+                const SizedBox(height: 12),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.euro_outlined,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Euro y bolívar',
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        _ConversionRow(
+                          label: '1 EUR',
+                          value: '${formatVeNumber(bcv.rate / eur.rate)} VES',
+                          hint: 'euro a bolívar',
+                        ),
+                        const SizedBox(height: 6),
+                        _ConversionRow(
+                          label: '1 VES',
+                          value: '${formatVeNumber(eur.rate / bcv.rate)} EUR',
+                          hint: 'bolívar a euro',
+                        ),
+                        const SizedBox(height: 6),
+                        _ConversionRow(
+                          label: '1 USD',
+                          value: '${formatVeNumber(bcv.rate)} VES',
+                          hint: 'tasa BCV',
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'El euro se convierte con la tasa de referencia '
+                          'USD/EUR y la tasa BCV.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               const CurrencyCalculator(),
               const SizedBox(height: 12),
@@ -584,5 +635,45 @@ class _RateChartPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _RateChartPainter oldDelegate) {
     return oldDelegate.primary != primary || oldDelegate.secondary != secondary;
+  }
+}
+
+class _ConversionRow extends StatelessWidget {
+  const _ConversionRow({
+    required this.label,
+    required this.value,
+    required this.hint,
+  });
+
+  final String label;
+  final String value;
+  final String hint;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        SizedBox(
+          width: 58,
+          child: Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        Text(hint, style: theme.textTheme.labelSmall),
+      ],
+    );
   }
 }

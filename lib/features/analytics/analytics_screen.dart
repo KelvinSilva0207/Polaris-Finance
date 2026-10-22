@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -6,9 +8,13 @@ import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
 import '../../data/models/enums.dart';
 import '../../shared/utils/month_compare.dart';
+import '../../shared/utils/transaction_math.dart';
 import '../../shared/widgets/fade_slide_in.dart';
 import '../budgets/budgets_screen.dart';
 import '../export/export_screen.dart';
+import '../export/file_saver.dart';
+import '../export/monthly_report.dart';
+import '../export/statistics_report.dart';
 import 'cash_flow_screen.dart';
 import 'inflation_screen.dart';
 import 'net_worth_screen.dart';
@@ -50,6 +56,56 @@ class AnalyticsScreen extends ConsumerStatefulWidget {
 class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
   bool _inUsd = false;
+  bool _exporting = false;
+
+  Future<void> _exportStatistics() async {
+    if (_exporting) return;
+    setState(() => _exporting = true);
+    try {
+      final transactions =
+          ref.read(transactionsProvider).value ?? const <Transaction>[];
+      final categories =
+          ref.read(categoriesProvider).value ?? const <Category>[];
+      final accounts = ref.read(accountsProvider).value ?? const <Account>[];
+      final rates = ref.read(ratesProvider).value ?? const <CurrencyRate>[];
+      final vesPerUsd = latestReferenceRate(rates, RateProvider.bcv)?.rate;
+      final eurPerUsd = latestEurRate(rates)?.rate;
+      final months = [
+        for (var index = 5; index >= 0; index--)
+          computeMonthlyReport(
+            month: DateTime(_month.year, _month.month - index),
+            transactions: transactions,
+            categories: categories,
+            vesPerUsd: vesPerUsd,
+            eurPerUsd: eurPerUsd,
+          ),
+      ];
+      final bytes = await buildStatisticsPdf(
+        months: months,
+        accounts: accounts,
+        balances: balancesOf(transactions, accounts: accounts),
+        transactions: transactions,
+        categories: categories,
+      );
+      final stamp = DateFormat('yyyyMMdd_HHmm').format(DateTime.now());
+      final saved = await saveBackupFile(
+        'polaris_estadisticas_$stamp.pdf',
+        bytes,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Estadísticas guardadas: $saved')));
+    } on SaveCanceledException {
+      return;
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('No se pudo exportar: $error')));
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
 
   void _previousMonth() {
     setState(() {
@@ -219,6 +275,17 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                 ),
               );
             },
+          ),
+          IconButton(
+            tooltip: 'Exportar estadísticas (PDF)',
+            icon: _exporting
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.picture_as_pdf_outlined),
+            onPressed: _exporting ? null : _exportStatistics,
           ),
           IconButton(
             tooltip: 'Exportar datos',
@@ -412,6 +479,56 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                         'Ingresos vs egresos',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
+                      const SizedBox(height: 12),
+                      if (income <= 0 && expense <= 0)
+                        const Text('Sin datos para mostrar el gráfico')
+                      else
+                        SizedBox(
+                          height: 190,
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final size = math.min(
+                                constraints.maxWidth,
+                                constraints.maxHeight,
+                              );
+                              return Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  CustomPaint(
+                                    size: Size(size, size),
+                                    painter: _DonutPainter(
+                                      income: income,
+                                      expense: expense,
+                                    ),
+                                  ),
+                                  Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Balance',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall,
+                                      ),
+                                      Text(
+                                        '${_fmt(balance)} $target',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: balance >= 0
+                                                  ? const Color(0xFF66BB6A)
+                                                  : const Color(0xFFEF5350),
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
                       const SizedBox(height: 12),
                       _HBarRow(
                         label: 'Ingresos',
@@ -879,5 +996,49 @@ class _CompareRow extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _DonutPainter extends CustomPainter {
+  _DonutPainter({required this.income, required this.expense});
+
+  final double income;
+  final double expense;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final total = income + expense;
+    if (total <= 0) {
+      final paint = Paint()
+        ..color = Colors.grey.withValues(alpha: 0.25)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 14;
+      final rect = Rect.fromLTWH(7, 7, size.width - 14, size.height - 14);
+      canvas.drawArc(rect, -math.pi / 2, 2 * math.pi, false, paint);
+      return;
+    }
+    final rect = Rect.fromLTWH(7, 7, size.width - 14, size.height - 14);
+    final stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 14
+      ..strokeCap = StrokeCap.butt;
+
+    var start = -math.pi / 2;
+    if (income > 0) {
+      final sweep = (income / total) * 2 * math.pi;
+      stroke.color = const Color(0xFF66BB6A);
+      canvas.drawArc(rect, start, sweep, false, stroke);
+      start += sweep;
+    }
+    if (expense > 0) {
+      final sweep = (expense / total) * 2 * math.pi;
+      stroke.color = const Color(0xFFEF5350);
+      canvas.drawArc(rect, start, sweep, false, stroke);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DonutPainter oldDelegate) {
+    return oldDelegate.income != income || oldDelegate.expense != expense;
   }
 }
