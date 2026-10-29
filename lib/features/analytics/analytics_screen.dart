@@ -277,7 +277,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
           ),
         ),
     ];
-    final slicesTotal = slices.fold<double>(0, (sum, slice) => sum + slice.value);
+    final slicesTotal = slices.fold<double>(
+      0,
+      (sum, slice) => sum + slice.value,
+    );
     _CategorySlice? selectedSlice;
     for (final slice in slices) {
       if (slice.key == _selectedCategoryKey) {
@@ -657,8 +660,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                                           child: CustomPaint(
                                             painter: _CategoryDonutPainter(
                                               slices: slices,
-                                              selectedKey:
-                                                  _selectedCategoryKey,
+                                              selectedKey: _selectedCategoryKey,
                                             ),
                                           ),
                                         ),
@@ -675,9 +677,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                                                 textAlign: TextAlign.center,
                                                 maxLines: 2,
                                                 overflow: TextOverflow.ellipsis,
-                                                style: Theme.of(
-                                                  context,
-                                                ).textTheme.labelSmall,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .labelSmall,
                                               ),
                                               const SizedBox(height: 2),
                                               Text(
@@ -699,8 +701,8 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                                                       .textTheme
                                                       .labelSmall
                                                       ?.copyWith(
-                                                        color: selectedSlice
-                                                            .color,
+                                                        color:
+                                                            selectedSlice.color,
                                                         fontWeight:
                                                             FontWeight.w700,
                                                       ),
@@ -1234,9 +1236,7 @@ class _CategoryDonutPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = selected ? 24 : 16
         ..strokeCap = StrokeCap.butt
-        ..color = dimmed
-            ? slice.color.withValues(alpha: 0.35)
-            : slice.color;
+        ..color = dimmed ? slice.color.withValues(alpha: 0.35) : slice.color;
       final gap = slices.length > 1 ? 0.018 : 0.0;
       canvas.drawArc(
         rect,
@@ -1283,9 +1283,7 @@ class _CategoryLegendRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
-          color: selected
-              ? color.withValues(alpha: 0.12)
-              : Colors.transparent,
+          color: selected ? color.withValues(alpha: 0.12) : Colors.transparent,
         ),
         child: Row(
           children: [

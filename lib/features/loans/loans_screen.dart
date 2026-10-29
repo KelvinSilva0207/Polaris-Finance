@@ -206,10 +206,7 @@ class LoansScreen extends ConsumerWidget {
                   child: Text(loan.name, overflow: TextOverflow.ellipsis),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  type.label,
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
+                Text(type.label, style: Theme.of(context).textTheme.labelSmall),
               ],
             ),
             subtitle: Text(
@@ -299,9 +296,9 @@ class LoansScreen extends ConsumerWidget {
                     value: percent,
                     minHeight: 6,
                     color: settled ? settledColor : null,
-                    backgroundColor: Theme.of(
-                      context,
-                    ).colorScheme.surfaceContainerHighest,
+                    backgroundColor: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest,
                   ),
                 ),
               ],

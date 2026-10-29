@@ -86,10 +86,9 @@ abstract final class AppTheme {
       brightness: Brightness.dark,
     );
     final canvas = background ?? AppTheme.background;
-    final panelBase = panel ?? Color.alphaBlend(
-      Colors.white.withValues(alpha: 0.035),
-      canvas,
-    );
+    final panelBase =
+        panel ??
+        Color.alphaBlend(Colors.white.withValues(alpha: 0.035), canvas);
     final raised = panelBase;
     final elevated = panel == null
         ? Color.alphaBlend(Colors.white.withValues(alpha: 0.06), canvas)
@@ -213,9 +212,8 @@ abstract final class AppTheme {
         backgroundColor: surface,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       ).copyWith(indicatorColor: scheme.primary.withValues(alpha: 0.16)),
-      navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: surface,
-      ).copyWith(indicatorColor: scheme.primary.withValues(alpha: 0.16)),
+      navigationRailTheme: NavigationRailThemeData(backgroundColor: surface)
+          .copyWith(indicatorColor: scheme.primary.withValues(alpha: 0.16)),
       cardTheme: CardThemeData(
         color: surface,
         elevation: 0,

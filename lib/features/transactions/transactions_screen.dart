@@ -195,9 +195,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                                           .textTheme
                                           .labelSmall
                                           ?.copyWith(
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.primary,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary,
                                             fontWeight: FontWeight.w600,
                                           ),
                                     ),

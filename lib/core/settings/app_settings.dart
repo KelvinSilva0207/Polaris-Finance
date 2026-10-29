@@ -137,8 +137,7 @@ class AppSettingsState {
           prefs.getInt(_secondaryColorKey) ?? defaults.secondaryColorValue,
       backgroundColorValue:
           prefs.getInt(_backgroundColorKey) ?? defaults.backgroundColorValue,
-      panelColorValue:
-          prefs.getInt(_panelColorKey) ?? defaults.panelColorValue,
+      panelColorValue: prefs.getInt(_panelColorKey) ?? defaults.panelColorValue,
       referenceProvider: RateProvider.fromStorage(
         prefs.getString(_providerKey),
       ),

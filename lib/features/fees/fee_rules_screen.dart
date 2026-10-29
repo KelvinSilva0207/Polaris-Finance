@@ -440,9 +440,8 @@ class _FeeEditorDialogState extends State<_FeeEditorDialog> {
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.secondaryContainer.withValues(alpha: 0.5),
+                  color: Theme.of(context).colorScheme.secondaryContainer
+                      .withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(

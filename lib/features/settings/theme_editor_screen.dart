@@ -178,8 +178,7 @@ class ThemeEditorScreen extends ConsumerWidget {
                 _PaletteCard(
                   palette: palette,
                   selected:
-                      settings.accentColorValue ==
-                          palette.primary.toARGB32() &&
+                      settings.accentColorValue == palette.primary.toARGB32() &&
                       settings.backgroundColorValue ==
                           palette.background.toARGB32() &&
                       settings.panelColorValue == palette.panel.toARGB32(),
