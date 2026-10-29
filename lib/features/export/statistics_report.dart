@@ -182,6 +182,8 @@ Future<List<int>> buildStatisticsPdf({
                         ? '—'
                         : '${savings.toStringAsFixed(1)} %',
                   ),
+                  if (current.feeVes > 0)
+                    _infoRow('Comisiones', '${_money(current.feeVes)} Bs'),
                   if (current.skipped > 0)
                     _infoRow('Sin tasa', '${current.skipped} movimiento(s)'),
                 ],
@@ -212,6 +214,11 @@ Future<List<int>> buildStatisticsPdf({
                       ? '0,0 %'
                       : '${(entry.total / totalExpense * 100).toStringAsFixed(1)} %',
                 ],
+              [
+                'Total',
+                _money(totalExpense),
+                totalExpense <= 0 ? '0,0 %' : '100,0 %',
+              ],
             ],
             headerStyle: pw.TextStyle(
               fontWeight: pw.FontWeight.bold,
@@ -330,6 +337,7 @@ Future<List<int>> buildStatisticsPdf({
               'Fecha',
               'Tipo',
               'Monto',
+              'Comisión',
               'Mon.',
               'Cuenta',
               'Categoría',
@@ -341,6 +349,9 @@ Future<List<int>> buildStatisticsPdf({
                   DateFormat('dd/MM').format(transaction.date),
                   TransactionType.fromStorage(transaction.type).label,
                   _money(transaction.amount),
+                  transaction.feeAmount > 0
+                      ? _money(transaction.feeAmount)
+                      : '',
                   transaction.currency,
                   accountNames[transaction.accountId] ?? '',
                   transaction.categoryId == null
@@ -355,11 +366,15 @@ Future<List<int>> buildStatisticsPdf({
             ),
             cellStyle: const pw.TextStyle(fontSize: 7),
             headerDecoration: pw.BoxDecoration(color: PdfColors.grey300),
-            cellAlignments: {2: pw.Alignment.centerRight},
+            cellAlignments: {
+              2: pw.Alignment.centerRight,
+              3: pw.Alignment.centerRight,
+            },
             columnWidths: {
-              0: const pw.FixedColumnWidth(48),
-              2: const pw.FixedColumnWidth(58),
-              3: const pw.FixedColumnWidth(34),
+              0: const pw.FixedColumnWidth(44),
+              2: const pw.FixedColumnWidth(52),
+              3: const pw.FixedColumnWidth(50),
+              4: const pw.FixedColumnWidth(32),
             },
           ),
         if (monthTx.length > 40)

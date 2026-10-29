@@ -310,9 +310,8 @@ class _FeeEditorDialogState extends State<_FeeEditorDialog> {
     );
     _isActive = widget.initial?.isActive ?? true;
     _feeType = FeeType.fromStorage(initial?.feeType);
-    _appliesTo = initial == null
-        ? defaultFeeRuleTypes.toSet()
-        : feeRuleTypes(initial);
+    // Las comisiones bancarias solo se cobran en pagos móviles.
+    _appliesTo = const {TransactionType.pagoMovil};
   }
 
   static String _moneyField(double? value) =>
@@ -434,25 +433,23 @@ class _FeeEditorDialogState extends State<_FeeEditorDialog> {
               const SizedBox(height: 16),
               Text('Aplica a', style: Theme.of(context).textTheme.labelLarge),
               const SizedBox(height: 6),
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: [
-                  for (final type in TransactionType.values)
-                    FilterChip(
-                      label: Text(type.label),
-                      selected: _appliesTo.contains(type),
-                      onSelected: (selected) {
-                        setState(() {
-                          if (selected) {
-                            _appliesTo.add(type);
-                          } else {
-                            _appliesTo.remove(type);
-                          }
-                        });
-                      },
-                    ),
-                ],
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.secondaryContainer.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  'Solo Pago Móvil. Los egresos y transferencias nunca llevan '
+                  'comisión.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ),
               const SizedBox(height: 16),
               Text(

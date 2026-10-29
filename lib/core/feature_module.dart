@@ -83,27 +83,33 @@ class FeatureModule {
     core: true,
   );
 
+  /// Orden de la navegación. Los cuatro primeros aparecen en la barra
+  /// inferior; el resto se agrupa en «Más».
+  ///
+  /// «Analítica» va antes que «Cuentas» porque se consulta mucho más a menudo
+  /// que la creación de cuentas, que ya tiene su propio botón dentro de la
+  /// sección de cuentas.
   static const all = <FeatureModule>[
     dashboard,
     transactions,
-    accounts,
+    analytics,
     rates,
+    accounts,
     loans,
     goals,
     services,
-    analytics,
     settings,
   ];
 
   static const allIds = <String>[
     'dashboard',
     'transactions',
-    'accounts',
+    'analytics',
     'rates',
+    'accounts',
     'loans',
     'goals',
     'services',
-    'analytics',
     'settings',
   ];
 }

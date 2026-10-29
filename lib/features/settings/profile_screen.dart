@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/settings/app_settings.dart';
+import '../../data/models/currencies.dart';
 import '../../shared/widgets/profile_avatar.dart';
 
 /// Redimensiona la imagen elegida y la devuelve como PNG en base64.
@@ -40,27 +41,32 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   late final TextEditingController _nameController;
+  late final TextEditingController _bioController;
+  late String _baseCurrency;
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(
-      text: ref.read(appSettingsProvider).profileName,
-    );
+    final settings = ref.read(appSettingsProvider);
+    _nameController = TextEditingController(text: settings.profileName);
+    _bioController = TextEditingController(text: settings.profileBio);
+    _baseCurrency = settings.baseCurrency;
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _bioController.dispose();
     super.dispose();
   }
 
   Future<void> _saveName() async {
     setState(() => _saving = true);
-    await ref
-        .read(appSettingsProvider.notifier)
-        .setProfileName(_nameController.text);
+    final controller = ref.read(appSettingsProvider.notifier);
+    await controller.setProfileName(_nameController.text);
+    await controller.setProfileBio(_bioController.text);
+    await controller.setBaseCurrency(_baseCurrency);
     if (!mounted) return;
     setState(() => _saving = false);
     ScaffoldMessenger.of(context)
@@ -133,14 +139,43 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   TextField(
                     controller: _nameController,
                     textCapitalization: TextCapitalization.words,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _saveName(),
+                    textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
                       labelText: 'Nombre',
                       hintText: '¿Cómo te llamas?',
                     ),
                   ),
                   const SizedBox(height: 12),
+                  TextField(
+                    controller: _bioController,
+                    textCapitalization: TextCapitalization.sentences,
+                    maxLines: 3,
+                    maxLength: 160,
+                    decoration: const InputDecoration(
+                      labelText: 'Biografía corta',
+                      hintText: 'Ej.: Ahorrando para mi primer viaje',
+                      alignLabelWithHint: true,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  DropdownButtonFormField<String>(
+                    initialValue: _baseCurrency,
+                    decoration: const InputDecoration(
+                      labelText: 'Moneda base',
+                      helperText: 'Se usa para mostrar equivalencias',
+                    ),
+                    items: [
+                      for (final code in commonCurrencies)
+                        DropdownMenuItem(
+                          value: code,
+                          child: Text('$code · ${currencySymbol(code)}'),
+                        ),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) setState(() => _baseCurrency = value);
+                    },
+                  ),
+                  const SizedBox(height: 16),
                   FilledButton.icon(
                     onPressed: _saving ? null : _saveName,
                     icon: const Icon(Icons.check),
@@ -154,8 +189,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text(
-              'Tu nombre y tu foto se muestran en el inicio y se guardan solo '
-              'en este dispositivo.',
+              'Tu nombre, foto, biografía y moneda base se guardan solo en este '
+              'dispositivo.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

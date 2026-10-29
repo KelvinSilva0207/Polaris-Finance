@@ -101,14 +101,22 @@ class HomeShell extends ConsumerWidget {
 
   /// Si el usuario desactiva el módulo en el que está, vuelve al inicio en
   /// lugar de mostrar una sección que ya no existe en la navegación.
+  ///
+  /// Ajustes nunca se redirige: desde ahí se activan y desactivan módulos, y
+  /// el usuario debe permanecer en la misma pantalla mientras los cambia.
   void _redirectIfDisabled(BuildContext context, List<FeatureModule> modules) {
+    if (currentPath == FeatureModule.settings.route) return;
     final isModuleRoute = FeatureModule.all.any(
       (module) => module.route == currentPath,
     );
     final isVisible = modules.any((module) => module.route == currentPath);
     if (!isModuleRoute || isVisible) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (context.mounted) context.go(FeatureModule.dashboard.route);
+      if (!context.mounted) return;
+      // La ruta pudo cambiar mientras se programaba el callback.
+      final location = GoRouterState.of(context).uri.path;
+      if (location != currentPath) return;
+      context.go(FeatureModule.dashboard.route);
     });
   }
 

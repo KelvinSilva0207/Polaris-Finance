@@ -4,7 +4,9 @@ import 'package:intl/intl.dart';
 
 import '../../data/database/app_database.dart';
 import '../../data/database/database_providers.dart';
+import '../../data/models/currencies.dart';
 import '../../data/models/enums.dart';
+import '../../shared/utils/amount_format.dart';
 import '../../shared/utils/transaction_filter.dart';
 import '../../shared/utils/transaction_math.dart';
 import '../../shared/widgets/amount_text.dart';
@@ -186,6 +188,19 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                                   Text(
                                     '${account?.name ?? 'Cuenta'} · ${DateFormat('dd/MM/yyyy HH:mm').format(transaction.date)}',
                                   ),
+                                  if (transaction.feeAmount > 0)
+                                    Text(
+                                      'Comisión: ${formatVeNumber(transaction.feeAmount)} ${currencySymbol(transaction.currency)}',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
                                   if (tags.isNotEmpty)
                                     Text(
                                       tags.map((t) => '#$t').join(' '),

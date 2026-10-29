@@ -53,10 +53,10 @@ abstract final class AppTheme {
   static const border = Color(0xFF232A3A);
 
   // Tema claro suave: evita el blanco puro para descansar la vista.
-  static const lightBackground = Color(0xFFF4F6FA);
-  static const lightSurface = Color(0xFFFDFDFE);
-  static const lightInput = Color(0xFFEFF2F7);
-  static const lightBorder = Color(0xFFE2E7F0);
+  static const lightBackground = Color(0xFFF5F7FA);
+  static const lightSurface = Color(0xFFF9FAFC);
+  static const lightInput = Color(0xFFEDF1F7);
+  static const lightBorder = Color(0xFFE0E6EF);
 
   /// Aplica la tipografía elegida sobre un tema base. [family] null mantiene la
   /// fuente del sistema.
@@ -79,20 +79,21 @@ abstract final class AppTheme {
     String? fontFamily,
     Color? secondary,
     Color? background,
+    Color? panel,
   }) {
     final base = ColorScheme.fromSeed(
       seedColor: seed,
       brightness: Brightness.dark,
     );
     final canvas = background ?? AppTheme.background;
-    final raised = Color.alphaBlend(
+    final panelBase = panel ?? Color.alphaBlend(
       Colors.white.withValues(alpha: 0.035),
       canvas,
     );
-    final elevated = Color.alphaBlend(
-      Colors.white.withValues(alpha: 0.06),
-      canvas,
-    );
+    final raised = panelBase;
+    final elevated = panel == null
+        ? Color.alphaBlend(Colors.white.withValues(alpha: 0.06), canvas)
+        : Color.alphaBlend(Colors.white.withValues(alpha: 0.02), panelBase);
     final line = Color.alphaBlend(Colors.white.withValues(alpha: 0.12), canvas);
     final scheme = base.copyWith(
       primary: seed,
@@ -146,9 +147,9 @@ abstract final class AppTheme {
         ),
       ),
       dividerTheme: DividerThemeData(color: line),
-      listTileTheme: const ListTileThemeData(
-        iconColor: Colors.white70,
-        textColor: Colors.white,
+      listTileTheme: ListTileThemeData(
+        iconColor: scheme.onSurfaceVariant,
+        textColor: scheme.onSurface,
       ),
       dialogTheme: DialogThemeData(backgroundColor: elevated),
       snackBarTheme: SnackBarThemeData(
@@ -157,7 +158,7 @@ abstract final class AppTheme {
           Colors.white.withValues(alpha: 0.08),
           canvas,
         ),
-        contentTextStyle: const TextStyle(color: Colors.white),
+        contentTextStyle: TextStyle(color: scheme.onSurface),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -175,17 +176,23 @@ abstract final class AppTheme {
     return _withFont(theme, fontFamily);
   }
 
-  static ThemeData light(Color seed, {String? fontFamily, Color? secondary}) {
+  static ThemeData light(
+    Color seed, {
+    String? fontFamily,
+    Color? secondary,
+    Color? panel,
+  }) {
     final base = ColorScheme.fromSeed(
       seedColor: seed,
       brightness: Brightness.light,
     );
+    final surface = panel ?? lightSurface;
     final scheme = base.copyWith(
       primary: seed,
       secondary: secondary ?? base.secondary,
-      surface: lightSurface,
+      surface: surface,
       surfaceContainerLowest: lightBackground,
-      surfaceContainerLow: lightSurface,
+      surfaceContainerLow: surface,
       surfaceContainer: lightInput,
       surfaceContainerHigh: lightInput,
       surfaceContainerHighest: lightInput,
@@ -202,15 +209,15 @@ abstract final class AppTheme {
         scrolledUnderElevation: 0,
         centerTitle: false,
       ),
-      navigationBarTheme: const NavigationBarThemeData(
-        backgroundColor: lightSurface,
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: surface,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       ).copyWith(indicatorColor: scheme.primary.withValues(alpha: 0.16)),
-      navigationRailTheme: const NavigationRailThemeData(
-        backgroundColor: lightSurface,
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: surface,
       ).copyWith(indicatorColor: scheme.primary.withValues(alpha: 0.16)),
       cardTheme: CardThemeData(
-        color: lightSurface,
+        color: surface,
         elevation: 0,
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
@@ -227,7 +234,7 @@ abstract final class AppTheme {
         ),
       ),
       dividerTheme: const DividerThemeData(color: lightBorder),
-      dialogTheme: const DialogThemeData(backgroundColor: lightSurface),
+      dialogTheme: DialogThemeData(backgroundColor: surface),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

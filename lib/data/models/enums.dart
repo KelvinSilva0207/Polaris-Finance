@@ -86,11 +86,11 @@ Set<TransactionType> decodeFeeRuleTypes(String? value) {
 }
 
 /// Tipos de transacción que admiten comisión por defecto.
-const defaultFeeRuleTypes = <TransactionType>[
-  TransactionType.expense,
-  TransactionType.pagoMovil,
-  TransactionType.transfer,
-];
+///
+/// Las comisiones bancarias (pago móvil) solo se descuentan cuando el
+/// movimiento es explícitamente de tipo [TransactionType.pagoMovil]. Nunca se
+/// aplican a egresos generales ni a transferencias.
+const defaultFeeRuleTypes = <TransactionType>[TransactionType.pagoMovil];
 
 /// Como se calcula la comisión de una regla.
 ///

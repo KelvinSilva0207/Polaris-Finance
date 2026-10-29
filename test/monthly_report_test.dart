@@ -72,6 +72,7 @@ void main() {
 
     expect(report.incomeVes, 1000);
     expect(report.expenseVes, 105);
+    expect(report.feeVes, 5);
     expect(report.balanceVes, 895);
     expect(report.transactionCount, 2);
     expect(report.expensesByCategory.single.label, 'Comida');

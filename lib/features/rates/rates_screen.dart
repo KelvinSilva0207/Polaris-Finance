@@ -255,6 +255,35 @@ class _RatesScreenState extends ConsumerState<RatesScreen> {
                           ],
                         ),
                         const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary
+                                .withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '1 EUR = ${formatVeNumber(bcv.rate / eur.rate)} VES',
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Tasa EUR/USD ${formatVeNumber(eur.rate)} · '
+                                'BCV ${formatVeNumber(bcv.rate)} VES/USD',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         _ConversionRow(
                           label: '1 EUR',
                           value: '${formatVeNumber(bcv.rate / eur.rate)} VES',
@@ -273,6 +302,12 @@ class _RatesScreenState extends ConsumerState<RatesScreen> {
                           hint: 'tasa BCV',
                         ),
                         const SizedBox(height: 8),
+                        Text(
+                          'Actualizado: EUR ${DateFormat('dd/MM HH:mm').format(eur.date)} · '
+                          'BCV ${DateFormat('dd/MM HH:mm').format(bcv.date)}',
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                        const SizedBox(height: 4),
                         Text(
                           'El euro se convierte con la tasa de referencia '
                           'USD/EUR y la tasa BCV.',

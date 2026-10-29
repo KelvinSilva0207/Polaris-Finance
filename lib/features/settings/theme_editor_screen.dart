@@ -52,6 +52,79 @@ const themeBackgroundPresets = <AccentPreset>[
   AccentPreset('Sepia', Color(0xFF17120C)),
 ];
 
+const themePanelPresets = <AccentPreset>[
+  AccentPreset('Polar', Color(0xFF12151D)),
+  AccentPreset('Grafito', Color(0xFF1C1C1C)),
+  AccentPreset('Noche azul', Color(0xFF131C2E)),
+  AccentPreset('Violeta', Color(0xFF1A1226)),
+  AccentPreset('Bosque', Color(0xFF12211A)),
+  AccentPreset('Vino', Color(0xFF261216)),
+  AccentPreset('Petróleo', Color(0xFF0E252B)),
+  AccentPreset('Sepia', Color(0xFF251D13)),
+];
+
+/// Combinaciones completas de colores para aplicar con un toque.
+class ThemePalette {
+  const ThemePalette({
+    required this.label,
+    required this.primary,
+    required this.secondary,
+    required this.background,
+    required this.panel,
+  });
+
+  final String label;
+  final Color primary;
+  final Color secondary;
+  final Color background;
+  final Color panel;
+}
+
+const themePalettes = <ThemePalette>[
+  ThemePalette(
+    label: 'Polar',
+    primary: Color(0xFF9C6BFF),
+    secondary: Color(0xFF00BCD4),
+    background: Color(0xFF0B0E14),
+    panel: Color(0xFF12151D),
+  ),
+  ThemePalette(
+    label: 'Océano',
+    primary: Color(0xFF42A5F5),
+    secondary: Color(0xFF4DD0E1),
+    background: Color(0xFF07121C),
+    panel: Color(0xFF0E1E2B),
+  ),
+  ThemePalette(
+    label: 'Bosque',
+    primary: Color(0xFF66BB6A),
+    secondary: Color(0xFF26A69A),
+    background: Color(0xFF0B1410),
+    panel: Color(0xFF12211A),
+  ),
+  ThemePalette(
+    label: 'Atardecer',
+    primary: Color(0xFFFF7043),
+    secondary: Color(0xFFFFB300),
+    background: Color(0xFF170B0D),
+    panel: Color(0xFF261216),
+  ),
+  ThemePalette(
+    label: 'Lavanda',
+    primary: Color(0xFFB39DDB),
+    secondary: Color(0xFFF48FB1),
+    background: Color(0xFF100B18),
+    panel: Color(0xFF1A1226),
+  ),
+  ThemePalette(
+    label: 'Grafito',
+    primary: Color(0xFF90A4AE),
+    secondary: Color(0xFF00BCD4),
+    background: Color(0xFF141414),
+    panel: Color(0xFF1C1C1C),
+  ),
+];
+
 class ThemeEditorScreen extends ConsumerWidget {
   const ThemeEditorScreen({super.key});
 
@@ -87,6 +160,7 @@ class ThemeEditorScreen extends ConsumerWidget {
               controller.setBackgroundColor(
                 AppSettingsState.defaults.backgroundColor,
               );
+              controller.setPanelColor(AppSettingsState.defaults.panelColor);
             },
           ),
         ],
@@ -94,6 +168,31 @@ class ThemeEditorScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          Text('Paletas', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (final palette in themePalettes)
+                _PaletteCard(
+                  palette: palette,
+                  selected:
+                      settings.accentColorValue ==
+                          palette.primary.toARGB32() &&
+                      settings.backgroundColorValue ==
+                          palette.background.toARGB32() &&
+                      settings.panelColorValue == palette.panel.toARGB32(),
+                  onTap: () => controller.applyPalette(
+                    primary: palette.primary,
+                    secondary: palette.secondary,
+                    background: palette.background,
+                    panel: palette.panel,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
           Text('Vista previa', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           Theme(
@@ -102,6 +201,7 @@ class ThemeEditorScreen extends ConsumerWidget {
                     settings.accentColor,
                     secondary: settings.secondaryColor,
                     background: settings.backgroundColor,
+                    panel: settings.panelColor,
                   )
                 : AppTheme.light(
                     settings.accentColor,
@@ -131,6 +231,15 @@ class ThemeEditorScreen extends ConsumerWidget {
             minValue: 0.02,
             maxValue: 0.25,
             onChanged: controller.setBackgroundColor,
+          ),
+          const SizedBox(height: 16),
+          _ColorSection(
+            title: 'Panel y tarjetas (modo oscuro)',
+            value: settings.panelColor,
+            presets: themePanelPresets,
+            minValue: 0.02,
+            maxValue: 0.3,
+            onChanged: controller.setPanelColor,
           ),
           const SizedBox(height: 20),
           Text('Modo', style: Theme.of(context).textTheme.titleMedium),
@@ -168,6 +277,80 @@ class ThemeEditorScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _PaletteCard extends StatelessWidget {
+  const _PaletteCard({
+    required this.palette,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final ThemePalette palette;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        width: 118,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: palette.background,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected
+                ? palette.primary
+                : theme.colorScheme.outlineVariant,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _dot(palette.primary),
+                const SizedBox(width: 4),
+                _dot(palette.secondary),
+                const SizedBox(width: 4),
+                _dot(palette.panel),
+                const Spacer(),
+                if (selected)
+                  Icon(Icons.check, size: 14, color: palette.primary),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Container(
+              height: 24,
+              decoration: BoxDecoration(
+                color: palette.panel,
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              palette.label,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _dot(Color color) => Container(
+    width: 14,
+    height: 14,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
 }
 
 class _ColorSection extends StatefulWidget {

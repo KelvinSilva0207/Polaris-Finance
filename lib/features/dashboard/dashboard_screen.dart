@@ -119,13 +119,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
         ],
       ),
-      floatingActionButton: hasAccounts && !_reordering
-          ? FloatingActionButton.extended(
-              onPressed: () => _openAccountEditor(context),
-              icon: const Icon(Icons.add),
-              label: const Text('Cuenta'),
-            )
-          : null,
+      // La creación de cuentas vive en la sección «Cuentas», que tiene su
+      // propio botón. Evitamos duplicar la acción aquí.
       body: accountsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text(error.toString())),

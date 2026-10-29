@@ -23,8 +23,14 @@ void main() {
     final loan = _loan(paid: 250);
     expect(loanProgress(loan), closeTo(0.25, 1e-9));
     expect(loanProgressPercent(loan), 25);
-    expect(loanProgressLabel(loan), '25% pagado');
+    expect(loanProgressLabel(loan), '25.0% pagado');
     expect(isLoanSettled(loan), isFalse);
+  });
+
+  test('muestra el porcentaje con un decimal', () {
+    final loan = _loan(paid: 755);
+    expect(loanProgressPercentValue(loan), 75.5);
+    expect(loanProgressLabel(loan), '75.5% pagado');
   });
 
   test('redondea el porcentaje al entero más cercano', () {

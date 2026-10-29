@@ -10,8 +10,11 @@ const _moduleKeyPrefix = 'module_';
 const _accentKey = 'accent_color';
 const _secondaryColorKey = 'secondary_color';
 const _backgroundColorKey = 'background_color';
+const _panelColorKey = 'panel_color';
 const _profileNameKey = 'profile_name';
 const _profileAvatarKey = 'profile_avatar';
+const _profileBioKey = 'profile_bio';
+const _baseCurrencyKey = 'base_currency';
 const _customFontNameKey = 'custom_font_name';
 const _notifyUpdatesKey = 'notify_updates';
 const _providerKey = 'rate_provider';
@@ -59,6 +62,7 @@ class AppSettingsState {
     this.accentColorValue = 0xFF9C6BFF,
     this.secondaryColorValue = 0xFF00BCD4,
     this.backgroundColorValue = 0xFF0B0E14,
+    this.panelColorValue = 0xFF12151D,
     this.referenceProvider = RateProvider.bcv,
     this.hideBalances = false,
     this.themeMode = ThemeMode.system,
@@ -72,6 +76,8 @@ class AppSettingsState {
     this.customFontName = '',
     this.profileName = '',
     this.profileAvatar = '',
+    this.profileBio = '',
+    this.baseCurrency = 'VES',
     this.dashboardOrder = dashboardSectionIds,
   });
 
@@ -81,6 +87,7 @@ class AppSettingsState {
   final int accentColorValue;
   final int secondaryColorValue;
   final int backgroundColorValue;
+  final int panelColorValue;
   final RateProvider referenceProvider;
   final bool hideBalances;
   final ThemeMode themeMode;
@@ -94,6 +101,8 @@ class AppSettingsState {
   final String customFontName;
   final String profileName;
   final String profileAvatar;
+  final String profileBio;
+  final String baseCurrency;
   final List<String> dashboardOrder;
 
   Color get accentColor => Color(accentColorValue);
@@ -101,6 +110,8 @@ class AppSettingsState {
   Color get secondaryColor => Color(secondaryColorValue);
 
   Color get backgroundColor => Color(backgroundColorValue);
+
+  Color get panelColor => Color(panelColorValue);
 
   /// Familia tipográfica de Google Fonts a aplicar (null = fuente del sistema).
   String? get fontFamily => AppFonts.familyOf(fontId);
@@ -126,6 +137,8 @@ class AppSettingsState {
           prefs.getInt(_secondaryColorKey) ?? defaults.secondaryColorValue,
       backgroundColorValue:
           prefs.getInt(_backgroundColorKey) ?? defaults.backgroundColorValue,
+      panelColorValue:
+          prefs.getInt(_panelColorKey) ?? defaults.panelColorValue,
       referenceProvider: RateProvider.fromStorage(
         prefs.getString(_providerKey),
       ),
@@ -145,6 +158,8 @@ class AppSettingsState {
       customFontName: prefs.getString(_customFontNameKey) ?? '',
       profileName: prefs.getString(_profileNameKey) ?? '',
       profileAvatar: prefs.getString(_profileAvatarKey) ?? '',
+      profileBio: prefs.getString(_profileBioKey) ?? '',
+      baseCurrency: prefs.getString(_baseCurrencyKey) ?? 'VES',
       dashboardOrder: [
         for (final id in storedOrder)
           if (dashboardSectionIds.contains(id)) id,
@@ -159,6 +174,7 @@ class AppSettingsState {
     int? accentColorValue,
     int? secondaryColorValue,
     int? backgroundColorValue,
+    int? panelColorValue,
     RateProvider? referenceProvider,
     bool? hideBalances,
     ThemeMode? themeMode,
@@ -172,6 +188,8 @@ class AppSettingsState {
     String? customFontName,
     String? profileName,
     String? profileAvatar,
+    String? profileBio,
+    String? baseCurrency,
     List<String>? dashboardOrder,
   }) {
     return AppSettingsState(
@@ -179,6 +197,7 @@ class AppSettingsState {
       accentColorValue: accentColorValue ?? this.accentColorValue,
       secondaryColorValue: secondaryColorValue ?? this.secondaryColorValue,
       backgroundColorValue: backgroundColorValue ?? this.backgroundColorValue,
+      panelColorValue: panelColorValue ?? this.panelColorValue,
       referenceProvider: referenceProvider ?? this.referenceProvider,
       hideBalances: hideBalances ?? this.hideBalances,
       themeMode: themeMode ?? this.themeMode,
@@ -192,6 +211,8 @@ class AppSettingsState {
       customFontName: customFontName ?? this.customFontName,
       profileName: profileName ?? this.profileName,
       profileAvatar: profileAvatar ?? this.profileAvatar,
+      profileBio: profileBio ?? this.profileBio,
+      baseCurrency: baseCurrency ?? this.baseCurrency,
       dashboardOrder: dashboardOrder ?? this.dashboardOrder,
     );
   }
@@ -235,6 +256,32 @@ class AppSettingsController extends Notifier<AppSettingsState> {
     await prefs.setInt(_backgroundColorKey, color.toARGB32());
   }
 
+  Future<void> setPanelColor(Color color) async {
+    final prefs = await SharedPreferences.getInstance();
+    state = state.copyWith(panelColorValue: color.toARGB32());
+    await prefs.setInt(_panelColorKey, color.toARGB32());
+  }
+
+  /// Aplica una paleta completa (principal, secundario, fondo y panel).
+  Future<void> applyPalette({
+    required Color primary,
+    required Color secondary,
+    required Color background,
+    required Color panel,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    state = state.copyWith(
+      accentColorValue: primary.toARGB32(),
+      secondaryColorValue: secondary.toARGB32(),
+      backgroundColorValue: background.toARGB32(),
+      panelColorValue: panel.toARGB32(),
+    );
+    await prefs.setInt(_accentKey, primary.toARGB32());
+    await prefs.setInt(_secondaryColorKey, secondary.toARGB32());
+    await prefs.setInt(_backgroundColorKey, background.toARGB32());
+    await prefs.setInt(_panelColorKey, panel.toARGB32());
+  }
+
   Future<void> setProfileName(String value) async {
     final prefs = await SharedPreferences.getInstance();
     final name = value.trim();
@@ -246,6 +293,19 @@ class AppSettingsController extends Notifier<AppSettingsState> {
     final prefs = await SharedPreferences.getInstance();
     state = state.copyWith(profileAvatar: base64Image);
     await prefs.setString(_profileAvatarKey, base64Image);
+  }
+
+  Future<void> setProfileBio(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    final bio = value.trim();
+    state = state.copyWith(profileBio: bio);
+    await prefs.setString(_profileBioKey, bio);
+  }
+
+  Future<void> setBaseCurrency(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    state = state.copyWith(baseCurrency: value);
+    await prefs.setString(_baseCurrencyKey, value);
   }
 
   Future<void> setReferenceProvider(RateProvider provider) async {

@@ -11,6 +11,15 @@ import 'package:polaris_finance/features/export/export_screen.dart';
 
 void main() {
   Future<void> openFromMore(WidgetTester tester, String label) async {
+    // Los módulos principales viven en la barra inferior; el resto, en «Más».
+    const primary = ['Inicio', 'Movimientos', 'Analítica', 'Monedas'];
+    if (primary.contains(label)) {
+      await tester.tap(find.byTooltip(label));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      return;
+    }
     await tester.tap(find.text('Más'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));

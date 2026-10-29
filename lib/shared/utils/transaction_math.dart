@@ -212,8 +212,12 @@ Set<TransactionType> feeRuleTypes(FeeRule rule) =>
     decodeFeeRuleTypes(rule.appliesTo);
 
 /// Indica si la regla de comisión aplica al tipo de transacción dado.
+///
+/// Por diseño, las comisiones bancarias solo se descuentan en pagos móviles:
+/// un egreso general nunca debe llevar comisión, aunque una regla antigua
+/// hubiera sido configurada para egresos.
 bool feeRuleAppliesTo(FeeRule rule, TransactionType type) =>
-    feeRuleTypes(rule).contains(type);
+    type == TransactionType.pagoMovil && feeRuleTypes(rule).contains(type);
 
 /// Resumen legible de una regla de comisión, para las listas y el formulario.
 String feeRuleSummary(FeeRule rule) {

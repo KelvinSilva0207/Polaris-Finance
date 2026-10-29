@@ -113,7 +113,15 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   /// Mantiene la regla de comisión coherente con el tipo de transacción:
   /// si la seleccionada deja de aplicar, se elige la primera que aplique
   /// (por ejemplo, al marcar *Pago Móvil* se toma el perfil de ese banco).
+  ///
+  /// Las comisiones solo existen para *Pago Móvil*: en cualquier otro tipo se
+  /// limpia la selección para que nunca se descuente una comisión de un
+  /// egreso o una transferencia normal.
   void _syncFeeRuleWithType() {
+    if (_type != TransactionType.pagoMovil) {
+      _feeRuleId = null;
+      return;
+    }
     final rules = ref.read(feeRulesProvider).value ?? const [];
     final applicable = rules
         .where((rule) => rule.isActive && feeRuleAppliesTo(rule, _type))
@@ -247,9 +255,11 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     );
     final eurRate = latestEurRate(rates);
     double feeAmount = 0;
-    if (_feeRuleId != null) {
+    if (_type == TransactionType.pagoMovil && _feeRuleId != null) {
       for (final rule in feeRules) {
-        if (rule.isActive && rule.id == _feeRuleId) {
+        if (rule.isActive &&
+            rule.id == _feeRuleId &&
+            feeRuleAppliesTo(rule, _type)) {
           feeAmount = feeFor(
             rule,
             amount,
@@ -341,12 +351,14 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   }
 
   List<Widget> _buildFeeSection(Account? source) {
+    // Las comisiones bancarias solo aplican a pagos móviles. En egresos y
+    // transferencias no se muestra ni se descuenta ninguna comisión.
+    if (_type != TransactionType.pagoMovil) return const [];
     final feeRules = ref.watch(feeRulesProvider).value ?? const [];
     final activeFeeRules = feeRules
         .where((r) => r.isActive && feeRuleAppliesTo(r, _type))
         .toList();
     if (activeFeeRules.isEmpty) {
-      if (_type == TransactionType.income) return const [];
       return [
         Align(
           alignment: Alignment.centerLeft,
@@ -357,7 +369,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
               ),
             ),
             icon: const Icon(Icons.sell_outlined, size: 18),
-            label: Text('Agregar comisión para ${_type.label}'),
+            label: const Text('Agregar comisión para Pago Móvil'),
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               visualDensity: VisualDensity.compact,
@@ -396,7 +408,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       DropdownButtonFormField<String>(
         key: ValueKey('fee-${selectedRule?.id ?? 'none'}'),
         initialValue: selectedRule?.id,
-        decoration: const InputDecoration(labelText: 'Comisión'),
+        decoration: const InputDecoration(labelText: 'Comisión del banco'),
         hint: const Text('Sin comisión'),
         items: [
           const DropdownMenuItem(value: _noneFee, child: Text('Sin comisión')),
@@ -406,15 +418,26 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         onChanged: (value) =>
             setState(() => _feeRuleId = value == _noneFee ? null : value),
       ),
-      if (estimatedFee != null)
-        Padding(
-          padding: const EdgeInsets.only(top: 8, left: 4),
-          child: Text(
-            'Comisión estimada: ${formatVeNumber(estimatedFee)} ${currencySymbol(accountCurrency)}',
-            style: Theme.of(context).textTheme.bodySmall
-                ?.copyWith(color: Theme.of(context).colorScheme.primary),
-          ),
+      if (selectedRule != null) ...[
+        const SizedBox(height: 6),
+        Text(
+          feeRuleSummary(selectedRule),
+          style: Theme.of(context).textTheme.labelSmall,
         ),
+        if (estimatedFee != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, left: 0),
+            child: Text(
+              'Comisión exacta: ${formatVeNumber(estimatedFee)} '
+              '${currencySymbol(accountCurrency)} · se descuenta aparte del '
+              'monto enviado',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+      ],
     ];
   }
 
@@ -459,13 +482,13 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         : accounts.firstWhere((a) => a.id == _destinationAccountId);
     if (sourceAcc == null || destAcc == null) {
       return const Text(
-        'Sin cuenta destino: el dinero sale de la cuenta de origen (se descuenta el monto y la comisión).',
+        'Sin cuenta destino: el dinero sale de la cuenta de origen.',
         style: TextStyle(fontSize: 12),
       );
     }
     if (sourceAcc.currency == destAcc.currency) {
       return const Text(
-        'Mismo monto: ambas cuentas usan la misma moneda, no se convierte. La comisión se descuenta aparte.',
+        'Mismo monto: ambas cuentas usan la misma moneda, no se convierte.',
         style: TextStyle(fontSize: 12),
       );
     }
@@ -502,6 +525,18 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   @override
   Widget build(BuildContext context) {
     final accountsAsync = ref.watch(accountsProvider);
+    // Las reglas de comisión se cargan de forma asíncrona: si el usuario ya
+    // marcó *Pago Móvil* antes de que lleguen, se selecciona el perfil por
+    // defecto en cuanto están disponibles.
+    ref.listen(feeRulesProvider, (previous, next) {
+      if (!next.hasValue || _type != TransactionType.pagoMovil) return;
+      if (_feeRuleId != null) return;
+      final applicable = next.value!
+          .where((rule) => rule.isActive && feeRuleAppliesTo(rule, _type))
+          .toList();
+      if (applicable.isEmpty) return;
+      setState(() => _feeRuleId = applicable.first.id);
+    });
 
     return Scaffold(
       appBar: AppBar(

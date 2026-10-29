@@ -41,7 +41,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     // El perfil del BDV solo aplica a pago móvil: en un egreso no aparece.
-    expect(find.text('Comisión'), findsNothing);
+    expect(find.text('Comisión del banco'), findsNothing);
 
     await tester.ensureVisible(find.text('Pago Móvil'));
     await tester.pump();
@@ -49,7 +49,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.text('Comisión'), findsOneWidget);
+    expect(find.text('Comisión del banco'), findsOneWidget);
     expect(find.text('Pago móvil (BDV)'), findsOneWidget);
 
     // 1.000 Bs → 14 Bs de comisión (monto fijo por debajo de 5.000).
@@ -57,13 +57,13 @@ void main() {
     await tester.enterText(find.widgetWithText(TextField, 'Monto'), '100000');
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.textContaining('14,00'), findsOneWidget);
+    expect(find.textContaining('Comisión exacta: 14,00'), findsOneWidget);
 
     // 10.000 Bs → 0,30 % de la operación.
     await tester.enterText(find.widgetWithText(TextField, 'Monto'), '1000000');
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.textContaining('30,00'), findsOneWidget);
+    expect(find.textContaining('Comisión exacta: 30,00'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 100));

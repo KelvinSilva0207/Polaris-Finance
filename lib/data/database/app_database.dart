@@ -961,6 +961,46 @@ class AppDatabase extends _$AppDatabase {
       ),
     );
     await _logChange('rates', row.id, row.toJson());
+    // La tasa se consulta cada minuto: sin poda el historial crecería sin
+    // límite. Se conservan los últimos [keepDays] días y la fila más reciente
+    // de cada combinación aunque sea más antigua.
+    await pruneRateHistory();
+  }
+
+  /// Elimina tasas antiguas para mantener la base de datos ligera.
+  ///
+  /// Conserva los últimos [keepDays] días de historial y, para cada
+  /// combinación `código + proveedor + rateCode`, la fila más reciente aunque
+  /// quede fuera del rango (así el valor vigente nunca se pierde).
+  Future<int> pruneRateHistory({int keepDays = 180}) async {
+    if (keepDays <= 0) return 0;
+    final cutoff = DateTime.now().subtract(Duration(days: keepDays));
+    final all = await select(currencyRates).get();
+    if (all.isEmpty) return 0;
+
+    final latestByGroup = <String, CurrencyRate>{};
+    for (final row in all) {
+      final key = '${row.code}|${row.rateCode}|${row.provider}';
+      final current = latestByGroup[key];
+      if (current == null || row.date.isAfter(current.date)) {
+        latestByGroup[key] = row;
+      }
+    }
+
+    final stale = all.where((row) {
+      if (!row.date.isBefore(cutoff)) return false;
+      final key = '${row.code}|${row.rateCode}|${row.provider}';
+      return latestByGroup[key]?.id != row.id;
+    }).toList();
+    if (stale.isEmpty) return 0;
+
+    await transaction(() async {
+      for (final row in stale) {
+        await (delete(currencyRates)..where((t) => t.id.equals(row.id))).go();
+        await _logChange('rates', row.id, const {}, deleted: true);
+      }
+    });
+    return stale.length;
   }
 
   Future<void> deleteRates() async {

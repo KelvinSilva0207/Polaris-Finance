@@ -26,6 +26,7 @@ class MonthlyReportData {
     required this.month,
     required this.incomeVes,
     required this.expenseVes,
+    required this.feeVes,
     required this.expensesByCategory,
     required this.skipped,
     required this.transactionCount,
@@ -34,6 +35,9 @@ class MonthlyReportData {
   final DateTime month;
   final double incomeVes;
   final double expenseVes;
+
+  /// Comisiones bancarias del periodo convertidas a bolívares.
+  final double feeVes;
   final List<({String label, int colorValue, double total})> expensesByCategory;
   final int skipped;
   final int transactionCount;
@@ -59,6 +63,7 @@ MonthlyReportData computeMonthlyReport({
 
   var income = 0.0;
   var expense = 0.0;
+  var fees = 0.0;
   var skipped = 0;
   var count = 0;
   final byCategory = <String, double>{};
@@ -84,6 +89,17 @@ MonthlyReportData computeMonthlyReport({
     if (value == null) {
       skipped++;
       continue;
+    }
+    if (transaction.feeAmount > 0) {
+      fees +=
+          convertBetween(
+            transaction.feeAmount,
+            transaction.currency,
+            'VES',
+            vesPerUsd: vesPerUsd,
+            eurPerUsd: eurPerUsd,
+          ) ??
+          0;
     }
     if (type == TransactionType.income) {
       income += value;
@@ -117,6 +133,7 @@ MonthlyReportData computeMonthlyReport({
     month: monthStart,
     incomeVes: income,
     expenseVes: expense,
+    feeVes: fees,
     expensesByCategory: byCategoryList,
     skipped: skipped,
     transactionCount: count,

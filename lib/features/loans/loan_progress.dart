@@ -9,9 +9,15 @@ double loanProgress(Loan loan) {
 /// Porcentaje entero pagado, listo para mostrar.
 int loanProgressPercent(Loan loan) => (loanProgress(loan) * 100).round();
 
+/// Porcentaje con un decimal, para que el avance se vea con precisión
+/// (por ejemplo, `75.5%`).
+double loanProgressPercentValue(Loan loan) =>
+    double.parse((loanProgress(loan) * 100).toStringAsFixed(1));
+
 /// `true` cuando el monto pagado cubre el total del préstamo.
 bool isLoanSettled(Loan loan) => loanProgress(loan) >= 0.999;
 
-/// Texto corto: `Liquidado` o `62% pagado`.
-String loanProgressLabel(Loan loan) =>
-    isLoanSettled(loan) ? 'Liquidado' : '${loanProgressPercent(loan)}% pagado';
+/// Texto corto: `Liquidado` o `62.5% pagado`.
+String loanProgressLabel(Loan loan) => isLoanSettled(loan)
+    ? 'Liquidado'
+    : '${loanProgressPercentValue(loan).toStringAsFixed(1)}% pagado';

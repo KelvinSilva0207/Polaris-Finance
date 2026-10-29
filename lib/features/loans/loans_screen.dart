@@ -105,195 +105,246 @@ class LoansScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final loansAsync = ref.watch(loansProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Préstamos')),
-      floatingActionButton: FloatingActionButton(
-        tooltip: 'Nuevo préstamo',
-        onPressed: () => _create(context, ref),
-        child: const Icon(Icons.add),
-      ),
-      body: loansAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text(error.toString())),
-        data: (loans) {
-          if (loans.isEmpty) {
-            return Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.request_quote_outlined, size: 72),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Aún no hay préstamos',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Deudas a pagar (Debo) y dinero que prestas (Me deben).',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    FilledButton.icon(
-                      onPressed: () => _create(context, ref),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Crear préstamo'),
-                    ),
-                  ],
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Préstamos'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Pendientes'),
+              Tab(text: 'Pagados / Liquidados'),
+            ],
+          ),
+        ),
+        floatingActionButton: FloatingActionButton(
+          tooltip: 'Nuevo préstamo',
+          onPressed: () => _create(context, ref),
+          child: const Icon(Icons.add),
+        ),
+        body: loansAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) => Center(child: Text(error.toString())),
+          data: (loans) {
+            if (loans.isEmpty) {
+              return _EmptyLoans(onCreate: () => _create(context, ref));
+            }
+            final pending = loans
+                .where((loan) => !isLoanSettled(loan))
+                .toList();
+            final settled = loans.where(isLoanSettled).toList();
+            return TabBarView(
+              children: [
+                _buildList(
+                  context,
+                  ref,
+                  pending,
+                  'No hay préstamos pendientes',
                 ),
-              ),
+                _buildList(
+                  context,
+                  ref,
+                  settled,
+                  'Aún no has liquidado ningún préstamo',
+                ),
+              ],
             );
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: loans.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              final loan = loans[index];
-              final type = LoanType.fromStorage(loan.type);
-              final active = loan.isActive;
-              final remaining = loan.principal - loan.paidAmount;
-              final percent = loanProgress(loan);
-              final settled = isLoanSettled(loan);
-              const settledColor = Color(0xFF66BB6A);
-              return Card(
-                child: Column(
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildList(
+    BuildContext context,
+    WidgetRef ref,
+    List<Loan> loans,
+    String emptyMessage,
+  ) {
+    if (loans.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(emptyMessage, textAlign: TextAlign.center),
+        ),
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: loans.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      itemBuilder: (context, index) => _loanCard(context, ref, loans[index]),
+    );
+  }
+
+  Widget _loanCard(BuildContext context, WidgetRef ref, Loan loan) {
+    final type = LoanType.fromStorage(loan.type);
+    final active = loan.isActive;
+    final remaining = loan.principal - loan.paidAmount;
+    final percent = loanProgress(loan);
+    final settled = isLoanSettled(loan);
+    const settledColor = Color(0xFF66BB6A);
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            onTap: () => _openDetail(context, loan),
+            leading: CircleAvatar(
+              backgroundColor: type == LoanType.debt
+                  ? const Color(0xFFEF5350).withValues(alpha: 0.16)
+                  : const Color(0xFF66BB6A).withValues(alpha: 0.16),
+              child: Icon(
+                type.icon,
+                color: type == LoanType.debt
+                    ? const Color(0xFFEF5350)
+                    : const Color(0xFF66BB6A),
+              ),
+            ),
+            title: Row(
+              children: [
+                Flexible(
+                  child: Text(loan.name, overflow: TextOverflow.ellipsis),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  type.label,
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              ],
+            ),
+            subtitle: Text(
+              [
+                loan.currency,
+                if (loan.dueDate != null)
+                  'vence ${DateFormat('dd/MM/yyyy').format(loan.dueDate!)}',
+              ].join(' · '),
+            ),
+            trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  'Queda ${_fmt(remaining < 0 ? 0 : remaining)}',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                Text(
+                  '${_fmt(loan.paidAmount)} pagado',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
+            child: Column(
+              children: [
+                Row(
                   children: [
-                    ListTile(
-                      onTap: () => _openDetail(context, loan),
-                      leading: CircleAvatar(
-                        backgroundColor: type == LoanType.debt
-                            ? const Color(0xFFEF5350).withValues(alpha: 0.16)
-                            : const Color(0xFF66BB6A).withValues(alpha: 0.16),
-                        child: Icon(
-                          type.icon,
-                          color: type == LoanType.debt
-                              ? const Color(0xFFEF5350)
-                              : const Color(0xFF66BB6A),
-                        ),
-                      ),
-                      title: Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              loan.name,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            type.label,
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                        ],
-                      ),
-                      subtitle: Text(
-                        [
-                          loan.currency,
-                          if (loan.dueDate != null)
-                            'vence ${DateFormat('dd/MM/yyyy').format(loan.dueDate!)}',
-                        ].join(' · '),
-                      ),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            'Queda ${_fmt(remaining < 0 ? 0 : remaining)}',
-                            style: Theme.of(context).textTheme.titleSmall,
-                          ),
-                          Text(
-                            '${_fmt(loan.paidAmount)} pagado',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
+                    Icon(
+                      settled
+                          ? Icons.verified_outlined
+                          : Icons.pie_chart_outline,
+                      size: 16,
+                      color: settled
+                          ? settledColor
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      loanProgressLabel(loan),
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: settled ? settledColor : null,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                settled
-                                    ? Icons.verified_outlined
-                                    : Icons.pie_chart_outline,
-                                size: 16,
-                                color: settled
-                                    ? settledColor
-                                    : Theme.of(context)
-                                          .colorScheme
-                                          .onSurfaceVariant,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                loanProgressLabel(loan),
-                                style: Theme.of(context).textTheme.labelMedium
-                                    ?.copyWith(
-                                      color: settled ? settledColor : null,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                              ),
-                              const Spacer(),
-                              PopupMenuButton<String>(
-                                onSelected: (action) {
-                                  switch (action) {
-                                    case 'pay':
-                                      _pay(context, ref, loan);
-                                    case 'toggle':
-                                      _toggleActive(context, ref, loan);
-                                    case 'delete':
-                                      _delete(context, ref, loan);
-                                  }
-                                },
-                                itemBuilder: (context) => [
-                                  PopupMenuItem(
-                                    value: 'pay',
-                                    child: Text(
-                                      type == LoanType.debt
-                                          ? 'Registrar pago'
-                                          : 'Registrar cobro',
-                                    ),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'toggle',
-                                    child: Text(
-                                      active
-                                          ? 'Marcar como cerrada'
-                                          : 'Reabrir',
-                                    ),
-                                  ),
-                                  const PopupMenuItem(
-                                    value: 'delete',
-                                    child: Text('Eliminar'),
-                                  ),
-                                ],
-                              ),
-                            ],
+                    const Spacer(),
+                    PopupMenuButton<String>(
+                      onSelected: (action) {
+                        switch (action) {
+                          case 'pay':
+                            _pay(context, ref, loan);
+                          case 'toggle':
+                            _toggleActive(context, ref, loan);
+                          case 'delete':
+                            _delete(context, ref, loan);
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          value: 'pay',
+                          child: Text(
+                            type == LoanType.debt
+                                ? 'Registrar pago'
+                                : 'Registrar cobro',
                           ),
-                          const SizedBox(height: 8),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: percent,
-                              minHeight: 6,
-                              color: settled ? settledColor : null,
-                              backgroundColor: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest,
-                            ),
+                        ),
+                        PopupMenuItem(
+                          value: 'toggle',
+                          child: Text(
+                            active ? 'Marcar como cerrada' : 'Reabrir',
                           ),
-                        ],
-                      ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Text('Eliminar'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              );
-            },
-          );
-        },
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: percent,
+                    minHeight: 6,
+                    color: settled ? settledColor : null,
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyLoans extends StatelessWidget {
+  const _EmptyLoans({required this.onCreate});
+
+  final VoidCallback onCreate;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.request_quote_outlined, size: 72),
+            const SizedBox(height: 16),
+            Text(
+              'Aún no hay préstamos',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Deudas a pagar (Debo) y dinero que prestas (Me deben).',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: onCreate,
+              icon: const Icon(Icons.add),
+              label: const Text('Crear préstamo'),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -58,6 +58,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   bool _inUsd = false;
   bool _exporting = false;
 
+  /// Categoría resaltada en el donut de egresos.
+  String? _selectedCategoryKey;
+
   Future<void> _exportStatistics() async {
     if (_exporting) return;
     setState(() => _exporting = true);
@@ -110,6 +113,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   void _previousMonth() {
     setState(() {
       _month = DateTime(_month.year, _month.month - 1);
+      _selectedCategoryKey = null;
     });
   }
 
@@ -117,7 +121,41 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final now = DateTime.now();
     final next = DateTime(_month.year, _month.month + 1);
     if (next.isAfter(DateTime(now.year, now.month))) return;
-    setState(() => _month = next);
+    setState(() {
+      _month = next;
+      _selectedCategoryKey = null;
+    });
+  }
+
+  /// Convierte un toque sobre el donut en la categoría correspondiente.
+  void _selectCategoryAt(
+    Offset local,
+    double size,
+    List<_CategorySlice> slices,
+  ) {
+    final center = Offset(size / 2, size / 2);
+    final dx = local.dx - center.dx;
+    final dy = local.dy - center.dy;
+    final distance = math.sqrt(dx * dx + dy * dy);
+    // Solo el anillo responde; el centro y el exterior se ignoran.
+    if (distance < size * 0.27 || distance > size * 0.5) return;
+    final total = slices.fold<double>(0, (sum, slice) => sum + slice.value);
+    if (total <= 0) return;
+    var angle = math.atan2(dy, dx) + math.pi / 2;
+    if (angle < 0) angle += 2 * math.pi;
+    var start = 0.0;
+    for (final slice in slices) {
+      final sweep = slice.value / total * 2 * math.pi;
+      if (angle >= start && angle < start + sweep) {
+        setState(() {
+          _selectedCategoryKey = _selectedCategoryKey == slice.key
+              ? null
+              : slice.key;
+        });
+        return;
+      }
+      start += sweep;
+    }
   }
 
   @override
@@ -222,8 +260,31 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final categoryEntries = byCategory.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     final topCategories = categoryEntries.take(6).toList();
-    final categoryMax = topCategories.isEmpty ? 0.0 : topCategories.first.value;
     final microPercent = expense <= 0 ? 0.0 : microSum / expense * 100;
+
+    final slices = [
+      for (final entry in topCategories)
+        _CategorySlice(
+          key: entry.key,
+          label: entry.key.isEmpty
+              ? 'Sin categoría'
+              : (categoryNames[entry.key]?.name ?? 'Sin categoría'),
+          value: entry.value,
+          color: Color(
+            entry.key.isEmpty
+                ? 0xFF78909C
+                : (categoryColors[entry.key] ?? 0xFF78909C),
+          ),
+        ),
+    ];
+    final slicesTotal = slices.fold<double>(0, (sum, slice) => sum + slice.value);
+    _CategorySlice? selectedSlice;
+    for (final slice in slices) {
+      if (slice.key == _selectedCategoryKey) {
+        selectedSlice = slice;
+        break;
+      }
+    }
 
     final trendMonths = List.generate(
       6,
@@ -568,25 +629,113 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                       const SizedBox(height: 12),
                       if (topCategories.isEmpty)
                         const Text('Sin egresos este mes')
-                      else
-                        for (final entry in topCategories) ...[
-                          _HBarRow(
-                            label: entry.key.isEmpty
-                                ? 'Sin categoría'
-                                : (categoryNames[entry.key]?.name ??
-                                      'Sin categoría'),
-                            valueText: _fmt(entry.value),
-                            fraction: categoryMax <= 0
-                                ? 0
-                                : entry.value / categoryMax,
-                            color: Color(
-                              entry.key.isEmpty
-                                  ? 0xFF78909C
-                                  : (categoryColors[entry.key] ?? 0xFF78909C),
-                            ),
+                      else ...[
+                        SizedBox(
+                          height: 220,
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final size = math.min(
+                                constraints.maxWidth,
+                                constraints.maxHeight,
+                              );
+                              return Center(
+                                child: SizedBox(
+                                  width: size,
+                                  height: size,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      Positioned.fill(
+                                        child: GestureDetector(
+                                          behavior: HitTestBehavior.opaque,
+                                          onTapUp: (details) =>
+                                              _selectCategoryAt(
+                                                details.localPosition,
+                                                size,
+                                                slices,
+                                              ),
+                                          child: CustomPaint(
+                                            painter: _CategoryDonutPainter(
+                                              slices: slices,
+                                              selectedKey:
+                                                  _selectedCategoryKey,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      IgnorePointer(
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(40),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                selectedSlice?.label ??
+                                                    'Total egresos',
+                                                textAlign: TextAlign.center,
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: Theme.of(
+                                                  context,
+                                                ).textTheme.labelSmall,
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                '${_fmt(selectedSlice?.value ?? expense)} $target',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .titleSmall
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                              ),
+                                              if (selectedSlice != null)
+                                                Text(
+                                                  slicesTotal <= 0
+                                                      ? ''
+                                                      : '${(selectedSlice.value / slicesTotal * 100).toStringAsFixed(1)}%',
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .labelSmall
+                                                      ?.copyWith(
+                                                        color: selectedSlice
+                                                            .color,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                      ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
                           ),
-                          const SizedBox(height: 8),
+                        ),
+                        const SizedBox(height: 8),
+                        for (final slice in slices) ...[
+                          _CategoryLegendRow(
+                            label: slice.label,
+                            valueText: '${_fmt(slice.value)} $target',
+                            percent: slicesTotal <= 0
+                                ? 0
+                                : slice.value / slicesTotal * 100,
+                            color: slice.color,
+                            selected: slice.key == _selectedCategoryKey,
+                            onTap: () => setState(() {
+                              _selectedCategoryKey =
+                                  _selectedCategoryKey == slice.key
+                                  ? null
+                                  : slice.key;
+                            }),
+                          ),
+                          const SizedBox(height: 6),
                         ],
+                      ],
                     ],
                   ),
                 ),
@@ -1040,5 +1189,143 @@ class _DonutPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _DonutPainter oldDelegate) {
     return oldDelegate.income != income || oldDelegate.expense != expense;
+  }
+}
+
+/// Una porción del donut de egresos por categoría.
+class _CategorySlice {
+  const _CategorySlice({
+    required this.key,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String key;
+  final String label;
+  final double value;
+  final Color color;
+}
+
+class _CategoryDonutPainter extends CustomPainter {
+  _CategoryDonutPainter({required this.slices, required this.selectedKey});
+
+  final List<_CategorySlice> slices;
+  final String? selectedKey;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final total = slices.fold<double>(0, (sum, slice) => sum + slice.value);
+    final rect = Rect.fromLTWH(14, 14, size.width - 28, size.height - 28);
+    if (total <= 0) {
+      final paint = Paint()
+        ..color = Colors.grey.withValues(alpha: 0.25)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 16;
+      canvas.drawArc(rect, -math.pi / 2, 2 * math.pi, false, paint);
+      return;
+    }
+    var start = -math.pi / 2;
+    for (final slice in slices) {
+      final sweep = slice.value / total * 2 * math.pi;
+      final selected = slice.key == selectedKey;
+      final dimmed = selectedKey != null && !selected;
+      final paint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = selected ? 24 : 16
+        ..strokeCap = StrokeCap.butt
+        ..color = dimmed
+            ? slice.color.withValues(alpha: 0.35)
+            : slice.color;
+      final gap = slices.length > 1 ? 0.018 : 0.0;
+      canvas.drawArc(
+        rect,
+        start + gap,
+        math.max(sweep - gap * 2, 0.005),
+        false,
+        paint,
+      );
+      start += sweep;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _CategoryDonutPainter oldDelegate) {
+    return oldDelegate.slices != slices ||
+        oldDelegate.selectedKey != selectedKey;
+  }
+}
+
+class _CategoryLegendRow extends StatelessWidget {
+  const _CategoryLegendRow({
+    required this.label,
+    required this.valueText,
+    required this.percent,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final String valueText;
+  final double percent;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: selected
+              ? color.withValues(alpha: 0.12)
+              : Colors.transparent,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '${percent.toStringAsFixed(1)}%',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              valueText,
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

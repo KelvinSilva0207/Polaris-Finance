@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../core/settings/save_location.dart';
+
 /// El usuario cerró el selector de archivos sin elegir destino.
 class SaveCanceledException implements Exception {
   const SaveCanceledException();
@@ -22,12 +24,14 @@ Future<String> saveBackupFile(String filename, List<int> bytes) async {
   final data = Uint8List.fromList(bytes);
   Uri? target;
   var pickerFailed = false;
+  final initialDirectory = await preferredSaveDirectory();
   try {
     target = await FilePicker.saveFile(
       dialogTitle: 'Guardar $filename',
       fileName: filename,
       type: FileType.any,
       bytes: data,
+      initialDirectory: initialDirectory,
     );
   } catch (_) {
     pickerFailed = true;

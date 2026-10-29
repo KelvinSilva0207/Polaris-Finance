@@ -7,6 +7,7 @@ import '../../core/feature_module.dart';
 import '../../core/security/app_lock.dart';
 import '../../core/security/biometric_service.dart';
 import '../../core/settings/app_settings.dart';
+import '../../core/settings/save_location.dart';
 import '../../core/theme/app_fonts.dart';
 import '../../core/theme/custom_font.dart';
 import '../../data/models/enums.dart';
@@ -171,14 +172,19 @@ class SettingsScreen extends ConsumerWidget {
                     : settings.profileName,
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
-              subtitle: const Text('Nombre y foto para personalizar la app'),
+              subtitle: Text(
+                [
+                  if (settings.profileBio.isNotEmpty) settings.profileBio,
+                  'Moneda base: ${settings.baseCurrency}',
+                ].join(' · '),
+              ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
               ),
             ),
           ),
-          const _SectionHeader('Aspecto'),
+          const _SectionHeader('Personalización'),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -280,7 +286,9 @@ class SettingsScreen extends ConsumerWidget {
             child: ListTile(
               leading: const Icon(Icons.palette_outlined),
               title: const Text('Personalizar tema'),
-              subtitle: const Text('Vista previa, color de acento y modo'),
+              subtitle: const Text(
+                'Paletas, colores de fondo y panel, tipografía',
+              ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -428,6 +436,8 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
+                const Divider(height: 1),
+                const _SaveLocationTile(),
               ],
             ),
           ),
@@ -510,6 +520,80 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Carpeta donde se guardan reportes y respaldos elegida por el usuario.
+class _SaveLocationTile extends StatefulWidget {
+  const _SaveLocationTile();
+
+  @override
+  State<_SaveLocationTile> createState() => _SaveLocationTileState();
+}
+
+class _SaveLocationTileState extends State<_SaveLocationTile> {
+  String? _directory;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final directory = await preferredSaveDirectory();
+    if (!mounted) return;
+    setState(() {
+      _directory = directory;
+      _loading = false;
+    });
+  }
+
+  Future<void> _pick() async {
+    final directory = await pickSaveDirectory();
+    if (!mounted || directory == null) return;
+    setState(() => _directory = directory);
+  }
+
+  Future<void> _reset() async {
+    await clearSaveDirectory();
+    if (!mounted) return;
+    setState(() => _directory = null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitle = _loading
+        ? 'Cargando…'
+        : _directory == null
+        ? 'Se pregunta en cada guardado'
+        : _directory!;
+    return ListTile(
+      leading: const Icon(Icons.folder_outlined),
+      title: const Text('Carpeta de guardado'),
+      subtitle: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
+      trailing: _directory == null
+          ? const Icon(Icons.chevron_right)
+          : PopupMenuButton<String>(
+              onSelected: (action) {
+                switch (action) {
+                  case 'change':
+                    _pick();
+                  case 'reset':
+                    _reset();
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'change', child: Text('Cambiar carpeta')),
+                PopupMenuItem(
+                  value: 'reset',
+                  child: Text('Preguntar cada vez'),
+                ),
+              ],
+            ),
+      onTap: _pick,
     );
   }
 }
